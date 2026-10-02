@@ -84,6 +84,15 @@ describe("joining", () => {
     expect(await asyncCodeOf(room.join("Latecomer"))).toBe("GAME_ENDED");
   });
 
+  it("pushes a fresh host snapshot when START becomes available or unavailable", async () => {
+    const { room, output } = makeRoom();
+    expect(room.hostView().availableCommands).not.toContain("START");
+    const a = await room.join("Ada");
+    expect(output.lastHostView().availableCommands).toContain("START");
+    room.remove(a.participantId);
+    expect(output.lastHostView().availableCommands).not.toContain("START");
+  });
+
   it("notifies hosts of joins", async () => {
     const { room, output } = makeRoom();
     await room.join("Ada");

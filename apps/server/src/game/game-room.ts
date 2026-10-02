@@ -222,6 +222,8 @@ export class GameRoom {
 
     this.output.toHosts("session:player_joined", this.summarize(participant));
     this.emitCounts();
+    // START becomes available with the first player: hosts need the new command set.
+    if (this.phase === "LOBBY" && this.participants.size === 1) this.output.toHosts("session:state", this.hostView());
     return { participantId: id, token, view: this.playerView(id) };
   }
 
@@ -275,6 +277,7 @@ export class GameRoom {
     if (closeReason) this.output.closePlayer(participantId, "SESSION_EXPIRED", closeReason);
     this.output.toHosts("session:player_left", { participantId });
     this.emitCounts();
+    if (this.phase === "LOBBY" && this.participants.size === 0) this.output.toHosts("session:state", this.hostView());
     this.persistence.participantRemoved(this.sessionId, participantId).catch((err) => {
       this.log.error({ err, code: this.code }, "failed to persist participant removal");
     });
