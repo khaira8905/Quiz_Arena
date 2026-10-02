@@ -77,6 +77,9 @@
   --color-a4: var(--answer-4);
   --color-answer-ink: var(--answer-ink);
 
+  /* Workspace breakpoint (1360px): wide enough for the editor's three panes. */
+  --breakpoint-wide: 85rem;
+
   --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -220,7 +223,9 @@
   .numeric {
     font-family: var(--font-display);
     font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-feature-settings:
+      "tnum" 1,
+      "lnum" 1;
     letter-spacing: -0.03em;
   }
 
@@ -240,9 +245,21 @@
   .arena-floor {
     background-color: var(--background);
     background-image:
-      radial-gradient(ellipse 70% 55% at 50% -8%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%),
-      linear-gradient(to right, color-mix(in oklab, var(--line) 55%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--line) 55%, transparent) 1px, transparent 1px);
+      radial-gradient(
+        ellipse 70% 55% at 50% -8%,
+        color-mix(in oklab, var(--accent) 9%, transparent),
+        transparent 70%
+      ),
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--line) 55%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--line) 55%, transparent) 1px,
+        transparent 1px
+      );
     background-size:
       100% 100%,
       64px 64px,
@@ -258,7 +275,8 @@
     height: 9px;
     background:
       linear-gradient(var(--line-strong), var(--line-strong)) 0 50% / 100% 1px no-repeat,
-      repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 24px) 0 0 / 100% 100%;
+      repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 24px) 0 0 / 100%
+        100%;
   }
 
   .scrollbar-thin {

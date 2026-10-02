@@ -39,7 +39,13 @@ const toDraft = (q: QuestionDto): Draft => ({
   options: q.options,
 });
 
-const POINT_LABELS: Record<number, string> = { 0: "None", 500: "Half", 1000: "Standard", 2000: "Double" };
+/** Compact multipliers — the settings rail is narrow. "None" makes a practice question. */
+const POINT_LABELS: Record<number, string> = {
+  0: "None",
+  500: "½×",
+  1000: "1×",
+  2000: "2×",
+};
 
 /**
  * Edits one question. The local draft is the source of truth while mounted (so typing is never
@@ -70,10 +76,13 @@ export function QuestionEditor({
   const { track } = useSaveTracker();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [customTimer, setCustomTimer] = useState(
-    question.timeLimitSec !== null && !(TIMER_PRESETS as readonly number[]).includes(question.timeLimitSec),
+    question.timeLimitSec !== null &&
+      !(TIMER_PRESETS as readonly number[]).includes(question.timeLimitSec),
   );
 
-  const { schedule } = useAutosave<QuestionUpdateInput>((patch) => update.mutateAsync({ id: question.id, patch }));
+  const { schedule } = useAutosave<QuestionUpdateInput>((patch) =>
+    update.mutateAsync({ id: question.id, patch }),
+  );
 
   const rules = QUESTION_TYPE_RULES[draft.type];
   const issues = questionIssues(draft);
@@ -85,7 +94,10 @@ export function QuestionEditor({
 
   const setOptions = (options: Draft["options"], immediate = false) => {
     setDraft((d) => ({ ...d, options }));
-    schedule({ options: options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })) }, immediate);
+    schedule(
+      { options: options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })) },
+      immediate,
+    );
   };
 
   /** Type changes reshape options server-side, so apply the server's answer to the draft. */
@@ -97,7 +109,11 @@ export function QuestionEditor({
     );
   };
 
-  const markCorrect = (i: number) => setOptions(draft.options.map((o, j) => ({ ...o, isCorrect: j === i })), true);
+  const markCorrect = (i: number) =>
+    setOptions(
+      draft.options.map((o, j) => ({ ...o, isCorrect: j === i })),
+      true,
+    );
 
   return (
     <>
@@ -106,7 +122,8 @@ export function QuestionEditor({
         <div className="notch relative border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
             <span className="label text-fg-3">
-              Question <span className="text-accent">{String(index + 1).padStart(2, "0")}</span> / {String(total).padStart(2, "0")}
+              Question <span className="text-accent">{String(index + 1).padStart(2, "0")}</span> /{" "}
+              {String(total).padStart(2, "0")}
             </span>
             <span className="label text-fg-3">{rules.label}</span>
           </div>
@@ -119,7 +136,11 @@ export function QuestionEditor({
               id={`qtext-${question.id}`}
               value={draft.text}
               maxLength={QUESTION_TEXT_MAX}
-              placeholder={draft.type === "TRUE_FALSE" ? "Write a statement players judge true or false…" : "Type your question…"}
+              placeholder={
+                draft.type === "TRUE_FALSE"
+                  ? "Write a statement players judge true or false…"
+                  : "Type your question…"
+              }
               onChange={(v) => set("text", v)}
               className="font-display text-[clamp(1.5rem,2.2vw,2.25rem)] font-bold leading-[1.15] tracking-[-0.025em]"
             />
@@ -146,7 +167,13 @@ export function QuestionEditor({
                         o.isCorrect ? style.border : "border-line",
                       )}
                     >
-                      <span className={cn("flex w-12 shrink-0 items-center justify-center font-display text-xl font-extrabold text-answer-ink", style.bg)} aria-hidden>
+                      <span
+                        className={cn(
+                          "flex w-12 shrink-0 items-center justify-center font-display text-xl font-extrabold text-answer-ink",
+                          style.bg,
+                        )}
+                        aria-hidden
+                      >
                         {style.letter}
                       </span>
                       <label className="sr-only" htmlFor={`opt-${question.id}-${i}`}>
@@ -158,7 +185,13 @@ export function QuestionEditor({
                         maxLength={OPTION_TEXT_MAX}
                         readOnly={!!rules.fixedOptions}
                         placeholder={`Answer ${style.letter}`}
-                        onChange={(e) => setOptions(draft.options.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+                        onChange={(e) =>
+                          setOptions(
+                            draft.options.map((x, j) =>
+                              j === i ? { ...x, text: e.target.value } : x,
+                            ),
+                          )
+                        }
                         className="min-w-0 flex-1 bg-transparent px-3 py-4 text-body-lg font-medium text-fg placeholder:text-fg-3 focus:outline-none read-only:cursor-default"
                       />
                       <div className="flex items-center gap-1 pr-2">
@@ -170,17 +203,26 @@ export function QuestionEditor({
                           onClick={() => markCorrect(i)}
                           className={cn(
                             "flex h-8 items-center gap-1.5 rounded-sm px-2.5 text-caption font-bold transition-colors",
-                            o.isCorrect ? "bg-success text-inverse" : "text-fg-3 hover:bg-elevated hover:text-fg",
+                            o.isCorrect
+                              ? "bg-success text-inverse"
+                              : "text-fg-3 hover:bg-elevated hover:text-fg",
                           )}
                         >
                           <Check className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">{o.isCorrect ? "Correct" : "Mark"}</span>
+                          <span className="hidden sm:inline">
+                            {o.isCorrect ? "Correct" : "Mark"}
+                          </span>
                         </button>
                         {!rules.fixedOptions && draft.options.length > rules.minOptions && (
                           <button
                             type="button"
                             aria-label={`Remove option ${style.letter}`}
-                            onClick={() => setOptions(draft.options.filter((_, j) => j !== i), true)}
+                            onClick={() =>
+                              setOptions(
+                                draft.options.filter((_, j) => j !== i),
+                                true,
+                              )
+                            }
                             className="grid h-8 w-8 place-items-center rounded-sm text-fg-3 opacity-60 hover:bg-elevated hover:text-danger group-hover:opacity-100"
                           >
                             <X className="h-4 w-4" />
@@ -196,7 +238,15 @@ export function QuestionEditor({
             {!rules.fixedOptions && draft.options.length < rules.maxOptions && (
               <button
                 type="button"
-                onClick={() => setOptions([...draft.options, { id: "", order: draft.options.length, text: "", isCorrect: false }], true)}
+                onClick={() =>
+                  setOptions(
+                    [
+                      ...draft.options,
+                      { id: "", order: draft.options.length, text: "", isCorrect: false },
+                    ],
+                    true,
+                  )
+                }
                 className="mt-3 flex h-11 w-full items-center justify-center gap-2 border border-dashed border-line-strong text-body-sm font-semibold text-fg-2 hover:border-accent hover:text-accent"
               >
                 <Plus className="h-4 w-4" /> Add option {answerStyle(draft.options.length).letter}
@@ -212,7 +262,10 @@ export function QuestionEditor({
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden border-t border-line"
               >
-                <ul className="flex flex-wrap gap-x-5 gap-y-1 bg-warning-soft px-5 py-3 text-body-sm text-warning" aria-live="polite">
+                <ul
+                  className="flex flex-wrap gap-x-5 gap-y-1 bg-warning-soft px-5 py-3 text-body-sm text-warning"
+                  aria-live="polite"
+                >
                   {issues.map((i) => (
                     <li key={i} className="flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> {i}
@@ -226,7 +279,10 @@ export function QuestionEditor({
       </section>
 
       {/* ------------------------------------------------------------ settings rail */}
-      <aside aria-label="Question settings" className="flex flex-col gap-6 border border-line bg-surface p-5">
+      <aside
+        aria-label="Question settings"
+        className="flex flex-col gap-6 border border-line bg-surface p-5"
+      >
         <div>
           <h3 className="label mb-3 text-fg-2">Type</h3>
           <Segmented
@@ -243,20 +299,33 @@ export function QuestionEditor({
         <div>
           <div className="mb-3 flex items-baseline justify-between">
             <h3 className="label text-fg-2">Timer</h3>
-            <span className="numeric text-body font-bold">{draft.timeLimitSec ?? defaultTimerSec}s</span>
+            <span className="numeric text-body font-bold">
+              {draft.timeLimitSec ?? defaultTimerSec}s
+            </span>
           </div>
           <div className="grid grid-cols-5 gap-1">
-            <TimerChip active={draft.timeLimitSec === null && !customTimer} onClick={() => (setCustomTimer(false), set("timeLimitSec", null, true))}>
+            <TimerChip
+              active={draft.timeLimitSec === null && !customTimer}
+              onClick={() => (setCustomTimer(false), set("timeLimitSec", null, true))}
+            >
               Auto
             </TimerChip>
             {TIMER_PRESETS.map((t) => (
-              <TimerChip key={t} active={draft.timeLimitSec === t && !customTimer} onClick={() => (setCustomTimer(false), set("timeLimitSec", t, true))}>
+              <TimerChip
+                key={t}
+                active={draft.timeLimitSec === t && !customTimer}
+                onClick={() => (setCustomTimer(false), set("timeLimitSec", t, true))}
+              >
                 {t}
               </TimerChip>
             ))}
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <button type="button" onClick={() => setCustomTimer(true)} className={cn("label", customTimer ? "text-accent" : "text-fg-3 hover:text-fg")}>
+            <button
+              type="button"
+              onClick={() => setCustomTimer(true)}
+              className={cn("label", customTimer ? "text-accent" : "text-fg-3 hover:text-fg")}
+            >
               Custom
             </button>
             {customTimer && (
@@ -268,21 +337,31 @@ export function QuestionEditor({
                 defaultValue={draft.timeLimitSec ?? defaultTimerSec}
                 onBlur={(e) => {
                   const v = Math.round(Number(e.target.value));
-                  if (v >= TIMER_MIN_SECONDS && v <= TIMER_MAX_SECONDS) set("timeLimitSec", v, true);
-                  else toast.error(`Timer must be between ${TIMER_MIN_SECONDS} and ${TIMER_MAX_SECONDS} seconds`);
+                  if (v >= TIMER_MIN_SECONDS && v <= TIMER_MAX_SECONDS)
+                    set("timeLimitSec", v, true);
+                  else
+                    toast.error(
+                      `Timer must be between ${TIMER_MIN_SECONDS} and ${TIMER_MAX_SECONDS} seconds`,
+                    );
                 }}
                 className="h-8 w-24"
               />
             )}
           </div>
-          <p className="mt-2 text-caption text-fg-3">Auto uses the quiz default ({defaultTimerSec}s).</p>
+          <p className="mt-2 text-caption text-fg-3">
+            Auto uses the quiz default ({defaultTimerSec}s).
+          </p>
         </div>
 
         <div>
           <h3 className="label mb-3 text-fg-2">Points</h3>
           <Segmented
             label="Points"
-            value={(POINT_PRESETS as readonly number[]).includes(draft.points) ? draft.points : DEFAULT_POINTS}
+            value={
+              (POINT_PRESETS as readonly number[]).includes(draft.points)
+                ? draft.points
+                : DEFAULT_POINTS
+            }
             onChange={(v) => set("points", v, true)}
             options={POINT_PRESETS.map((p) => ({ value: p, label: POINT_LABELS[p] ?? p }))}
           />
@@ -298,7 +377,15 @@ export function QuestionEditor({
         )}
 
         <Field label="Explanation" hint="Shown after the reveal, if correct answers are shown.">
-          {(p) => <Textarea {...p} rows={3} maxLength={500} value={draft.explanation} onChange={(e) => set("explanation", e.target.value)} />}
+          {(p) => (
+            <Textarea
+              {...p}
+              rows={3}
+              maxLength={500}
+              value={draft.explanation}
+              onChange={(e) => set("explanation", e.target.value)}
+            />
+          )}
         </Field>
 
         <div className="mt-auto flex gap-2 border-t border-line pt-5">
@@ -319,7 +406,13 @@ export function QuestionEditor({
           >
             <Copy className="h-3.5 w-3.5" /> Duplicate
           </Button>
-          <Button variant="ghost" size="sm" className="flex-1 hover:text-danger" disabled={total <= 1} onClick={() => setConfirmDelete(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1 hover:text-danger"
+            disabled={total <= 1}
+            onClick={() => setConfirmDelete(true)}
+          >
             <Trash2 className="h-3.5 w-3.5" /> Delete
           </Button>
         </div>
@@ -341,7 +434,15 @@ export function QuestionEditor({
   );
 }
 
-function TimerChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TimerChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -349,7 +450,9 @@ function TimerChip({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       className={cn(
         "numeric h-9 rounded-sm border text-body-sm font-bold transition-colors",
-        active ? "border-accent bg-accent text-accent-ink" : "border-line bg-sunken text-fg-2 hover:border-line-strong hover:text-fg",
+        active
+          ? "border-accent bg-accent text-accent-ink"
+          : "border-line bg-sunken text-fg-2 hover:border-line-strong hover:text-fg",
       )}
     >
       {children}
@@ -362,7 +465,10 @@ function AutoGrowTextarea({
   onChange,
   className,
   ...props
-}: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange"> & { value: string; onChange: (v: string) => void }) {
+}: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange"> & {
+  value: string;
+  onChange: (v: string) => void;
+}) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -376,13 +482,22 @@ function AutoGrowTextarea({
       rows={1}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={cn("w-full resize-none overflow-hidden bg-transparent text-fg placeholder:text-fg-3/70 focus:outline-none", className)}
+      className={cn(
+        "w-full resize-none overflow-hidden bg-transparent text-fg placeholder:text-fg-3/70 focus:outline-none",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-function ImageSlot({ url, onChange }: { url: string | null; onChange: (v: string | null) => void }) {
+function ImageSlot({
+  url,
+  onChange,
+}: {
+  url: string | null;
+  onChange: (v: string | null) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(url ?? "");
   const [broken, setBroken] = useState(false);
@@ -391,8 +506,18 @@ function ImageSlot({ url, onChange }: { url: string | null; onChange: (v: string
     return (
       <div className="group relative mt-5 overflow-hidden border border-line bg-sunken">
         {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-supplied URLs */}
-        <img src={url} alt="Question illustration" onError={() => setBroken(true)} onLoad={() => setBroken(false)} className="mx-auto max-h-64 w-auto object-contain" />
-        {broken && <p className="p-4 text-center text-body-sm text-warning">This image couldn&apos;t be loaded. Check the URL.</p>}
+        <img
+          src={url}
+          alt="Question illustration"
+          onError={() => setBroken(true)}
+          onLoad={() => setBroken(false)}
+          className="mx-auto max-h-64 w-auto object-contain"
+        />
+        {broken && (
+          <p className="p-4 text-center text-body-sm text-warning">
+            This image couldn&apos;t be loaded. Check the URL.
+          </p>
+        )}
         <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
             Change
@@ -428,7 +553,14 @@ function ImageSlot({ url, onChange }: { url: string | null; onChange: (v: string
         setEditing(false);
       }}
     >
-      <Input autoFocus aria-label="Image URL" placeholder="https://…/diagram.png" value={value} onChange={(e) => setValue(e.target.value)} className="h-10" />
+      <Input
+        autoFocus
+        aria-label="Image URL"
+        placeholder="https://…/diagram.png"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="h-10"
+      />
       <Button type="submit" size="md">
         Save
       </Button>
