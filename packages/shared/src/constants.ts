@@ -22,22 +22,39 @@ export const QUIZ_TITLE_MAX = 120;
 export const QUIZ_DESCRIPTION_MAX = 1000;
 export const MAX_QUESTIONS_PER_QUIZ = 100;
 
-/** Game codes look like QA4821: fixed prefix + 4 digits. Easy to read aloud from a stage. */
+/**
+ * Game PINs look like QA482193: fixed prefix + 6 digits. Short enough to read aloud from a
+ * stage, large enough (1M) that live games can't be found by guessing.
+ */
 export const GAME_CODE_PREFIX = "QA";
-export const GAME_CODE_PATTERN = /^QA\d{4}$/;
+export const GAME_CODE_DIGITS = 6;
+export const GAME_CODE_PATTERN = /^QA\d{6}$/;
+
+/** Uppercases, strips spaces, and accepts the digits alone ("482 193" → "QA482193"). */
+export function normalizeGameCode(raw: string): string {
+  const s = raw.replace(/[\s-]+/g, "").toUpperCase();
+  return /^\d{6}$/.test(s) ? `${GAME_CODE_PREFIX}${s}` : s;
+}
 
 /**
  * Grace window (ms) after the server deadline during which an answer still counts.
- * Covers network transit for an answer the player sent just before zero — the client
- * stops accepting input at its own zero, so this never extends the visible timer.
+ * Covers network transit for an answer the player sent just before zero (100 phones on one
+ * congested access point regularly see 300-600ms uplink). The client stops accepting input
+ * at its own zero, so this never extends the visible timer, and speed points are computed
+ * from the receipt time, so late arrivals gain nothing.
  */
-export const ANSWER_GRACE_MS = 350;
+export const ANSWER_GRACE_MS = 800;
 
 /** Length of the "3-2-1" game-start sequence. */
 export const START_COUNTDOWN_MS = 4_500;
 
-/** How long a disconnected player is kept in the lobby before being removed. */
-export const LOBBY_DISCONNECT_GRACE_MS = 30_000;
+/**
+ * How long a disconnected player keeps their lobby seat. Phones in pockets drop their socket
+ * within ~25s, and lobbies often run for minutes while people find their seats; the seat
+ * (and nickname) must still be there when the screen wakes. Starting the game cancels all
+ * pending evictions: from then on seats are kept for the player's score.
+ */
+export const LOBBY_DISCONNECT_GRACE_MS = 10 * 60_000;
 
 /** Answer option identity is never colour-only: every option also carries a letter and a key. */
 export const ANSWER_LETTERS = ["A", "B", "C", "D"] as const;

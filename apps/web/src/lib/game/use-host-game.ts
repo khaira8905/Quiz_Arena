@@ -20,6 +20,10 @@ export function useHostGame(code: string) {
   const [connection, setConnection] = useState<HostConnection>("connecting");
   const [error, setError] = useState<{ code: ErrorCode; message: string } | null>(null);
   const socketRef = useRef<GameSocket | null>(null);
+  const viewRef = useRef<HostView | null>(null);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     const socket = createGameSocket(async () => {
@@ -119,7 +123,14 @@ export function useHostGame(code: string) {
           ok: false as const,
           error: { code: "INTERNAL" as ErrorCode, message: "Not connected" },
         };
-      const res = await emitAck<HostView>(socket, "host:command", { code, command: cmd });
+      // Tell the server what this screen showed, so a second host screen (projector +
+      // laptop) can't apply the same step twice.
+      const v = viewRef.current;
+      const res = await emitAck<HostView>(socket, "host:command", {
+        code,
+        command: cmd,
+        expected: v ? { phase: v.phase, questionIndex: v.questionIndex } : undefined,
+      });
       if (res.ok) setView(res.data);
       return res;
     },

@@ -19,6 +19,7 @@ export const ERROR_CODES = [
   "ANSWER_INVALID",
   "QUESTION_NOT_ACTIVE",
   "COMMAND_NOT_ALLOWED",
+  "COMMAND_OUT_OF_DATE",
   "QUIZ_EMPTY",
   "REPLACED_BY_NEW_CONNECTION",
 ] as const;
@@ -64,6 +65,10 @@ export const ERROR_COPY: Record<ErrorCode, { title: string; message: string }> =
   ANSWER_INVALID: { title: "Invalid answer", message: "That answer isn't part of this question." },
   QUESTION_NOT_ACTIVE: { title: "Question closed", message: "This question is no longer open." },
   COMMAND_NOT_ALLOWED: { title: "Not now", message: "That action isn't available at this stage." },
+  COMMAND_OUT_OF_DATE: {
+    title: "Already moved on",
+    message: "Another screen advanced the game first. Your screen is up to date now.",
+  },
   QUIZ_EMPTY: { title: "Empty quiz", message: "Add at least one question before going live." },
   REPLACED_BY_NEW_CONNECTION: {
     title: "Opened elsewhere",

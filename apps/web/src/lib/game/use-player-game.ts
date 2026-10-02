@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeGameCode } from "@quizarena/shared/constants";
 import type { GameLookupDto } from "@quizarena/shared/dto";
 import type { ErrorCode } from "@quizarena/shared/errors";
 import type { AnswerReceipt, JoinResult } from "@quizarena/shared/events";
@@ -67,6 +68,28 @@ export function usePlayerGame(initialCode: string | null) {
   const seatRef = useRef<Seat | null>(null);
   /** Bumped on every new flow and on unmount; async continuations from older flows bail out. */
   const generation = useRef(0);
+  /**
+   * Whether the current transport is bound to our seat. After a network blip the socket
+   * reconnects anonymous until player:reconnect is acknowledged; an answer sent in that
+   * window would be refused, so answers wait for the binding instead.
+   */
+  const bound = useRef(false);
+  const boundWaiters = useRef<(() => void)[]>([]);
+  const markBound = useCallback(() => {
+    bound.current = true;
+    const waiters = boundWaiters.current;
+    boundWaiters.current = [];
+    for (const w of waiters) w();
+  }, []);
+  const waitBound = (ms: number) =>
+    new Promise<boolean>((resolve) => {
+      if (bound.current) return resolve(true);
+      const t = setTimeout(() => resolve(bound.current), ms);
+      boundWaiters.current.push(() => {
+        clearTimeout(t);
+        resolve(true);
+      });
+    });
 
   const closeWith = useCallback((code: ErrorCode, message: string) => {
     if (seatRef.current) clearSeat(seatRef.current.code);
@@ -81,12 +104,11 @@ export function usePlayerGame(initialCode: string | null) {
     const socket = createGameSocket();
     socketRef.current = socket;
 
-    socket.on("connect", async () => {
-      setConnection("online");
-      void syncClock(socket);
-      // Every new transport connection must re-bind to the seat.
+    // Every new transport connection must re-bind to the seat. Transient failures (a
+    // timeout, rate limiting, a server hiccup) are retried; only a dead seat ends the flow.
+    const rebind = async (attempt: number): Promise<void> => {
       const seat = seatRef.current;
-      if (!seat) return;
+      if (!seat || !socket.connected) return;
       const res = await emitAck<JoinResult>(socket, "player:reconnect", {
         code: seat.code,
         token: seat.token,
@@ -95,6 +117,8 @@ export function usePlayerGame(initialCode: string | null) {
         seedOffset(res.data.view.serverTime);
         setView(res.data.view);
         setStep({ kind: "playing" });
+        setConnection("online");
+        markBound();
       } else if (res.error.code === "SESSION_EXPIRED" || res.error.code === "INVALID_GAME_CODE") {
         closeWith(
           res.error.code,
@@ -102,9 +126,21 @@ export function usePlayerGame(initialCode: string | null) {
             ? "This game is no longer running."
             : res.error.message,
         );
+      } else if (attempt < 6) {
+        await new Promise((r) => setTimeout(r, Math.min(8000, 500 * 2 ** attempt)));
+        return rebind(attempt + 1);
+      } else {
+        setConnection("offline");
       }
+    };
+
+    socket.on("connect", () => {
+      void syncClock(socket);
+      if (seatRef.current) void rebind(0);
+      else setConnection("online");
     });
     socket.on("disconnect", (reason) => {
+      bound.current = false;
       if (reason !== "io client disconnect") setConnection("reconnecting");
     });
     socket.io.on("reconnect_failed", () => setConnection("offline"));
@@ -123,7 +159,7 @@ export function usePlayerGame(initialCode: string | null) {
     );
     socket.on("session:closed", ({ code, message }) => closeWith(code, message));
     return socket;
-  }, [closeWith]);
+  }, [closeWith, markBound]);
 
   const waitConnected = (socket: GameSocket) =>
     new Promise<boolean>((resolve) => {
@@ -140,7 +176,7 @@ export function usePlayerGame(initialCode: string | null) {
   const submitCode = useCallback(
     async (raw: string) => {
       const gen = ++generation.current;
-      const code = raw.replace(/\s+/g, "").toUpperCase();
+      const code = normalizeGameCode(raw);
       setStep({ kind: "checking", code });
       const seat = loadSeat(code);
       if (seat) {
@@ -236,6 +272,7 @@ export function usePlayerGame(initialCode: string | null) {
         };
         seatRef.current = seat;
         saveSeat(seat);
+        markBound();
         seedOffset(res.data.view.serverTime);
         setView(res.data.view);
         setStep({ kind: "playing" });
@@ -249,7 +286,7 @@ export function usePlayerGame(initialCode: string | null) {
         setStep({ kind: "name", game, error: res.error });
       }
     },
-    [step, ensureSocket],
+    [step, ensureSocket, markBound],
   );
 
   /** Answers are optimistic for feel; the server's ack is the truth. */
@@ -264,6 +301,14 @@ export function usePlayerGame(initialCode: string | null) {
       if (!socket || !q)
         return { ok: false, code: "QUESTION_NOT_ACTIVE", message: "No open question." };
       setPendingAnswer(optionId);
+      if (!(await waitBound(4000))) {
+        setPendingAnswer(null);
+        return {
+          ok: false,
+          code: "INTERNAL",
+          message: "Your connection dropped. Tap again once you're back online.",
+        };
+      }
       const res = await emitAck<AnswerReceipt>(
         socket,
         "question:answer",

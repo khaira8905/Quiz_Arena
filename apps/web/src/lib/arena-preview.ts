@@ -94,7 +94,7 @@ const NAMES = [
   "Ravi",
 ];
 
-const PREVIEW_CODE = "QA2048";
+const PREVIEW_CODE = "QA204816";
 const PLAYER_COUNT = 87;
 
 function players(): PlayerSummary[] {
@@ -182,6 +182,7 @@ export function previewHostView(s: ArenaPreviewState, now: number): HostView {
     settings: { ...s.settings, soundEnabled: false, appearance: s.appearance },
     countdownEndsAt: null,
     questionCount: Math.max(1, s.questionCount),
+    questionIndex: phase === "LOBBY" ? -1 : 0,
     players: phase === "LOBBY" ? players() : [],
     playerCount: phase === "LOBBY" ? NAMES.length : PLAYER_COUNT,
     connectedCount: phase === "LOBBY" ? NAMES.length : PLAYER_COUNT,

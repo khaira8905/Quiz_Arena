@@ -3,7 +3,7 @@ import { createClient } from "redis";
 import type { IoServer } from "./gateway";
 
 /**
- * Enables cross-node fan-out: an emit to `h:QA4821` on node A reaches host sockets connected
+ * Enables cross-node fan-out: an emit to `h:QA482193` on node A reaches host sockets connected
  * to node B. Game rooms themselves remain owned by one node — route players by game code
  * (see docs/ARCHITECTURE.md, "Scaling out").
  */

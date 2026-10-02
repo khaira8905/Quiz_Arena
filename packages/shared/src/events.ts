@@ -1,5 +1,5 @@
 import type { ErrorCode } from "./errors";
-import type { HostCommand, HostView, PlayerSummary, PlayerView } from "./game";
+import type { GamePhase, HostCommand, HostView, PlayerSummary, PlayerView } from "./game";
 
 /**
  * Socket.IO contract. Both the server (`new Server<ClientToServerEvents, ServerToClientEvents>`)
@@ -60,6 +60,8 @@ export interface HostAttachPayload {
 export interface HostCommandPayload {
   code: string;
   command: HostCommand;
+  /** The phase and question the sender was looking at (see hostCommandSchema). */
+  expected?: { phase: GamePhase; questionIndex: number };
 }
 
 export interface ClientToServerEvents {

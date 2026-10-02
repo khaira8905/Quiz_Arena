@@ -176,6 +176,8 @@ export interface HostView {
   settings: LiveSettings;
   countdownEndsAt: number | null;
   questionCount: number;
+  /** Index of the current (or last played) question; -1 before the first one opens. */
+  questionIndex: number;
   players: PlayerSummary[];
   playerCount: number;
   connectedCount: number;

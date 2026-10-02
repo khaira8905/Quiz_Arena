@@ -10,7 +10,7 @@ import { GameRoom } from "../src/game/game-room";
 import { MemoryGamePersistence } from "../src/game/persistence";
 import type { QuizSnapshot } from "../src/game/snapshot";
 
-export const silentLog = { error: () => {}, info: () => {} };
+export const silentLog = { error: () => {}, warn: () => {}, info: () => {} };
 
 export function makeSnapshot(
   overrides: Partial<LiveSettings> = {},
@@ -97,7 +97,7 @@ export function makeRoom(settings: Partial<LiveSettings> = {}, questionCount = 3
   const room = new GameRoom(
     {
       sessionId: "sess_1",
-      code: "QA1234",
+      code: "QA123456",
       hostId: "user_1",
       snapshot: makeSnapshot(settings, questionCount),
     },

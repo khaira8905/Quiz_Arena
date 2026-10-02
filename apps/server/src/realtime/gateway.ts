@@ -73,7 +73,23 @@ interface GatewayDeps {
   log: Logger;
 }
 
+/**
+ * Per-room join budget, independent of who is joining: a room fills at most this fast, so a
+ * script with many sockets can't turn joins into a database flood. A real crowd of 500
+ * scanning a QR code in the same minute fits comfortably (300 burst, then 30/s).
+ */
+const ROOM_JOIN_BURST = 300;
+const ROOM_JOINS_PER_SECOND = 30;
+
 export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
+  const roomJoins = new WeakMap<GameRoom, TokenBucket>();
+  const takeRoomJoin = (room: GameRoom) => {
+    let bucket = roomJoins.get(room);
+    if (!bucket)
+      roomJoins.set(room, (bucket = new TokenBucket(ROOM_JOIN_BURST, ROOM_JOINS_PER_SECOND)));
+    if (!bucket.take()) throw new AppError("RATE_LIMITED");
+  };
+
   io.use(async (socket, next) => {
     socket.data = { role: "anonymous", userId: null, gameCode: null, participantId: null };
     const ticket: unknown = socket.handshake.auth?.ticket;
@@ -160,16 +176,16 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
       handle(async (raw) => {
         const payload = joinPayloadSchema.parse(raw);
         const room = roomFor(payload.code);
-        // Leaving a previous seat in the same game first keeps "rejoin with a new name" sane.
-        if (
-          socket.data.role === "player" &&
-          socket.data.gameCode === room.code &&
-          socket.data.participantId
-        ) {
-          room.remove(socket.data.participantId);
-        }
+        // "Rejoin with a new name" from the same socket: only give up the old seat once the
+        // new one exists, so a refused name (taken, invalid) never costs the player a score.
+        const previous =
+          socket.data.role === "player" && socket.data.gameCode === room.code
+            ? socket.data.participantId
+            : null;
+        takeRoomJoin(room);
         const result = await room.join(payload.nickname);
         await bindPlayer(room.code, result.participantId);
+        if (previous) room.remove(previous);
         return result;
       }, joins),
     );
@@ -241,9 +257,9 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
     socket.on(
       "host:command",
       handle((raw) => {
-        const { code, command } = hostCommandSchema.parse(raw);
+        const { code, command, expected } = hostCommandSchema.parse(raw);
         const room = requireHost(code);
-        room.command(command);
+        room.command(command, expected);
         return room.hostView();
       }),
     );

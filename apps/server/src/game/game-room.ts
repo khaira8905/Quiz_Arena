@@ -22,9 +22,13 @@ import {
 import { createPlayerToken, hashToken } from "../lib/auth";
 import { AppError } from "../lib/errors";
 import { newId } from "../lib/random";
+import { withRetry } from "../lib/retry";
 import { throttle } from "../lib/throttle";
 import type { AnswerRecord, GamePersistence } from "./persistence";
 import type { QuizSnapshot, SnapshotQuestion } from "./snapshot";
+
+/** Backoff for writes that must survive a database blip (about 1.5 minutes in total). */
+const PERSIST_RETRY_DELAYS_MS = [1_000, 5_000, 20_000, 60_000];
 
 /**
  * Transport-agnostic output. The Socket.IO gateway implements this with rooms; tests
@@ -45,6 +49,7 @@ export interface RoomOutput {
 
 export interface Logger {
   error(obj: unknown, msg?: string): void;
+  warn(obj: unknown, msg?: string): void;
   info(obj: unknown, msg?: string): void;
 }
 
@@ -106,6 +111,10 @@ export class GameRoom {
   private readonly lobbyEvictions = new Map<string, ReturnType<typeof setTimeout>>();
   private finishedAt: number | null = null;
   private results: FinalResults | null = null;
+  private resultsSaved = false;
+  private saving: Promise<void> | null = null;
+  /** Last host command, join or answer: lets the manager end games their host walked away from. */
+  private lastActivityAt = Date.now();
 
   private readonly emitProgress: ReturnType<typeof throttle>;
   private readonly emitCounts: ReturnType<typeof throttle>;
@@ -138,6 +147,15 @@ export class GameRoom {
 
   get finishedTime() {
     return this.finishedAt;
+  }
+
+  /** False until the final standings are safely in the database. */
+  get resultsPersisted() {
+    return this.resultsSaved;
+  }
+
+  get lastActivity() {
+    return this.lastActivityAt;
   }
 
   get quizTitle() {
@@ -178,6 +196,7 @@ export class GameRoom {
     rawNickname: string,
   ): Promise<{ participantId: string; token: string; view: PlayerView }> {
     if (this.phase === "FINISHED") throw new AppError("GAME_ENDED");
+    this.lastActivityAt = Date.now();
     if (this.phase !== "LOBBY" && !this.snapshot.settings.allowLateJoin)
       throw new AppError("GAME_ALREADY_STARTED");
     if (this.participants.size + this.reserved.size >= this.snapshot.settings.participantLimit) {
@@ -318,6 +337,7 @@ export class GameRoom {
     optionId: string,
     receivedAt = Date.now(),
   ): AnswerReceipt {
+    this.lastActivityAt = receivedAt;
     const p = this.participants.get(participantId);
     if (!p) throw new AppError("SESSION_EXPIRED");
     const q = this.question;
@@ -366,8 +386,14 @@ export class GameRoom {
     }
   }
 
-  command(command: HostCommand): void {
+  command(command: HostCommand, expected?: { phase: GamePhase; questionIndex: number }): void {
+    if (
+      expected &&
+      (expected.phase !== this.phase || expected.questionIndex !== this.questionIndex)
+    )
+      throw new AppError("COMMAND_OUT_OF_DATE");
     if (!this.availableCommands().includes(command)) throw new AppError("COMMAND_NOT_ALLOWED");
+    this.lastActivityAt = Date.now();
     switch (command) {
       case "START":
         return this.start();
@@ -393,6 +419,9 @@ export class GameRoom {
   }
 
   private start() {
+    // Everyone seated at the whistle keeps their seat, connected or not.
+    for (const t of this.lobbyEvictions.values()) clearTimeout(t);
+    this.lobbyEvictions.clear();
     this.setPhase("COUNTDOWN");
     this.countdownEndsAt = Date.now() + START_COUNTDOWN_MS;
     this.schedule(START_COUNTDOWN_MS, () => this.openQuestion(0));
@@ -509,8 +538,17 @@ export class GameRoom {
       };
     }
 
-    this.persistence.answersScored(this.sessionId, records).catch((err) => {
-      this.log.error({ err, code: this.code }, "failed to persist answers");
+    // Idempotent (skipDuplicates), so retrying after a partial failure is safe.
+    withRetry(
+      () => this.persistence.answersScored(this.sessionId, records),
+      PERSIST_RETRY_DELAYS_MS,
+      (err, attempt) =>
+        this.log.warn({ err, code: this.code, attempt }, "retrying answer persistence"),
+    ).catch((err) => {
+      this.log.error(
+        { err, code: this.code, question: this.questionIndex, answers: records.length },
+        "failed to persist answers",
+      );
     });
     this.setPhase("ANSWER_REVEAL");
     this.broadcast();
@@ -537,10 +575,43 @@ export class GameRoom {
     for (const t of this.lobbyEvictions.values()) clearTimeout(t);
     this.lobbyEvictions.clear();
 
-    this.persistence.sessionFinished(this.sessionId, this.finishedAt, this.results).catch((err) => {
-      this.log.error({ err, code: this.code }, "failed to persist results");
-    });
+    void this.saveResults();
     this.broadcast();
+  }
+
+  /**
+   * Persists the final standings, retrying through a database blip. If every attempt fails
+   * the room stays in memory (see GameManager) and the manager calls this again later.
+   */
+  saveResults(): Promise<void> {
+    if (!this.results || this.finishedAt === null || this.resultsSaved) return Promise.resolve();
+    if (this.saving) return this.saving;
+    const { results, finishedAt } = this;
+    this.saving = withRetry(
+      () => this.persistence.sessionFinished(this.sessionId, finishedAt, results),
+      PERSIST_RETRY_DELAYS_MS,
+      (err, attempt) => this.log.warn({ err, code: this.code, attempt }, "retrying results save"),
+    ).then(
+      () => {
+        this.resultsSaved = true;
+        this.saving = null;
+      },
+      (err) => {
+        this.saving = null;
+        this.log.error({ err, code: this.code }, "failed to persist results; will retry");
+      },
+    );
+    return this.saving;
+  }
+
+  /** Ends a game nobody is driving any more, saving the results reached so far. */
+  endAbandoned() {
+    this.finish();
+  }
+
+  /** Last resort before the room is dropped: the standings go to the log, not to nowhere. */
+  get unsavedResults(): FinalResults | null {
+    return this.resultsSaved ? null : this.results;
   }
 
   /** Called by the manager when the room is torn down. */
@@ -712,6 +783,7 @@ export class GameRoom {
       settings: this.snapshot.settings,
       countdownEndsAt: this.countdownEndsAt,
       questionCount: this.snapshot.questions.length,
+      questionIndex: this.questionIndex,
       players: [...this.participants.values()].map((p) => this.summarize(p)),
       playerCount: this.participants.size,
       connectedCount: this.connectedCount,

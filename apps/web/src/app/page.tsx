@@ -51,7 +51,7 @@ export default function Home() {
           <div className="label text-fg-3">Have a code?</div>
           <h2 className="mt-3 font-display text-h1">Enter the arena</h2>
           <p className="mt-2 text-body text-fg-2">
-            It&apos;s on the big screen — looks like QA4821.
+            It&apos;s on the big screen — looks like QA482193.
           </p>
           <JoinCodeForm />
         </div>

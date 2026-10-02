@@ -1,5 +1,6 @@
 "use client";
 
+import { GAME_CODE_PATTERN, normalizeGameCode } from "@quizarena/shared/constants";
 import { ERROR_COPY } from "@quizarena/shared/errors";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -114,7 +115,8 @@ function CodeStep({
   onSubmit: (code: string) => void;
 }) {
   const [code, setCode] = useState(initial);
-  const clean = code.replace(/\s+/g, "").toUpperCase();
+  const clean = normalizeGameCode(code);
+  const complete = GAME_CODE_PATTERN.test(clean);
   const title = error
     ? (ERROR_COPY[error.code as keyof typeof ERROR_COPY]?.title ?? "Something's off")
     : null;
@@ -124,7 +126,7 @@ function CodeStep({
       {...stepMotion}
       onSubmit={(e) => {
         e.preventDefault();
-        if (clean.length >= 4) onSubmit(clean);
+        if (complete) onSubmit(clean);
       }}
       className="flex flex-col"
     >
@@ -142,14 +144,14 @@ function CodeStep({
         autoCapitalize="characters"
         spellCheck={false}
         maxLength={8}
-        placeholder="QA0000"
+        placeholder="QA000000"
         value={code}
         onChange={(e) => setCode(e.target.value.toUpperCase())}
         aria-invalid={!!error}
         aria-describedby={error ? "code-error" : undefined}
         animate={error ? { x: [0, -10, 8, -5, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
-        className="numeric mt-8 h-20 w-full rounded-md border-2 border-line-strong bg-sunken text-center text-[2.75rem] font-extrabold tracking-[0.1em] text-fg placeholder:text-fg-3/40 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger"
+        className="numeric mt-8 h-20 w-full rounded-md border-2 border-line-strong bg-sunken text-center text-[clamp(1.75rem,9vw,2.75rem)] font-extrabold tracking-[0.1em] text-fg placeholder:text-fg-3/40 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger"
       />
       {error && (
         <div
@@ -161,7 +163,7 @@ function CodeStep({
           <p className="text-body-sm text-fg-2">{error.message}</p>
         </div>
       )}
-      <Button type="submit" size="xl" className="mt-6 w-full" disabled={clean.length < 4} notch>
+      <Button type="submit" size="xl" className="mt-6 w-full" disabled={!complete} notch>
         Continue <ArrowRight className="h-5 w-5" />
       </Button>
     </motion.form>
