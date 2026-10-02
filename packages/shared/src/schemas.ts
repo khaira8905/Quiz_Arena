@@ -15,6 +15,7 @@ import {
   TIMER_MAX_SECONDS,
   TIMER_MIN_SECONDS,
 } from "./constants";
+import { arenaAppearanceSchema } from "./appearance";
 import { HOST_COMMANDS } from "./game";
 import { QUESTION_TYPES, QUESTION_TYPE_RULES } from "./question-types";
 import { SCORING_MODES } from "./scoring";
@@ -101,6 +102,7 @@ export const quizUpdateSchema = quizSettingsSchema.partial().extend({
   description: plainText(QUIZ_DESCRIPTION_MAX).optional(),
   coverImageUrl: imageUrl.optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
+  appearance: arenaAppearanceSchema.optional(),
 });
 export type QuizUpdateInput = z.infer<typeof quizUpdateSchema>;
 

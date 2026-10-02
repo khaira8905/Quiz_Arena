@@ -254,6 +254,55 @@ describe.skipIf(!hasDb)("REST API", () => {
     expect(del.statusCode).toBe(204);
   });
 
+  it("stores a validated arena appearance and refuses unreadable colours", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/quizzes",
+      headers: { cookie: aliceCookie },
+      payload: { title: "Themed" },
+    });
+    const id = created.json().quiz.id;
+    expect(created.json().quiz.appearance.theme).toBe("BLACK");
+
+    const ok = await app.inject({
+      method: "PATCH",
+      url: `/api/quizzes/${id}`,
+      headers: { cookie: aliceCookie },
+      payload: {
+        appearance: {
+          theme: "WHITE",
+          accent: "#2443ff",
+          eventName: "ACM Night",
+          timerStyle: "DIGITAL",
+        },
+      },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().quiz.appearance).toMatchObject({
+      theme: "WHITE",
+      accent: "#2443ff",
+      eventName: "ACM Night",
+      timerStyle: "DIGITAL",
+      motion: "NORMAL",
+    });
+
+    const bad = await app.inject({
+      method: "PATCH",
+      url: `/api/quizzes/${id}`,
+      headers: { cookie: aliceCookie },
+      payload: { appearance: { theme: "WHITE", accent: "#fafafa" } },
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error.details[0].path).toBe("appearance.accent");
+
+    const copy = await app.inject({
+      method: "POST",
+      url: `/api/quizzes/${id}/duplicate`,
+      headers: { cookie: aliceCookie },
+    });
+    expect(copy.json().quiz.appearance.theme).toBe("WHITE");
+  });
+
   it("rejects unknown game codes on the public lookup", async () => {
     expect((await app.inject({ method: "GET", url: "/api/games/QA0001" })).json()).toMatchObject({
       error: { code: "INVALID_GAME_CODE" },

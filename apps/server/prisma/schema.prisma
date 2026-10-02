@@ -69,6 +69,9 @@ model Quiz {
   participantLimit   Int         @default(200)
   soundEnabled       Boolean     @default(true)
   nicknameFilter     Boolean     @default(true)
+  /// Arena appearance (theme, colours, typography, motion, layouts, branding).
+  /// Validated by arenaAppearanceSchema; null means the defaults.
+  appearance         Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

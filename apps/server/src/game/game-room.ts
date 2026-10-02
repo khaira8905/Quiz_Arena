@@ -765,6 +765,7 @@ export class GameRoom {
         : null,
       explanation: revealed && showCorrectAnswers && q?.explanation ? q.explanation : null,
       soundEnabled: this.snapshot.settings.soundEnabled,
+      appearance: this.snapshot.settings.appearance,
     };
   }
 

@@ -11,6 +11,7 @@ import {
 } from "@quizarena/shared";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { Prisma } from "../../db";
 import { AppError } from "../../lib/errors";
 import { requireUser, type AppContext } from "../context";
 import { questionDto, quizDto, quizSummaryDto } from "../mappers";
@@ -146,11 +147,13 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       updatedAt: _u,
       questions,
       _count: _n,
+      appearance,
       ...settings
     } = source;
     const copy = await ctx.db.quiz.create({
       data: {
         ...settings,
+        appearance: appearance ?? Prisma.JsonNull,
         ownerId: userId,
         title: `${source.title} (copy)`.slice(0, 120),
         status: "DRAFT",
