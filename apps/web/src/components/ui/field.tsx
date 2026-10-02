@@ -9,29 +9,34 @@ const control =
   "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft " +
   "disabled:opacity-50 aria-[invalid=true]:border-danger";
 
-export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
-  { className, ...props },
-  ref,
-) {
-  return <input ref={ref} className={cn(control, "h-11", className)} {...props} />;
-});
-
-export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  function Textarea({ className, ...props }, ref) {
-    return <textarea ref={ref} className={cn(control, "min-h-24 resize-y py-3", className)} {...props} />;
+export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...props }, ref) {
+    return <input ref={ref} className={cn(control, "h-11", className)} {...props} />;
   },
 );
 
-export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(function Select(
-  { className, children, ...props },
-  ref,
-) {
+export const Textarea = forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea({ className, ...props }, ref) {
   return (
-    <select ref={ref} className={cn(control, "h-11 appearance-none bg-[length:12px] pr-9", className)} {...props}>
-      {children}
-    </select>
+    <textarea ref={ref} className={cn(control, "min-h-24 resize-y py-3", className)} {...props} />
   );
 });
+
+export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  function Select({ className, children, ...props }, ref) {
+    return (
+      <select
+        ref={ref}
+        className={cn(control, "h-11 appearance-none bg-[length:12px] pr-9", className)}
+        {...props}
+      >
+        {children}
+      </select>
+    );
+  },
+);
 
 /** Label + control + hint/error, wired together with ids for screen readers. */
 export function Field({
@@ -47,7 +52,11 @@ export function Field({
   error?: string | null;
   className?: string;
   aside?: React.ReactNode;
-  children: (props: { id: string; "aria-describedby"?: string; "aria-invalid"?: boolean }) => React.ReactNode;
+  children: (props: {
+    id: string;
+    "aria-describedby"?: string;
+    "aria-invalid"?: boolean;
+  }) => React.ReactNode;
 }) {
   const id = useId();
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;

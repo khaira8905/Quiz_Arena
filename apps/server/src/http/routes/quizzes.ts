@@ -22,18 +22,25 @@ const listQuery = z.object({
 });
 
 const counts = { _count: { select: { questions: true, sessions: true } } } as const;
-const withQuestions = { ...counts, questions: { include: { options: true }, orderBy: { order: "asc" } } } as const;
+const withQuestions = {
+  ...counts,
+  questions: { include: { options: true }, orderBy: { order: "asc" } },
+} as const;
 
 function defaultOptions(type: QuestionType) {
   const rules = QUESTION_TYPE_RULES[type];
-  if (rules.fixedOptions) return rules.fixedOptions.map((text, i) => ({ text, isCorrect: i === 0 }));
+  if (rules.fixedOptions)
+    return rules.fixedOptions.map((text, i) => ({ text, isCorrect: i === 0 }));
   return Array.from({ length: rules.maxOptions }, () => ({ text: "", isCorrect: false }));
 }
 
 export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
   /** Loads a quiz the caller owns. Missing and foreign quizzes are indistinguishable (404). */
   const ownedQuiz = async (userId: string, id: string) => {
-    const quiz = await ctx.db.quiz.findFirst({ where: { id, ownerId: userId }, include: withQuestions });
+    const quiz = await ctx.db.quiz.findFirst({
+      where: { id, ownerId: userId },
+      include: withQuestions,
+    });
     if (!quiz) throw new AppError("NOT_FOUND", "Quiz not found.");
     return quiz;
   };
@@ -47,13 +54,18 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     return question;
   };
 
-  const touchQuiz = (quizId: string) => ctx.db.quiz.update({ where: { id: quizId }, data: { updatedAt: new Date() } });
+  const touchQuiz = (quizId: string) =>
+    ctx.db.quiz.update({ where: { id: quizId }, data: { updatedAt: new Date() } });
 
   app.get("/api/quizzes", async (req) => {
     const userId = await requireUser(ctx, req);
     const { status, q } = listQuery.parse(req.query);
     const quizzes = await ctx.db.quiz.findMany({
-      where: { ownerId: userId, status, ...(q ? { title: { contains: q, mode: "insensitive" } } : {}) },
+      where: {
+        ownerId: userId,
+        status,
+        ...(q ? { title: { contains: q, mode: "insensitive" } } : {}),
+      },
       include: counts,
       orderBy: { updatedAt: "desc" },
       take: 200,
@@ -70,7 +82,13 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
         title: input.title,
         description: input.description,
         questions: {
-          create: { order: 0, type: "MULTIPLE_CHOICE", options: { create: defaultOptions("MULTIPLE_CHOICE").map((o, i) => ({ ...o, order: i })) } },
+          create: {
+            order: 0,
+            type: "MULTIPLE_CHOICE",
+            options: {
+              create: defaultOptions("MULTIPLE_CHOICE").map((o, i) => ({ ...o, order: i })),
+            },
+          },
         },
       },
       include: withQuestions,
@@ -121,7 +139,15 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const userId = await requireUser(ctx, req);
     const { id } = idParams.parse(req.params);
     const source = await ownedQuiz(userId, id);
-    const { id: _id, ownerId: _o, createdAt: _c, updatedAt: _u, questions, _count: _n, ...settings } = source;
+    const {
+      id: _id,
+      ownerId: _o,
+      createdAt: _c,
+      updatedAt: _u,
+      questions,
+      _count: _n,
+      ...settings
+    } = source;
     const copy = await ctx.db.quiz.create({
       data: {
         ...settings,
@@ -138,7 +164,13 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
             points: q.points,
             explanation: q.explanation,
             randomizeAnswers: q.randomizeAnswers,
-            options: { create: q.options.map((o) => ({ order: o.order, text: o.text, isCorrect: o.isCorrect })) },
+            options: {
+              create: q.options.map((o) => ({
+                order: o.order,
+                text: o.text,
+                isCorrect: o.isCorrect,
+              })),
+            },
           })),
         },
       },
@@ -154,11 +186,19 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const { id } = idParams.parse(req.params);
     const quiz = await ownedQuiz(userId, id);
     if (quiz.questions.length >= MAX_QUESTIONS_PER_QUIZ) {
-      throw new AppError("BAD_REQUEST", `A quiz can have at most ${MAX_QUESTIONS_PER_QUIZ} questions.`);
+      throw new AppError(
+        "BAD_REQUEST",
+        `A quiz can have at most ${MAX_QUESTIONS_PER_QUIZ} questions.`,
+      );
     }
     const body = (req.body ?? {}) as Record<string, unknown>;
     const type = (body.type as QuestionType | undefined) ?? "MULTIPLE_CHOICE";
-    const input = questionInputSchema.parse({ type, text: "", options: defaultOptions(type), ...body });
+    const input = questionInputSchema.parse({
+      type,
+      text: "",
+      options: defaultOptions(type),
+      ...body,
+    });
     const order = quiz.questions.length;
 
     const question = await ctx.db.question.create({
@@ -172,7 +212,9 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
         points: input.points,
         explanation: input.explanation,
         randomizeAnswers: input.randomizeAnswers,
-        options: { create: input.options.map((o, i) => ({ order: i, text: o.text, isCorrect: o.isCorrect })) },
+        options: {
+          create: input.options.map((o, i) => ({ order: i, text: o.text, isCorrect: o.isCorrect })),
+        },
       },
       include: { options: true },
     });
@@ -190,7 +232,9 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       throw new AppError("CONFLICT", "The question list changed. Refresh and try again.");
     }
     await ctx.db.$transaction(
-      questionIds.map((qid, order) => ctx.db.question.update({ where: { id: qid }, data: { order } })),
+      questionIds.map((qid, order) =>
+        ctx.db.question.update({ where: { id: qid }, data: { order } }),
+      ),
     );
     await touchQuiz(id);
     return { quiz: quizDto(await ownedQuiz(userId, id)) };
@@ -203,12 +247,19 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const existing = await ownedQuestion(userId, id);
 
     const type = patch.type ?? existing.type;
-    let options = patch.options ?? existing.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }));
+    let options =
+      patch.options ?? existing.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }));
     const rules = QUESTION_TYPE_RULES[type];
     if (rules.fixedOptions) {
       // Switching to a fixed-option type keeps the correct choice when it maps cleanly.
-      const correctIndex = Math.max(0, options.findIndex((o) => o.isCorrect));
-      options = rules.fixedOptions.map((text, i) => ({ text, isCorrect: i === Math.min(correctIndex, 1) }));
+      const correctIndex = Math.max(
+        0,
+        options.findIndex((o) => o.isCorrect),
+      );
+      options = rules.fixedOptions.map((text, i) => ({
+        text,
+        isCorrect: i === Math.min(correctIndex, 1),
+      }));
     } else if (options.length > rules.maxOptions) {
       options = options.slice(0, rules.maxOptions);
     }
@@ -231,9 +282,18 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       const before = existing.options[i];
       const after = merged.options[i];
       if (before && after) {
-        ops.push(ctx.db.answerOption.update({ where: { id: before.id }, data: { text: after.text, isCorrect: after.isCorrect, order: i } }));
+        ops.push(
+          ctx.db.answerOption.update({
+            where: { id: before.id },
+            data: { text: after.text, isCorrect: after.isCorrect, order: i },
+          }),
+        );
       } else if (after) {
-        ops.push(ctx.db.answerOption.create({ data: { questionId: id, order: i, text: after.text, isCorrect: after.isCorrect } }));
+        ops.push(
+          ctx.db.answerOption.create({
+            data: { questionId: id, order: i, text: after.text, isCorrect: after.isCorrect },
+          }),
+        );
       } else if (before) {
         ops.push(ctx.db.answerOption.delete({ where: { id: before.id } }));
       }
@@ -269,10 +329,16 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const q = await ownedQuestion(userId, id);
     const total = await ctx.db.question.count({ where: { quizId: q.quizId } });
     if (total >= MAX_QUESTIONS_PER_QUIZ) {
-      throw new AppError("BAD_REQUEST", `A quiz can have at most ${MAX_QUESTIONS_PER_QUIZ} questions.`);
+      throw new AppError(
+        "BAD_REQUEST",
+        `A quiz can have at most ${MAX_QUESTIONS_PER_QUIZ} questions.`,
+      );
     }
     const [, copy] = await ctx.db.$transaction([
-      ctx.db.question.updateMany({ where: { quizId: q.quizId, order: { gt: q.order } }, data: { order: { increment: 1 } } }),
+      ctx.db.question.updateMany({
+        where: { quizId: q.quizId, order: { gt: q.order } },
+        data: { order: { increment: 1 } },
+      }),
       ctx.db.question.create({
         data: {
           quizId: q.quizId,
@@ -284,7 +350,13 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
           points: q.points,
           explanation: q.explanation,
           randomizeAnswers: q.randomizeAnswers,
-          options: { create: q.options.map((o) => ({ order: o.order, text: o.text, isCorrect: o.isCorrect })) },
+          options: {
+            create: q.options.map((o) => ({
+              order: o.order,
+              text: o.text,
+              isCorrect: o.isCorrect,
+            })),
+          },
         },
         include: { options: true },
       }),

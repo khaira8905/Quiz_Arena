@@ -20,8 +20,18 @@ import type { TokenService } from "../lib/auth";
 import { AppError, isAppError } from "../lib/errors";
 import { TokenBucket } from "./socket-rate-limit";
 
-export type IoServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
-type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
+export type IoServer = Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  Record<string, never>,
+  SocketData
+>;
+type IoSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  Record<string, never>,
+  SocketData
+>;
 
 /** Room naming. Every broadcast is addressed to one of these, never to `io` as a whole. */
 export const rooms = {
@@ -32,7 +42,8 @@ export const rooms = {
 
 export function createRoomOutput(io: IoServer, code: string): RoomOutput {
   return {
-    toPlayer: (participantId, view) => io.to(rooms.player(participantId)).emit("session:state", view),
+    toPlayer: (participantId, view) =>
+      io.to(rooms.player(participantId)).emit("session:state", view),
     toHosts: (event, ...args) => io.to(rooms.hosts(code)).emit(event, ...args),
     toPlayers: (event, ...args) => io.to(rooms.players(code)).emit(event, ...args),
     closePlayer: (participantId, errorCode, message) => {
@@ -85,7 +96,10 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
       async (payload: P, ack: Ack<T>) => {
         if (typeof ack !== "function") return;
         if (!bucket.take()) {
-          ack({ ok: false, error: { code: "RATE_LIMITED", message: ERROR_COPY.RATE_LIMITED.message } });
+          ack({
+            ok: false,
+            error: { code: "RATE_LIMITED", message: ERROR_COPY.RATE_LIMITED.message },
+          });
           return;
         }
         try {
@@ -93,7 +107,10 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
         } catch (err) {
           if (isAppError(err)) ack({ ok: false, error: { code: err.code, message: err.message } });
           else if (err instanceof ZodError) {
-            ack({ ok: false, error: { code: "BAD_REQUEST", message: err.issues[0]?.message ?? "Invalid payload" } });
+            ack({
+              ok: false,
+              error: { code: "BAD_REQUEST", message: err.issues[0]?.message ?? "Invalid payload" },
+            });
           } else {
             log.error({ err }, "socket handler failed");
             ack({ ok: false, error: { code: "INTERNAL", message: ERROR_COPY.INTERNAL.message } });
@@ -144,7 +161,11 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
         const payload = joinPayloadSchema.parse(raw);
         const room = roomFor(payload.code);
         // Leaving a previous seat in the same game first keeps "rejoin with a new name" sane.
-        if (socket.data.role === "player" && socket.data.gameCode === room.code && socket.data.participantId) {
+        if (
+          socket.data.role === "player" &&
+          socket.data.gameCode === room.code &&
+          socket.data.participantId
+        ) {
           room.remove(socket.data.participantId);
         }
         const result = await room.join(payload.nickname);
@@ -182,7 +203,12 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
         const payload = answerPayloadSchema.parse(raw);
         const { gameCode, participantId, role } = socket.data;
         if (role !== "player" || !gameCode || !participantId) throw new AppError("SESSION_EXPIRED");
-        return roomFor(gameCode).submitAnswer(participantId, payload.questionId, payload.optionId, receivedAt);
+        return roomFor(gameCode).submitAnswer(
+          participantId,
+          payload.questionId,
+          payload.optionId,
+          receivedAt,
+        );
       }),
     );
 

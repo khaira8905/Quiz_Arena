@@ -1,4 +1,9 @@
-import { gameCodeSchema, sessionCreateSchema, type DashboardDto, type GameLookupDto } from "@quizarena/shared";
+import {
+  gameCodeSchema,
+  sessionCreateSchema,
+  type DashboardDto,
+  type GameLookupDto,
+} from "@quizarena/shared";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { buildSnapshot } from "../../game/snapshot";
@@ -21,7 +26,10 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
   const counts = { _count: { select: { participants: true } } } as const;
 
   const ownedSession = async (userId: string, id: string) => {
-    const session = await ctx.db.quizSession.findFirst({ where: { id, hostId: userId }, include: counts });
+    const session = await ctx.db.quizSession.findFirst({
+      where: { id, hostId: userId },
+      include: counts,
+    });
     if (!session) throw new AppError("NOT_FOUND", "Session not found.");
     return session;
   };
@@ -31,13 +39,19 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
     const { quizId } = sessionCreateSchema.parse(req.body);
     const quiz = await ctx.db.quiz.findFirst({
       where: { id: quizId, ownerId: userId },
-      include: { questions: { include: { options: { orderBy: { order: "asc" } } }, orderBy: { order: "asc" } } },
+      include: {
+        questions: {
+          include: { options: { orderBy: { order: "asc" } } },
+          orderBy: { order: "asc" },
+        },
+      },
     });
     if (!quiz) throw new AppError("NOT_FOUND", "Quiz not found.");
 
     const snapshot = buildSnapshot(quiz);
-    const code = await ctx.games.allocateCode(async (c) =>
-      (await ctx.db.quizSession.count({ where: { code: c, status: { in: [...ACTIVE] } } })) > 0,
+    const code = await ctx.games.allocateCode(
+      async (c) =>
+        (await ctx.db.quizSession.count({ where: { code: c, status: { in: [...ACTIVE] } } })) > 0,
     );
     const session = await ctx.db.quizSession.create({
       data: {
@@ -57,7 +71,11 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
     const userId = await requireUser(ctx, req);
     const { scope } = listQuery.parse(req.query);
     const status =
-      scope === "active" ? { in: [...ACTIVE] } : scope === "past" ? { in: ["FINISHED", "ABANDONED"] as ("FINISHED" | "ABANDONED")[] } : undefined;
+      scope === "active"
+        ? { in: [...ACTIVE] }
+        : scope === "past"
+          ? { in: ["FINISHED", "ABANDONED"] as ("FINISHED" | "ABANDONED")[] }
+          : undefined;
     const sessions = await ctx.db.quizSession.findMany({
       where: { hostId: userId, status },
       include: counts,
@@ -72,19 +90,26 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
     const { id } = idParams.parse(req.params);
     const session = await ownedSession(userId, id);
     const room = ctx.games.get(session.code);
-    const live = room && room.sessionId === session.id ? { phase: room.currentPhase, players: room.participantCount } : null;
+    const live =
+      room && room.sessionId === session.id
+        ? { phase: room.currentPhase, players: room.participantCount }
+        : null;
     return { session: sessionDto(session), live };
   });
 
   const loadResults = async (userId: string, id: string) => {
     const session = await ownedSession(userId, id);
-    if (session.status !== "FINISHED") throw new AppError("CONFLICT", "Results are available once the game has finished.");
+    if (session.status !== "FINISHED")
+      throw new AppError("CONFLICT", "Results are available once the game has finished.");
     const rows = await ctx.db.quizResult.findMany({
       where: { sessionId: id },
       include: { participant: { select: { nickname: true } } },
       orderBy: { rank: "asc" },
     });
-    return { session: sessionDto(session), results: resultsFromRows(rows, sessionDto(session).questionCount) };
+    return {
+      session: sessionDto(session),
+      results: resultsFromRows(rows, sessionDto(session).questionCount),
+    };
   };
 
   app.get("/api/sessions/:id/results", async (req) => {
@@ -97,7 +122,16 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
     const userId = await requireUser(ctx, req);
     const { id } = idParams.parse(req.params);
     const { session, results } = await loadResults(userId, id);
-    const header = ["rank", "nickname", "score", "correct", "answered", "accuracy_pct", "avg_response_ms", "best_streak"];
+    const header = [
+      "rank",
+      "nickname",
+      "score",
+      "correct",
+      "answered",
+      "accuracy_pct",
+      "avg_response_ms",
+      "best_streak",
+    ];
     const lines = results.standings.map((s) =>
       [
         s.rank,
@@ -122,7 +156,15 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
 
   app.get("/api/dashboard", async (req): Promise<DashboardDto> => {
     const userId = await requireUser(ctx, req);
-    const [quizzes, published, sessions, participants, liveSessions, recentQuizzes, recentSessions] = await Promise.all([
+    const [
+      quizzes,
+      published,
+      sessions,
+      participants,
+      liveSessions,
+      recentQuizzes,
+      recentSessions,
+    ] = await Promise.all([
       ctx.db.quiz.count({ where: { ownerId: userId } }),
       ctx.db.quiz.count({ where: { ownerId: userId, status: "PUBLISHED" } }),
       ctx.db.quizSession.count({ where: { hostId: userId } }),
@@ -134,22 +176,43 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
         orderBy: { updatedAt: "desc" },
         take: 6,
       }),
-      ctx.db.quizSession.findMany({ where: { hostId: userId }, include: counts, orderBy: { createdAt: "desc" }, take: 6 }),
+      ctx.db.quizSession.findMany({
+        where: { hostId: userId },
+        include: counts,
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
     ]);
     return {
-      totals: { quizzes, published, drafts: quizzes - published, sessions, participants, liveSessions },
+      totals: {
+        quizzes,
+        published,
+        drafts: quizzes - published,
+        sessions,
+        participants,
+        liveSessions,
+      },
       recentQuizzes: recentQuizzes.map(quizSummaryDto),
       recentSessions: recentSessions.map(sessionDto),
     };
   });
 
   /** Public: lets the join screen validate a code before asking for a nickname. */
-  app.get("/api/games/:code", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req): Promise<GameLookupDto> => {
-    const parsed = gameCodeSchema.safeParse((req.params as { code?: string }).code ?? "");
-    if (!parsed.success) throw new AppError("INVALID_GAME_CODE");
-    const room = ctx.games.get(parsed.data);
-    if (!room) throw new AppError("INVALID_GAME_CODE");
-    if (room.isFinished) throw new AppError("GAME_ENDED");
-    return { code: room.code, quizTitle: room.quizTitle, joinable: room.joinable, phase: room.currentPhase };
-  });
+  app.get(
+    "/api/games/:code",
+    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    async (req): Promise<GameLookupDto> => {
+      const parsed = gameCodeSchema.safeParse((req.params as { code?: string }).code ?? "");
+      if (!parsed.success) throw new AppError("INVALID_GAME_CODE");
+      const room = ctx.games.get(parsed.data);
+      if (!room) throw new AppError("INVALID_GAME_CODE");
+      if (room.isFinished) throw new AppError("GAME_ENDED");
+      return {
+        code: room.code,
+        quizTitle: room.quizTitle,
+        joinable: room.joinable,
+        phase: room.currentPhase,
+      };
+    },
+  );
 }

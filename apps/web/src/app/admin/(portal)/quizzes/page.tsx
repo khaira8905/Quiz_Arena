@@ -22,7 +22,11 @@ export default function QuizzesPage() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (data ?? []).filter((quiz) => (filter === "ALL" || quiz.status === filter) && (!q || quiz.title.toLowerCase().includes(q)));
+    return (data ?? []).filter(
+      (quiz) =>
+        (filter === "ALL" || quiz.status === filter) &&
+        (!q || quiz.title.toLowerCase().includes(q)),
+    );
   }, [data, filter, query]);
 
   const counts = {
@@ -57,14 +61,27 @@ export default function QuizzesPage() {
           ]}
         />
         <div className="relative sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-3" aria-hidden />
-          <Input aria-label="Search quizzes" placeholder="Search by title" value={query} onChange={(e) => setQuery(e.target.value)} className="h-10 pl-9" />
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-3"
+            aria-hidden
+          />
+          <Input
+            aria-label="Search quizzes"
+            placeholder="Search by title"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-10 pl-9"
+          />
         </div>
       </div>
 
       <div className="mt-6">
         {isError ? (
-          <EmptyState title="Couldn't load quizzes" description="The server didn't respond." action={<Button onClick={() => refetch()}>Retry</Button>} />
+          <EmptyState
+            title="Couldn't load quizzes"
+            description="The server didn't respond."
+            action={<Button onClick={() => refetch()}>Retry</Button>}
+          />
         ) : isPending ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }, (_, i) => (
@@ -83,7 +100,9 @@ export default function QuizzesPage() {
             }
           />
         ) : visible.length === 0 ? (
-          <p className="border border-dashed border-line-strong p-8 text-center text-fg-3">Nothing matches that filter.</p>
+          <p className="border border-dashed border-line-strong p-8 text-center text-fg-3">
+            Nothing matches that filter.
+          </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <AnimatePresence mode="popLayout">

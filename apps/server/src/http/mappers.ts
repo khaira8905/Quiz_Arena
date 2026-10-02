@@ -47,7 +47,10 @@ export const quizSummaryDto = (
 });
 
 export const quizDto = (
-  q: Quiz & { _count: { questions: number; sessions: number }; questions: (Question & { options: AnswerOption[] })[] },
+  q: Quiz & {
+    _count: { questions: number; sessions: number };
+    questions: (Question & { options: AnswerOption[] })[];
+  },
 ): QuizDto => ({
   ...quizSummaryDto(q),
   defaultTimerSec: q.defaultTimerSec,
@@ -65,7 +68,9 @@ export const quizDto = (
   questions: [...q.questions].sort((a, b) => a.order - b.order).map(questionDto),
 });
 
-export const sessionDto = (s: QuizSession & { _count: { participants: number } }): SessionSummaryDto => ({
+export const sessionDto = (
+  s: QuizSession & { _count: { participants: number } },
+): SessionSummaryDto => ({
   id: s.id,
   code: s.code,
   status: s.status,
@@ -115,8 +120,12 @@ export function resultsFromRows(
     totalQuestions,
     playedQuestions: played,
     participantCount: standings.length,
-    averageAccuracy: standings.length ? standings.reduce((s, x) => s + x.accuracy, 0) / standings.length : 0,
-    averageResponseMs: timed.length ? timed.reduce((s, x) => s + (x.avgResponseMs ?? 0), 0) / timed.length : null,
+    averageAccuracy: standings.length
+      ? standings.reduce((s, x) => s + x.accuracy, 0) / standings.length
+      : 0,
+    averageResponseMs: timed.length
+      ? timed.reduce((s, x) => s + (x.avgResponseMs ?? 0), 0) / timed.length
+      : null,
     standings,
   };
 }

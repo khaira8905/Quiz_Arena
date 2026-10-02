@@ -9,7 +9,8 @@ type Size = "sm" | "md" | "lg" | "xl" | "icon";
 
 const variants: Record<Variant, string> = {
   primary: "bg-accent text-accent-ink hover:bg-accent-strong",
-  secondary: "bg-elevated text-fg border border-line-strong hover:border-fg-3 hover:bg-[color-mix(in_oklab,var(--surface-elevated)_80%,white_4%)]",
+  secondary:
+    "bg-elevated text-fg border border-line-strong hover:border-fg-3 hover:bg-[color-mix(in_oklab,var(--surface-elevated)_80%,white_4%)]",
   outline: "border border-line-strong text-fg hover:border-fg-2",
   ghost: "text-fg-2 hover:text-fg hover:bg-elevated",
   danger: "bg-danger text-white hover:brightness-110",
@@ -51,7 +52,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...props}
     >
       {loading && <Loader2 className="absolute h-4 w-4 animate-spin" aria-hidden />}
-      <span className={cn("inline-flex items-center gap-[inherit]", loading && "invisible")}>{children}</span>
+      <span className={cn("inline-flex items-center gap-[inherit]", loading && "invisible")}>
+        {children}
+      </span>
     </button>
   );
 });

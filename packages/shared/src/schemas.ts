@@ -35,13 +35,19 @@ const cuid = z.string().min(1).max(64);
 /* ------------------------------------------------------------------ auth */
 
 export const loginSchema = z.object({
-  email: z.email().max(254).transform((e) => e.toLowerCase()),
+  email: z
+    .email()
+    .max(254)
+    .transform((e) => e.toLowerCase()),
   password: z.string().min(1).max(200),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const registerSchema = z.object({
-  email: z.email().max(254).transform((e) => e.toLowerCase()),
+  email: z
+    .email()
+    .max(254)
+    .transform((e) => e.toLowerCase()),
   name: plainText(80).pipe(z.string().min(1)),
   password: z.string().min(10, "Use at least 10 characters").max(200),
 });
@@ -73,7 +79,12 @@ export const quizSettingsSchema = z.object({
   showCorrectAnswers: z.boolean().default(true),
   showAnswerStats: z.boolean().default(true),
   allowLateJoin: z.boolean().default(false),
-  participantLimit: z.number().int().min(2).max(PARTICIPANT_LIMIT_MAX).default(PARTICIPANT_LIMIT_DEFAULT),
+  participantLimit: z
+    .number()
+    .int()
+    .min(2)
+    .max(PARTICIPANT_LIMIT_MAX)
+    .default(PARTICIPANT_LIMIT_DEFAULT),
   soundEnabled: z.boolean().default(true),
   nicknameFilter: z.boolean().default(true),
 });
@@ -147,9 +158,11 @@ export function questionIssues(q: {
   const issues: string[] = [];
   const rules = QUESTION_TYPE_RULES[q.type];
   if (!q.text.trim()) issues.push("Question text is empty");
-  if (q.options.length < rules.minOptions) issues.push(`Needs at least ${rules.minOptions} options`);
+  if (q.options.length < rules.minOptions)
+    issues.push(`Needs at least ${rules.minOptions} options`);
   if (q.options.some((o) => !o.text.trim())) issues.push("Every option needs text");
-  if (q.options.filter((o) => o.isCorrect).length !== 1) issues.push("Mark exactly one correct answer");
+  if (q.options.filter((o) => o.isCorrect).length !== 1)
+    issues.push("Mark exactly one correct answer");
   return issues;
 }
 

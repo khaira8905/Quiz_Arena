@@ -59,8 +59,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div>
           <p className="label text-danger">Server unavailable</p>
           <h1 className="mt-3 font-display text-h1">Can&apos;t reach the control room</h1>
-          <p className="mt-2 text-fg-2">The API isn&apos;t responding. It will retry automatically.</p>
-          <button className="label mt-6 text-accent underline-offset-4 hover:underline" onClick={() => me.refetch()}>
+          <p className="mt-2 text-fg-2">
+            The API isn&apos;t responding. It will retry automatically.
+          </p>
+          <button
+            className="label mt-6 text-accent underline-offset-4 hover:underline"
+            onClick={() => me.refetch()}
+          >
             Retry now
           </button>
         </div>
@@ -70,14 +75,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-ink">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-ink"
+      >
         Skip to content
       </a>
 
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg/90 px-4 backdrop-blur lg:hidden">
         <Logo size="sm" />
-        <button aria-label="Open navigation" aria-expanded={drawer} onClick={() => setDrawer(true)} className="rounded-sm p-2 text-fg-2 hover:text-fg">
+        <button
+          aria-label="Open navigation"
+          aria-expanded={drawer}
+          onClick={() => setDrawer(true)}
+          className="rounded-sm p-2 text-fg-2 hover:text-fg"
+        >
           <Menu className="h-5 w-5" />
         </button>
       </header>
@@ -103,7 +116,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 420, damping: 40 }}
             >
-              <button aria-label="Close navigation" onClick={() => setDrawer(false)} className="absolute right-3 top-4 z-10 rounded-sm p-2 text-fg-2">
+              <button
+                aria-label="Close navigation"
+                onClick={() => setDrawer(false)}
+                className="absolute right-3 top-4 z-10 rounded-sm p-2 text-fg-2"
+              >
                 <X className="h-5 w-5" />
               </button>
               <Sidebar userName={me.data.name} email={me.data.email} />
@@ -114,7 +131,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <main id="main" className="min-w-0 px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
         {/* Workspaces (editor, live control) use the full width; content pages stay readable. */}
-        <div className={cn("mx-auto", WIDE_ROUTES.test(pathname) ? "max-w-[1600px]" : "max-w-6xl")}>{children}</div>
+        <div className={cn("mx-auto", WIDE_ROUTES.test(pathname) ? "max-w-[1600px]" : "max-w-6xl")}>
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -183,7 +202,9 @@ function Sidebar({ userName, email }: { userName: string; email: string }) {
             aria-label="Sign out"
             title="Sign out"
             className="rounded-sm p-2 text-fg-3 transition-colors hover:text-fg"
-            onClick={() => logout.mutate(undefined, { onSettled: () => router.replace("/admin/login") })}
+            onClick={() =>
+              logout.mutate(undefined, { onSettled: () => router.replace("/admin/login") })
+            }
           >
             <LogOut className="h-4 w-4" />
           </button>

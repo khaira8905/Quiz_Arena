@@ -37,7 +37,8 @@ export function Countdown({
 
   useEffect(() => {
     if (!sound || !active || timer?.paused) return;
-    if (seconds !== lastTick.current && seconds > 0 && seconds <= 5) play(seconds <= 3 ? "tickUrgent" : "tick");
+    if (seconds !== lastTick.current && seconds > 0 && seconds <= 5)
+      play(seconds <= 3 ? "tickUrgent" : "tick");
     lastTick.current = seconds;
   }, [seconds, sound, active, timer?.paused]);
 
@@ -70,11 +71,22 @@ export function Countdown({
       <motion.svg
         viewBox="0 0 100 100"
         className="absolute inset-0 -rotate-90"
-        animate={reduced ? undefined : { scale: urgency >= 1 && urgency < 4 ? [1, RING.pulse[urgency]!, 1] : 1 }}
+        animate={
+          reduced
+            ? undefined
+            : { scale: urgency >= 1 && urgency < 4 ? [1, RING.pulse[urgency]!, 1] : 1 }
+        }
         transition={{ duration: 0.45, ease: "easeOut" }}
         key={urgency >= 1 && urgency < 4 ? `pulse-${seconds}` : "static"}
       >
-        <circle cx="50" cy="50" r={r} fill="var(--surface-sunken)" stroke="var(--line)" strokeWidth="5" />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="var(--surface-sunken)"
+          stroke="var(--line)"
+          strokeWidth="5"
+        />
         <circle
           cx="50"
           cy="50"
@@ -132,11 +144,17 @@ export function CountdownBar({ timer, active }: { timer: TimerState | null; acti
   return (
     <div className="flex items-center gap-3" role="timer" aria-label={`${seconds} seconds left`}>
       <div className="relative h-2 flex-1 overflow-hidden bg-line">
-        <div className={cn("absolute inset-y-0 left-0 transition-colors", color)} style={{ width: `${progress * 100}%` }} />
+        <div
+          className={cn("absolute inset-y-0 left-0 transition-colors", color)}
+          style={{ width: `${progress * 100}%` }}
+        />
       </div>
       <motion.span
         key={urgency >= 2 ? seconds : "calm"}
-        className={cn("numeric w-10 text-right text-2xl font-extrabold", urgency >= 2 && "text-danger")}
+        className={cn(
+          "numeric w-10 text-right text-2xl font-extrabold",
+          urgency >= 2 && "text-danger",
+        )}
         initial={reduced || urgency < 2 ? false : { scale: 1.6 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 600, damping: 20 }}

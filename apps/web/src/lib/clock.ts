@@ -17,7 +17,10 @@ export function seedOffset(serverTime: number) {
   if (bestRtt === Infinity) offset = serverTime - Date.now();
 }
 
-export async function syncClock(socket: Socket<ServerToClientEvents, ClientToServerEvents>, probes = 5) {
+export async function syncClock(
+  socket: Socket<ServerToClientEvents, ClientToServerEvents>,
+  probes = 5,
+) {
   bestRtt = Infinity;
   for (let i = 0; i < probes; i++) {
     if (!socket.connected) return;

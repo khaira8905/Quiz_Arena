@@ -3,7 +3,11 @@ import { Logo } from "@/components/brand/logo";
 
 export const metadata = { title: "Sign in" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const { next } = await searchParams;
   // Only allow internal admin redirects.
   const safeNext = next && next.startsWith("/admin") && !next.startsWith("//") ? next : "/admin";
@@ -40,7 +44,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="mx-auto w-full max-w-sm">
           <Logo className="mb-10 lg:hidden" />
           <h2 className="font-display text-h1">Sign in</h2>
-          <p className="mt-2 text-body text-fg-2">Organisers and hosts only. Players join at the home page.</p>
+          <p className="mt-2 text-body text-fg-2">
+            Organisers and hosts only. Players join at the home page.
+          </p>
           <LoginForm next={safeNext} />
         </div>
       </section>

@@ -6,7 +6,14 @@ import { cn } from "@/lib/cn";
  */
 export function LogoMark({ className, size = 28 }: { className?: string; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden className={className}>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
       <path
         d="M16 2.5 27.7 9.25v13.5L16 29.5 4.3 22.75V9.25L16 2.5Z"
         stroke="currentColor"
@@ -19,11 +26,20 @@ export function LogoMark({ className, size = 28 }: { className?: string; size?: 
   );
 }
 
-export function Logo({ className, size = "md" }: { className?: string; size?: "sm" | "md" | "lg" }) {
+export function Logo({
+  className,
+  size = "md",
+}: {
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}) {
   const mark = { sm: 22, md: 28, lg: 44 }[size];
   const text = { sm: "text-[15px]", md: "text-[19px]", lg: "text-[30px]" }[size];
   return (
-    <span className={cn("inline-flex items-center gap-2.5 text-fg", className)} aria-label="QuizArena">
+    <span
+      className={cn("inline-flex items-center gap-2.5 text-fg", className)}
+      aria-label="QuizArena"
+    >
       <LogoMark size={mark} />
       <span className={cn("font-display font-extrabold tracking-[-0.04em] leading-none", text)}>
         QUIZ<span className="text-accent">ARENA</span>

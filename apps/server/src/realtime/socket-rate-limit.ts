@@ -15,7 +15,10 @@ export class TokenBucket {
 
   take(cost = 1): boolean {
     const now = Date.now();
-    this.tokens = Math.min(this.capacity, this.tokens + ((now - this.updated) / 1000) * this.refillPerSecond);
+    this.tokens = Math.min(
+      this.capacity,
+      this.tokens + ((now - this.updated) / 1000) * this.refillPerSecond,
+    );
     this.updated = now;
     if (this.tokens < cost) return false;
     this.tokens -= cost;

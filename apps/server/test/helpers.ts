@@ -6,7 +6,10 @@ import type { QuizSnapshot } from "../src/game/snapshot";
 
 export const silentLog = { error: () => {}, info: () => {} };
 
-export function makeSnapshot(overrides: Partial<LiveSettings> = {}, questionCount = 3): QuizSnapshot {
+export function makeSnapshot(
+  overrides: Partial<LiveSettings> = {},
+  questionCount = 3,
+): QuizSnapshot {
   return {
     quizId: "quiz_1",
     title: "Test Quiz",
@@ -53,10 +56,16 @@ export class RecordingOutput implements RoomOutput {
     list.push(view);
     this.playerViews.set(id, list);
   }
-  toHosts<E extends keyof ServerToClientEvents>(event: E, ...args: Parameters<ServerToClientEvents[E]>) {
+  toHosts<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ) {
     this.hostEvents.push({ event, payload: args[0] });
   }
-  toPlayers<E extends keyof ServerToClientEvents>(event: E, ...args: Parameters<ServerToClientEvents[E]>) {
+  toPlayers<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ) {
     this.playerEvents.push({ event, payload: args[0] });
   }
   closePlayer(participantId: string, code: string) {
@@ -79,7 +88,12 @@ export function makeRoom(settings: Partial<LiveSettings> = {}, questionCount = 3
   const output = new RecordingOutput();
   const persistence = new MemoryGamePersistence();
   const room = new GameRoom(
-    { sessionId: "sess_1", code: "QA1234", hostId: "user_1", snapshot: makeSnapshot(settings, questionCount) },
+    {
+      sessionId: "sess_1",
+      code: "QA1234",
+      hostId: "user_1",
+      snapshot: makeSnapshot(settings, questionCount),
+    },
     output,
     persistence,
     silentLog,

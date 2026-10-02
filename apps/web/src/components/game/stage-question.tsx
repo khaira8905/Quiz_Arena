@@ -69,11 +69,17 @@ export function StageQuestion({
               >
                 Q{pad2(question.index + 1)}
               </motion.span>
-              <span className="numeric text-[clamp(1rem,1.5vw,3rem)] font-bold text-fg-3">/ {pad2(question.total)}</span>
+              <span className="numeric text-[clamp(1rem,1.5vw,3rem)] font-bold text-fg-3">
+                / {pad2(question.total)}
+              </span>
               <ProgressTicks index={question.index} total={question.total} />
               {question.points !== 1000 && (
                 <span className="label border border-line-strong px-[0.8vw] py-[0.6vh] text-[clamp(0.7rem,0.9vw,1.75rem)] text-fg-2">
-                  {question.points === 0 ? "No points" : question.points === 2000 ? "Double points" : `${formatNumber(question.points)} pts`}
+                  {question.points === 0
+                    ? "No points"
+                    : question.points === 2000
+                      ? "Double points"
+                      : `${formatNumber(question.points)} pts`}
                 </span>
               )}
             </div>
@@ -94,7 +100,11 @@ export function StageQuestion({
                   className="notch shrink-0 overflow-hidden border border-line-strong bg-sunken"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- organiser-supplied image URL */}
-                  <img src={question.imageUrl} alt="" className="block max-h-[30vh] max-w-[34vw] object-contain" />
+                  <img
+                    src={question.imageUrl}
+                    alt=""
+                    className="block max-h-[30vh] max-w-[34vw] object-contain"
+                  />
                 </motion.div>
               )}
             </div>
@@ -106,7 +116,12 @@ export function StageQuestion({
         </div>
 
         {/* ------------------------------------------------ answers */}
-        <div className={cn("grid min-h-0 flex-1 gap-[1.2vw]", question.options.length > 2 ? "grid-cols-2 grid-rows-2" : "grid-cols-2 grid-rows-1")}>
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 gap-[1.2vw]",
+            question.options.length > 2 ? "grid-cols-2 grid-rows-2" : "grid-cols-2 grid-rows-1",
+          )}
+        >
           {question.options.map((o, i) => {
             const count = distribution[o.id] ?? 0;
             return (
@@ -134,7 +149,9 @@ export function StageQuestion({
               exit={{ opacity: 0 }}
               className="flex items-center justify-center gap-[1vw] border-y border-danger/50 bg-danger-soft py-[1.2vh]"
             >
-              <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-extrabold uppercase tracking-[-0.02em] text-danger">Time&apos;s up</span>
+              <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-extrabold uppercase tracking-[-0.02em] text-danger">
+                Time&apos;s up
+              </span>
               <span className="label text-[clamp(0.7rem,1vw,2rem)] text-fg-2">Answers locked</span>
             </motion.div>
           )}
@@ -161,7 +178,13 @@ function ProgressTicks({ index, total }: { index: number; total: number }) {
   return (
     <span className="flex items-center gap-[0.25vw]" aria-hidden>
       {Array.from({ length: total }, (_, i) => (
-        <span key={i} className={cn("h-[0.7vh] w-[1.1vw] transition-colors", i < index ? "bg-fg-3" : i === index ? "bg-accent" : "bg-line-strong")} />
+        <span
+          key={i}
+          className={cn(
+            "h-[0.7vh] w-[1.1vw] transition-colors",
+            i < index ? "bg-fg-3" : i === index ? "bg-accent" : "bg-line-strong",
+          )}
+        />
       ))}
     </span>
   );
@@ -177,7 +200,11 @@ function AnsweredMeter({ answered, players }: { answered: number; players: numbe
       </div>
       <div className="label mt-[0.6vh] text-[clamp(0.6rem,0.8vw,1.5rem)] text-fg-3">Answered</div>
       <div className="mt-[0.8vh] h-[0.6vh] bg-line">
-        <motion.div className="h-full bg-accent" animate={{ width: `${share * 100}%` }} transition={{ duration: 0.3 }} />
+        <motion.div
+          className="h-full bg-accent"
+          animate={{ width: `${share * 100}%` }}
+          transition={{ duration: 0.3 }}
+        />
       </div>
     </div>
   );

@@ -19,12 +19,17 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   app.post("/api/auth/register", strict, async (req, reply) => {
-    if (!ctx.config.ALLOW_REGISTRATION) throw new AppError("FORBIDDEN", "Registration is disabled on this server.");
+    if (!ctx.config.ALLOW_REGISTRATION)
+      throw new AppError("FORBIDDEN", "Registration is disabled on this server.");
     const input = registerSchema.parse(req.body);
     const exists = await ctx.db.user.findUnique({ where: { email: input.email } });
     if (exists) throw new AppError("CONFLICT", "An account with that email already exists.");
     const user = await ctx.db.user.create({
-      data: { email: input.email, name: input.name, passwordHash: await hashPassword(input.password) },
+      data: {
+        email: input.email,
+        name: input.name,
+        passwordHash: await hashPassword(input.password),
+      },
     });
     setSessionCookie(ctx, reply, await ctx.tokens.signSession(user.id), SESSION_TTL_SECONDS);
     return reply.code(201).send({ user: userDto(user) });

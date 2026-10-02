@@ -8,7 +8,11 @@ import { serverNow } from "./clock";
  * Remaining milliseconds for a server timer, re-rendering only when the displayed second
  * changes (plus a fine-grained progress value for rings/bars via `fine`).
  */
-export function useCountdown(timer: TimerState | null, active: boolean, opts: { fine?: boolean } = {}) {
+export function useCountdown(
+  timer: TimerState | null,
+  active: boolean,
+  opts: { fine?: boolean } = {},
+) {
   const compute = () => {
     if (!timer) return 0;
     if (timer.paused || !active) return timer.remainingMs;
@@ -35,7 +39,11 @@ export function useCountdown(timer: TimerState | null, active: boolean, opts: { 
   }, [timer?.deadline, timer?.paused, timer?.remainingMs, active, opts.fine]);
 
   const total = timer?.durationMs ?? 1;
-  return { remaining, seconds: Math.ceil(remaining / 1000), progress: Math.min(1, Math.max(0, remaining / total)) };
+  return {
+    remaining,
+    seconds: Math.ceil(remaining / 1000),
+    progress: Math.min(1, Math.max(0, remaining / total)),
+  };
 }
 
 /** Urgency level drives the countdown's escalating motion: 0 calm → 4 expired. */

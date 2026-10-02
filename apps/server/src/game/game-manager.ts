@@ -46,7 +46,12 @@ export class GameManager {
     throw new Error("Could not allocate a game code");
   }
 
-  create(params: { sessionId: string; code: string; hostId: string; snapshot: QuizSnapshot }): GameRoom {
+  create(params: {
+    sessionId: string;
+    code: string;
+    hostId: string;
+    snapshot: QuizSnapshot;
+  }): GameRoom {
     if (this.rooms.has(params.code)) throw new Error(`Room ${params.code} already exists`);
     const room = new GameRoom(params, this.outputFor(params.code), this.persistence, this.log);
     this.rooms.set(params.code, room);
@@ -71,7 +76,9 @@ export class GameManager {
         this.remove(code);
       } else if (room.currentPhase === "LOBBY" && now - room.createdAt > LOBBY_MAX_AGE_MS) {
         this.remove(code);
-        this.onAbandon(room.sessionId).catch((err) => this.log.error({ err, code }, "failed to abandon session"));
+        this.onAbandon(room.sessionId).catch((err) =>
+          this.log.error({ err, code }, "failed to abandon session"),
+        );
       }
     }
   }

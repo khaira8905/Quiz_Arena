@@ -9,7 +9,13 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { questionIssues } from "@quizarena/shared/schemas";
 import type { QuestionDto } from "@quizarena/shared/dto";
@@ -48,13 +54,22 @@ export function QuestionNavigator({
     <nav aria-label="Questions" className="flex min-h-0 flex-col">
       <div className="flex items-center justify-between px-1 pb-3">
         <h2 className="label text-fg-2">Questions</h2>
-        <span className="numeric text-body-sm font-bold text-fg-3">{String(questions.length).padStart(2, "0")}</span>
+        <span className="numeric text-body-sm font-bold text-fg-3">
+          {String(questions.length).padStart(2, "0")}
+        </span>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
           <ol className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-2 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto">
             {questions.map((q, i) => (
-              <NavItem key={q.id} q={q} index={i} selected={q.id === selectedId} onSelect={onSelect} defaultTimerSec={defaultTimerSec} />
+              <NavItem
+                key={q.id}
+                q={q}
+                index={i}
+                selected={q.id === selectedId}
+                onSelect={onSelect}
+                defaultTimerSec={defaultTimerSec}
+              />
             ))}
           </ol>
         </SortableContext>
@@ -92,7 +107,9 @@ function NavItem({
   onSelect: (id: string) => void;
   defaultTimerSec: number;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: q.id,
+  });
   const issues = questionIssues(q);
   const Icon = q.type === "TRUE_FALSE" ? ToggleLeft : ListChecks;
 
@@ -117,14 +134,38 @@ function NavItem({
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <button onClick={() => onSelect(q.id)} aria-current={selected ? "true" : undefined} className="min-w-0 flex-1 py-3 pr-3 text-left">
+        <button
+          onClick={() => onSelect(q.id)}
+          aria-current={selected ? "true" : undefined}
+          className="min-w-0 flex-1 py-3 pr-3 text-left"
+        >
           <div className="flex items-center gap-2">
-            <span className={cn("numeric text-body-sm font-extrabold", selected ? "text-accent" : "text-fg-3")}>Q{String(index + 1).padStart(2, "0")}</span>
+            <span
+              className={cn(
+                "numeric text-body-sm font-extrabold",
+                selected ? "text-accent" : "text-fg-3",
+              )}
+            >
+              Q{String(index + 1).padStart(2, "0")}
+            </span>
             <Icon className="h-3.5 w-3.5 text-fg-3" aria-hidden />
             <span className="label ml-auto text-fg-3">{q.timeLimitSec ?? defaultTimerSec}s</span>
-            {issues.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-warning" title={issues.join(" · ")} aria-label="Needs attention" />}
+            {issues.length > 0 && (
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-warning"
+                title={issues.join(" · ")}
+                aria-label="Needs attention"
+              />
+            )}
           </div>
-          <p className={cn("mt-1.5 line-clamp-2 text-body-sm", q.text ? "text-fg" : "italic text-fg-3")}>{q.text || "Untitled question"}</p>
+          <p
+            className={cn(
+              "mt-1.5 line-clamp-2 text-body-sm",
+              q.text ? "text-fg" : "italic text-fg-3",
+            )}
+          >
+            {q.text || "Untitled question"}
+          </p>
         </button>
       </div>
     </li>

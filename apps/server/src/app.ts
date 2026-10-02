@@ -33,21 +33,30 @@ export async function buildApp(
         ? false
         : {
             level: config.LOG_LEVEL,
-            ...(config.isProd ? {} : { transport: { target: "pino-pretty", options: { translateTime: "HH:MM:ss" } } }),
+            ...(config.isProd
+              ? {}
+              : { transport: { target: "pino-pretty", options: { translateTime: "HH:MM:ss" } } }),
             redact: ["req.headers.cookie", "req.headers.authorization"],
           },
     trustProxy: config.TRUST_PROXY,
     bodyLimit: 256 * 1024,
   });
 
-  await app.register(cors, { origin: config.webOrigins, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE"] });
+  await app.register(cors, {
+    origin: config.webOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+  });
   await app.register(cookie);
   await app.register(rateLimit, {
     max: 300,
     timeWindow: "1 minute",
     errorResponseBuilder: (_req, ctx) => ({
       statusCode: 429,
-      error: { code: "RATE_LIMITED", message: `Too many requests. Try again in ${Math.ceil(ctx.ttl / 1000)}s.` },
+      error: {
+        code: "RATE_LIMITED",
+        message: `Too many requests. Try again in ${Math.ceil(ctx.ttl / 1000)}s.`,
+      },
     }),
   });
 
@@ -59,7 +68,9 @@ export async function buildApp(
 
   app.setErrorHandler((err, req, reply) => {
     let status = 500;
-    let body: ApiErrorBody = { error: { code: "INTERNAL", message: "Something went wrong on our side." } };
+    let body: ApiErrorBody = {
+      error: { code: "INTERNAL", message: "Something went wrong on our side." },
+    };
     if (isAppError(err)) {
       status = err.status;
       body = { error: { code: err.code, message: err.message, details: err.details } };
@@ -74,10 +85,26 @@ export async function buildApp(
       };
     } else if (typeof err === "object" && err && "statusCode" in err && err.statusCode === 429) {
       status = 429;
-      body = { error: { code: "RATE_LIMITED", message: (err as { message?: string }).message ?? "Too many requests" } };
-    } else if (typeof err === "object" && err && "statusCode" in err && typeof err.statusCode === "number" && err.statusCode < 500) {
+      body = {
+        error: {
+          code: "RATE_LIMITED",
+          message: (err as { message?: string }).message ?? "Too many requests",
+        },
+      };
+    } else if (
+      typeof err === "object" &&
+      err &&
+      "statusCode" in err &&
+      typeof err.statusCode === "number" &&
+      err.statusCode < 500
+    ) {
       status = err.statusCode;
-      body = { error: { code: "BAD_REQUEST", message: (err as { message?: string }).message ?? "Bad request" } };
+      body = {
+        error: {
+          code: "BAD_REQUEST",
+          message: (err as { message?: string }).message ?? "Bad request",
+        },
+      };
     } else {
       req.log.error({ err }, "unhandled error");
     }
@@ -85,7 +112,9 @@ export async function buildApp(
   });
 
   app.setNotFoundHandler((_req, reply) => {
-    reply.code(404).send({ error: { code: "NOT_FOUND", message: "Route not found." } } satisfies ApiErrorBody);
+    reply
+      .code(404)
+      .send({ error: { code: "NOT_FOUND", message: "Route not found." } } satisfies ApiErrorBody);
   });
 
   const io = createIo(app.server, config.webOrigins);
@@ -95,7 +124,10 @@ export async function buildApp(
     persistence,
     app.log,
     async (sessionId) => {
-      await db.quizSession.update({ where: { id: sessionId }, data: { status: "ABANDONED", endedAt: new Date() } });
+      await db.quizSession.update({
+        where: { id: sessionId },
+        data: { status: "ABANDONED", endedAt: new Date() },
+      });
     },
   );
   const tokens = new TokenService(config.JWT_SECRET);
@@ -103,7 +135,11 @@ export async function buildApp(
 
   attachGateway({ io, games, tokens, log: app.log });
 
-  app.get("/health", async () => ({ ok: true, rooms: games.size, uptime: Math.round(process.uptime()) }));
+  app.get("/health", async () => ({
+    ok: true,
+    rooms: games.size,
+    uptime: Math.round(process.uptime()),
+  }));
   app.get("/api/health", async () => ({ ok: true }));
   authRoutes(app, ctx);
   quizRoutes(app, ctx);

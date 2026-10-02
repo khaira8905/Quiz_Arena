@@ -36,8 +36,20 @@ export function SessionDetail({ id }: { id: string }) {
     return (
       <EmptyState
         title={notFound ? "Session not found" : "Couldn't load this session"}
-        description={notFound ? "It doesn't exist or belongs to another organiser." : "The server didn't respond."}
-        action={notFound ? <Link href="/admin/sessions"><Button>All sessions</Button></Link> : <Button onClick={() => refetch()}>Retry</Button>}
+        description={
+          notFound
+            ? "It doesn't exist or belongs to another organiser."
+            : "The server didn't respond."
+        }
+        action={
+          notFound ? (
+            <Link href="/admin/sessions">
+              <Button>All sessions</Button>
+            </Link>
+          ) : (
+            <Button onClick={() => refetch()}>Retry</Button>
+          )
+        }
       />
     );
   }
@@ -50,16 +62,30 @@ export function SessionDetail({ id }: { id: string }) {
 
   return (
     <>
-      <PageHeader eyebrow={`Arena ${session.code}`} title={session.quizTitle} description={`Opened ${formatDateTime(session.createdAt)}`} />
+      <PageHeader
+        eyebrow={`Arena ${session.code}`}
+        title={session.quizTitle}
+        description={`Opened ${formatDateTime(session.createdAt)}`}
+      />
       <EmptyState
         className="mt-8"
-        title={session.status === "ABANDONED" ? "This arena was closed" : "This arena is no longer running"}
+        title={
+          session.status === "ABANDONED"
+            ? "This arena was closed"
+            : "This arena is no longer running"
+        }
         description={
           session.status === "ABANDONED"
             ? "It was closed before the game finished, so there are no final results."
             : "The game server restarted while this game was open. Start a new session from the quiz."
         }
-        action={session.quizId ? <Link href={`/admin/quizzes/${session.quizId}`}><Button variant="secondary">Open quiz</Button></Link> : undefined}
+        action={
+          session.quizId ? (
+            <Link href={`/admin/quizzes/${session.quizId}`}>
+              <Button variant="secondary">Open quiz</Button>
+            </Link>
+          ) : undefined
+        }
       />
     </>
   );

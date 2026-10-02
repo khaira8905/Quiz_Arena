@@ -52,9 +52,15 @@ export const ERROR_COPY: Record<ErrorCode, { title: string; message: string }> =
   NICKNAME_TAKEN: { title: "Name taken", message: "Someone in this arena already uses that name." },
   NICKNAME_INVALID: { title: "Pick another name", message: "That nickname isn't allowed." },
   PARTICIPANT_LIMIT: { title: "Arena full", message: "This game has reached its player limit." },
-  SESSION_EXPIRED: { title: "Session expired", message: "Your seat expired. Join again with the code." },
+  SESSION_EXPIRED: {
+    title: "Session expired",
+    message: "Your seat expired. Join again with the code.",
+  },
   ANSWER_TOO_LATE: { title: "Too late", message: "Time ran out before your answer arrived." },
-  ANSWER_DUPLICATE: { title: "Already locked in", message: "You've already answered this question." },
+  ANSWER_DUPLICATE: {
+    title: "Already locked in",
+    message: "You've already answered this question.",
+  },
   ANSWER_INVALID: { title: "Invalid answer", message: "That answer isn't part of this question." },
   QUESTION_NOT_ACTIVE: { title: "Question closed", message: "This question is no longer open." },
   COMMAND_NOT_ALLOWED: { title: "Not now", message: "That action isn't available at this stage." },

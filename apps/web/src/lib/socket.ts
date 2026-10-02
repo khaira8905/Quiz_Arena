@@ -1,4 +1,8 @@
-import type { AckResponse, ClientToServerEvents, ServerToClientEvents } from "@quizarena/shared/events";
+import type {
+  AckResponse,
+  ClientToServerEvents,
+  ServerToClientEvents,
+} from "@quizarena/shared/events";
 import { io, type Socket } from "socket.io-client";
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -29,12 +33,20 @@ export function emitAck<T>(
 ): Promise<AckResponse<T>> {
   return new Promise((resolve) => {
     const timer = setTimeout(
-      () => resolve({ ok: false, error: { code: "INTERNAL", message: "The server didn't respond in time." } }),
+      () =>
+        resolve({
+          ok: false,
+          error: { code: "INTERNAL", message: "The server didn't respond in time." },
+        }),
       timeoutMs,
     );
-    (socket.emit as (e: string, p: unknown, ack: (r: AckResponse<T>) => void) => void)(event, payload, (res) => {
-      clearTimeout(timer);
-      resolve(res);
-    });
+    (socket.emit as (e: string, p: unknown, ack: (r: AckResponse<T>) => void) => void)(
+      event,
+      payload,
+      (res) => {
+        clearTimeout(timer);
+        resolve(res);
+      },
+    );
   });
 }

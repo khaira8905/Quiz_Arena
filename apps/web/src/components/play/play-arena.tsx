@@ -37,7 +37,11 @@ export function PlayArena({ initialCode }: { initialCode: string | null }) {
       <div className="arena-floor flex min-h-dvh flex-col items-center justify-center gap-5 px-6">
         <Spinner className="h-8 w-8" />
         <p className="label text-fg-2">
-          {step.kind === "resuming" ? `Rejoining ${step.code}` : step.kind === "checking" ? `Finding arena ${step.code}` : "Entering the arena"}
+          {step.kind === "resuming"
+            ? `Rejoining ${step.code}`
+            : step.kind === "checking"
+              ? `Finding arena ${step.code}`
+              : "Entering the arena"}
         </p>
       </div>
     );
@@ -53,7 +57,12 @@ export function PlayArena({ initialCode }: { initialCode: string | null }) {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
         <AnimatePresence mode="wait">
           {step.kind === "code" ? (
-            <CodeStep key="code" error={step.error} initial={step.attempted ?? ""} onSubmit={game.submitCode} />
+            <CodeStep
+              key="code"
+              error={step.error}
+              initial={step.attempted ?? ""}
+              onSubmit={game.submitCode}
+            />
           ) : (
             <NameStep
               key="name"
@@ -81,10 +90,20 @@ const stepMotion = {
   transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const },
 };
 
-function CodeStep({ error, initial, onSubmit }: { error?: { code: string; message: string }; initial: string; onSubmit: (code: string) => void }) {
+function CodeStep({
+  error,
+  initial,
+  onSubmit,
+}: {
+  error?: { code: string; message: string };
+  initial: string;
+  onSubmit: (code: string) => void;
+}) {
   const [code, setCode] = useState(initial);
   const clean = code.replace(/\s+/g, "").toUpperCase();
-  const title = error ? (ERROR_COPY[error.code as keyof typeof ERROR_COPY]?.title ?? "Something's off") : null;
+  const title = error
+    ? (ERROR_COPY[error.code as keyof typeof ERROR_COPY]?.title ?? "Something's off")
+    : null;
 
   return (
     <motion.form
@@ -119,7 +138,11 @@ function CodeStep({ error, initial, onSubmit }: { error?: { code: string; messag
         className="numeric mt-8 h-20 w-full rounded-md border-2 border-line-strong bg-sunken text-center text-[2.75rem] font-extrabold tracking-[0.1em] text-fg placeholder:text-fg-3/40 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger"
       />
       {error && (
-        <div id="code-error" role="alert" className="mt-3 border-l-2 border-danger bg-danger-soft px-3 py-2">
+        <div
+          id="code-error"
+          role="alert"
+          className="mt-3 border-l-2 border-danger bg-danger-soft px-3 py-2"
+        >
           <p className="text-body-sm font-semibold text-fg">{title}</p>
           <p className="text-body-sm text-fg-2">{error.message}</p>
         </div>
@@ -180,7 +203,11 @@ function NameStep({
         className="mt-8 h-16 w-full rounded-md border-2 border-line-strong bg-sunken px-4 text-center font-display text-2xl font-bold text-fg placeholder:font-sans placeholder:text-lg placeholder:font-normal placeholder:text-fg-3 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger"
       />
       {error ? (
-        <p id="name-error" role="alert" className="mt-3 border-l-2 border-danger bg-danger-soft px-3 py-2 text-body-sm text-fg">
+        <p
+          id="name-error"
+          role="alert"
+          className="mt-3 border-l-2 border-danger bg-danger-soft px-3 py-2 text-body-sm text-fg"
+        >
           {error.message}
         </p>
       ) : (
@@ -188,10 +215,21 @@ function NameStep({
           2–20 characters. Everyone will see it on the big screen.
         </p>
       )}
-      <Button type="submit" size="xl" className="mt-6 w-full" disabled={!ok} loading={pending} notch>
+      <Button
+        type="submit"
+        size="xl"
+        className="mt-6 w-full"
+        disabled={!ok}
+        loading={pending}
+        notch
+      >
         Enter the arena <ArrowRight className="h-5 w-5" />
       </Button>
-      <button type="button" onClick={onBack} className="label mt-5 self-center text-fg-3 hover:text-fg">
+      <button
+        type="button"
+        onClick={onBack}
+        className="label mt-5 self-center text-fg-3 hover:text-fg"
+      >
         Use a different code
       </button>
     </motion.form>

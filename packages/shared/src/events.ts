@@ -13,7 +13,8 @@ import type { HostCommand, HostView, PlayerSummary, PlayerView } from "./game";
  */
 
 export type Ack<T> = (response: AckResponse<T>) => void;
-export type AckResponse<T> = { ok: true; data: T } | { ok: false; error: { code: ErrorCode; message: string } };
+export type AckResponse<T> =
+  { ok: true; data: T } | { ok: false; error: { code: ErrorCode; message: string } };
 
 export interface JoinPayload {
   code: string;
@@ -81,9 +82,18 @@ export interface ServerToClientEvents {
   "session:player_status": (payload: { participantId: string; connected: boolean }) => void;
   /** Throttled live counters. */
   "session:player_count": (payload: { count: number; connected: number }) => void;
-  "question:progress": (payload: { questionId: string; answered: number; distribution: Record<string, number> }) => void;
+  "question:progress": (payload: {
+    questionId: string;
+    answered: number;
+    distribution: Record<string, number>;
+  }) => void;
   /** Pushed when the deadline moves (pause/resume) so clocks re-align. */
-  "timer:sync": (payload: { serverTime: number; deadline: number; paused: boolean; remainingMs: number }) => void;
+  "timer:sync": (payload: {
+    serverTime: number;
+    deadline: number;
+    paused: boolean;
+    remainingMs: number;
+  }) => void;
   /** The server is closing this seat (kicked, replaced, game deleted). */
   "session:closed": (payload: { code: ErrorCode; message: string }) => void;
 }

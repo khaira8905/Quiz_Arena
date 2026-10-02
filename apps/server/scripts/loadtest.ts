@@ -40,16 +40,30 @@ const pct = (xs: number[], p: number) => {
 };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function call<T>(socket: Client, event: keyof ClientToServerEvents, payload: unknown): Promise<AckResponse<T>> {
+function call<T>(
+  socket: Client,
+  event: keyof ClientToServerEvents,
+  payload: unknown,
+): Promise<AckResponse<T>> {
   return new Promise((resolve) =>
-    (socket.emit as (e: string, p: unknown, a: (r: AckResponse<T>) => void) => void)(event, payload, resolve),
+    (socket.emit as (e: string, p: unknown, a: (r: AckResponse<T>) => void) => void)(
+      event,
+      payload,
+      resolve,
+    ),
   );
 }
 
-async function api<T>(path: string, init: RequestInit & { cookie?: string } = {}): Promise<{ data: T; cookie?: string }> {
+async function api<T>(
+  path: string,
+  init: RequestInit & { cookie?: string } = {},
+): Promise<{ data: T; cookie?: string }> {
   const res = await fetch(`${API}${path}`, {
     ...init,
-    headers: { "content-type": "application/json", ...(init.cookie ? { cookie: init.cookie } : {}) },
+    headers: {
+      "content-type": "application/json",
+      ...(init.cookie ? { cookie: init.cookie } : {}),
+    },
   });
   if (!res.ok) throw new Error(`${path} → ${res.status} ${await res.text()}`);
   return { data: (await res.json()) as T, cookie: res.headers.get("set-cookie")?.split(";")[0] };
@@ -60,9 +74,14 @@ async function main() {
   const password = process.env.SEED_ADMIN_PASSWORD;
   if (!email || !password) throw new Error("Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD");
 
-  const { cookie } = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  const { cookie } = await api("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
   if (!cookie) throw new Error("login returned no cookie");
-  const { data: list } = await api<{ quizzes: QuizSummaryDto[] }>("/api/quizzes?status=PUBLISHED", { cookie });
+  const { data: list } = await api<{ quizzes: QuizSummaryDto[] }>("/api/quizzes?status=PUBLISHED", {
+    cookie,
+  });
   const quiz = list.quizzes[0];
   if (!quiz) throw new Error("No published quiz — run pnpm db:seed");
   const { data: created } = await api<{ session: SessionSummaryDto }>("/api/sessions", {
@@ -91,13 +110,20 @@ async function main() {
       await sleep(Math.random() * 1500); // a crowd scanning a QR code, not a single burst
       const socket: Client = io(API, { transports: ["websocket"], forceNew: true });
       await new Promise<void>((r) => socket.once("connect", () => r()));
-      const res = await call<JoinResult>(socket, "session:join", { code, nickname: `Bot ${String(i).padStart(3, "0")}` });
+      const res = await call<JoinResult>(socket, "session:join", {
+        code,
+        nickname: `Bot ${String(i).padStart(3, "0")}`,
+      });
       if (!res.ok) {
         bump(`join:${res.error.code}`);
         socket.disconnect();
         return;
       }
-      const entry = { socket, latest: res.data.view as PlayerView | null, id: res.data.participantId };
+      const entry = {
+        socket,
+        latest: res.data.view as PlayerView | null,
+        id: res.data.participantId,
+      };
       socket.on("session:state", (v) => (entry.latest = v as PlayerView));
       players.push(entry);
     }),
@@ -158,7 +184,10 @@ async function main() {
         await sleep(300 + Math.random() * 2500);
         const option = question.options[Math.floor(Math.random() * question.options.length)]!;
         const t0 = Date.now();
-        const res = await call(p.socket, "question:answer", { questionId: question.id, optionId: option.id });
+        const res = await call(p.socket, "question:answer", {
+          questionId: question.id,
+          optionId: option.id,
+        });
         ackLatencies.push(Date.now() - t0);
         if (!res.ok) bump(`answer:${res.error.code}`);
       }),
@@ -177,10 +206,14 @@ async function main() {
   console.log("\n── results ───────────────────────────────");
   console.log(`  players                 ${players.length}`);
   console.log(`  join (all)              ${joinMs} ms`);
-  console.log(`  answer ack p50/p95/p99  ${pct(ackLatencies, 50)} / ${pct(ackLatencies, 95)} / ${pct(ackLatencies, 99)} ms`);
+  console.log(
+    `  answer ack p50/p95/p99  ${pct(ackLatencies, 50)} / ${pct(ackLatencies, 95)} / ${pct(ackLatencies, 99)} ms`,
+  );
   console.log(`  broadcast fan-out max   ${Math.max(...fanout)} ms (p95 ${pct(fanout, 95)} ms)`);
   console.log(`  winner                  ${winner?.nickname} (${winner?.score})`);
-  console.log(`  errors                  ${Object.keys(errors).length ? JSON.stringify(errors) : "none"}`);
+  console.log(
+    `  errors                  ${Object.keys(errors).length ? JSON.stringify(errors) : "none"}`,
+  );
 
   for (const p of players) p.socket.disconnect();
   host.disconnect();

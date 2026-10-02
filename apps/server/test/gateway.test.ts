@@ -26,7 +26,12 @@ const tokens = new TokenService("test-secret-test-secret-test-secret-123");
 const clients: Client[] = [];
 
 function client(auth: Record<string, string> = {}): Promise<Client> {
-  const socket: Client = connect(url, { transports: ["websocket"], auth, reconnection: false, forceNew: true });
+  const socket: Client = connect(url, {
+    transports: ["websocket"],
+    auth,
+    reconnection: false,
+    forceNew: true,
+  });
   clients.push(socket);
   return new Promise((resolve, reject) => {
     socket.once("connect", () => resolve(socket));
@@ -35,13 +40,24 @@ function client(auth: Record<string, string> = {}): Promise<Client> {
 }
 
 /** Emits with an ack and unwraps it. */
-function call<T>(socket: Client, event: keyof ClientToServerEvents, payload: unknown): Promise<AckResponse<T>> {
+function call<T>(
+  socket: Client,
+  event: keyof ClientToServerEvents,
+  payload: unknown,
+): Promise<AckResponse<T>> {
   return new Promise((resolve) => {
-    (socket.emit as (e: string, p: unknown, ack: (r: AckResponse<T>) => void) => void)(event, payload, resolve);
+    (socket.emit as (e: string, p: unknown, ack: (r: AckResponse<T>) => void) => void)(
+      event,
+      payload,
+      resolve,
+    );
   });
 }
 
-function nextState<T extends PlayerView | HostView>(socket: Client, predicate: (v: T) => boolean): Promise<T> {
+function nextState<T extends PlayerView | HostView>(
+  socket: Client,
+  predicate: (v: T) => boolean,
+): Promise<T> {
   return new Promise((resolve) => {
     const handler = (view: PlayerView | HostView) => {
       if (predicate(view as T)) {
@@ -56,7 +72,11 @@ function nextState<T extends PlayerView | HostView>(socket: Client, predicate: (
 beforeEach(async () => {
   http = createServer();
   io = createIo(http, ["http://localhost"]);
-  games = new GameManager((code) => createRoomOutput(io, code), new MemoryGamePersistence(), silentLog);
+  games = new GameManager(
+    (code) => createRoomOutput(io, code),
+    new MemoryGamePersistence(),
+    silentLog,
+  );
   attachGateway({ io, games, tokens, log: silentLog });
   await new Promise<void>((r) => http.listen(0, "127.0.0.1", r));
   url = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
@@ -69,7 +89,12 @@ afterEach(async () => {
 });
 
 function createGame(settings = {}) {
-  return games.create({ sessionId: "sess_1", code: "QA1234", hostId: "host_1", snapshot: makeSnapshot(settings, 2) });
+  return games.create({
+    sessionId: "sess_1",
+    code: "QA1234",
+    hostId: "host_1",
+    snapshot: makeSnapshot(settings, 2),
+  });
 }
 
 describe("socket gateway", () => {
@@ -84,7 +109,10 @@ describe("socket gateway", () => {
   it("only lets the session's host attach and issue commands", async () => {
     createGame();
     const anonymous = await client();
-    expect(await call(anonymous, "host:attach", { code: "QA1234" })).toMatchObject({ ok: false, error: { code: "UNAUTHORIZED" } });
+    expect(await call(anonymous, "host:attach", { code: "QA1234" })).toMatchObject({
+      ok: false,
+      error: { code: "UNAUTHORIZED" },
+    });
 
     const intruder = await client({ ticket: await tokens.signSocketTicket("someone_else") });
     expect(await call(intruder, "host:command", { code: "QA1234", command: "END" })).toMatchObject({
@@ -94,7 +122,10 @@ describe("socket gateway", () => {
 
     // A session cookie token is not accepted as a socket ticket.
     const wrongPurpose = await client({ ticket: await tokens.signSession("host_1") });
-    expect(await call(wrongPurpose, "host:attach", { code: "QA1234" })).toMatchObject({ ok: false, error: { code: "UNAUTHORIZED" } });
+    expect(await call(wrongPurpose, "host:attach", { code: "QA1234" })).toMatchObject({
+      ok: false,
+      error: { code: "UNAUTHORIZED" },
+    });
 
     const host = await client({ ticket: await tokens.signSocketTicket("host_1") });
     expect(await call(host, "host:attach", { code: "QA1234" })).toMatchObject({ ok: true });
@@ -111,7 +142,9 @@ describe("socket gateway", () => {
     expect(joinA.ok).toBe(true);
     const dup = await call<JoinResult>(b, "session:join", { code: "QA1234", nickname: "ADA" });
     expect(dup).toMatchObject({ ok: false, error: { code: "NICKNAME_TAKEN" } });
-    expect((await call<JoinResult>(b, "session:join", { code: "QA1234", nickname: "Grace" })).ok).toBe(true);
+    expect(
+      (await call<JoinResult>(b, "session:join", { code: "QA1234", nickname: "Grace" })).ok,
+    ).toBe(true);
 
     const activeA = nextState<PlayerView>(a, (v) => v.phase === "QUESTION_ACTIVE");
     const start = await call<HostView>(host, "host:command", { code: "QA1234", command: "START" });
@@ -125,7 +158,9 @@ describe("socket gateway", () => {
     const qid = view.question!.id;
     const answer = await call(a, "question:answer", { questionId: qid, optionId: `${qid}_a` });
     expect(answer.ok).toBe(true);
-    expect(await call(a, "question:answer", { questionId: qid, optionId: `${qid}_b` })).toMatchObject({
+    expect(
+      await call(a, "question:answer", { questionId: qid, optionId: `${qid}_b` }),
+    ).toMatchObject({
       ok: false,
       error: { code: "ANSWER_DUPLICATE" },
     });
@@ -147,7 +182,9 @@ describe("socket gateway", () => {
   it("rejects answers from sockets that never joined", async () => {
     createGame();
     const stranger = await client();
-    expect(await call(stranger, "question:answer", { questionId: "q0", optionId: "q0_a" })).toMatchObject({
+    expect(
+      await call(stranger, "question:answer", { questionId: "q0", optionId: "q0_a" }),
+    ).toMatchObject({
       ok: false,
       error: { code: "SESSION_EXPIRED" },
     });
@@ -156,17 +193,27 @@ describe("socket gateway", () => {
   it("reconnects a player to their seat and replaces the older connection", async () => {
     createGame();
     const first = await client();
-    const joined = await call<JoinResult>(first, "session:join", { code: "QA1234", nickname: "Ada" });
+    const joined = await call<JoinResult>(first, "session:join", {
+      code: "QA1234",
+      nickname: "Ada",
+    });
     if (!joined.ok) throw new Error("join failed");
 
-    const closed = new Promise<string>((resolve) => first.on("session:closed", (p) => resolve(p.code)));
+    const closed = new Promise<string>((resolve) =>
+      first.on("session:closed", (p) => resolve(p.code)),
+    );
     const second = await client();
-    const again = await call<JoinResult>(second, "player:reconnect", { code: "QA1234", token: joined.data.token });
+    const again = await call<JoinResult>(second, "player:reconnect", {
+      code: "QA1234",
+      token: joined.data.token,
+    });
     expect(again).toMatchObject({ ok: true, data: { participantId: joined.data.participantId } });
     expect(await closed).toBe("REPLACED_BY_NEW_CONNECTION");
 
     const bad = await client();
-    expect(await call(bad, "player:reconnect", { code: "QA1234", token: "x".repeat(43) })).toMatchObject({
+    expect(
+      await call(bad, "player:reconnect", { code: "QA1234", token: "x".repeat(43) }),
+    ).toMatchObject({
       ok: false,
       error: { code: "SESSION_EXPIRED" },
     });

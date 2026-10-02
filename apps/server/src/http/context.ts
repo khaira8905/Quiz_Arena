@@ -20,7 +20,12 @@ export async function requireUser(ctx: AppContext, req: FastifyRequest): Promise
   return userId;
 }
 
-export function setSessionCookie(ctx: AppContext, reply: FastifyReply, token: string, maxAgeSeconds: number) {
+export function setSessionCookie(
+  ctx: AppContext,
+  reply: FastifyReply,
+  token: string,
+  maxAgeSeconds: number,
+) {
   reply.setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: ctx.config.isProd,
@@ -31,5 +36,10 @@ export function setSessionCookie(ctx: AppContext, reply: FastifyReply, token: st
 }
 
 export function clearSessionCookie(ctx: AppContext, reply: FastifyReply) {
-  reply.clearCookie(SESSION_COOKIE, { httpOnly: true, secure: ctx.config.isProd, sameSite: "lax", path: "/" });
+  reply.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    secure: ctx.config.isProd,
+    sameSite: "lax",
+    path: "/",
+  });
 }

@@ -91,7 +91,8 @@ export function buildSnapshot(quiz: SourceQuiz): QuizSnapshot {
     },
     questions: ordered.map((q) => {
       // True/False keeps its natural order; shuffling it only confuses players.
-      const shuffleOptions = q.type !== "TRUE_FALSE" && (quiz.randomizeAnswers || q.randomizeAnswers);
+      const shuffleOptions =
+        q.type !== "TRUE_FALSE" && (quiz.randomizeAnswers || q.randomizeAnswers);
       return {
         id: q.id,
         type: q.type,

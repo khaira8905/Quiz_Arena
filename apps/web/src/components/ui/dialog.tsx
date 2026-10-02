@@ -49,12 +49,17 @@ export function Dialog({
               >
                 <RD.Title className="pr-8 font-display text-h2">{title}</RD.Title>
                 {description ? (
-                  <RD.Description className="mt-2 text-body text-fg-2">{description}</RD.Description>
+                  <RD.Description className="mt-2 text-body text-fg-2">
+                    {description}
+                  </RD.Description>
                 ) : (
                   <RD.Description className="sr-only">{title}</RD.Description>
                 )}
                 <div className="mt-5">{children}</div>
-                <RD.Close className="absolute right-4 top-4 rounded-sm p-1 text-fg-3 hover:text-fg" aria-label="Close">
+                <RD.Close
+                  className="absolute right-4 top-4 rounded-sm p-1 text-fg-3 hover:text-fg"
+                  aria-label="Close"
+                >
                   <X className="h-5 w-5" />
                 </RD.Close>
               </motion.div>
@@ -86,7 +91,12 @@ export function ConfirmDialog({
 }) {
   const [busy, setBusy] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)} title={title} description={description}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !busy && onOpenChange(o)}
+      title={title}
+      description={description}
+    >
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
           Cancel

@@ -19,7 +19,15 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Account" title="Profile" description={me.data ? `Signed in as ${me.data.email} · member since ${formatDateTime(me.data.createdAt)}` : undefined} />
+      <PageHeader
+        eyebrow="Account"
+        title="Profile"
+        description={
+          me.data
+            ? `Signed in as ${me.data.email} · member since ${formatDateTime(me.data.createdAt)}`
+            : undefined
+        }
+      />
       <div className="mt-8 grid max-w-3xl gap-10 md:grid-cols-2">
         <form
           className="flex flex-col gap-4"
@@ -27,13 +35,31 @@ export default function ProfilePage() {
             e.preventDefault();
             update.mutate(
               { name: currentName },
-              { onSuccess: () => toast.success("Name updated"), onError: (err) => toast.error(isApiError(err) ? err.message : "Update failed") },
+              {
+                onSuccess: () => toast.success("Name updated"),
+                onError: (err) => toast.error(isApiError(err) ? err.message : "Update failed"),
+              },
             );
           }}
         >
           <h2 className="label text-fg-2">Display name</h2>
-          <Field label="Name">{(p) => <Input {...p} value={currentName} maxLength={80} onChange={(e) => setName(e.target.value)} />}</Field>
-          <Button type="submit" variant="secondary" loading={update.isPending && !newPassword} disabled={!currentName.trim()} className="self-start">
+          <Field label="Name">
+            {(p) => (
+              <Input
+                {...p}
+                value={currentName}
+                maxLength={80}
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
+          </Field>
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={update.isPending && !newPassword}
+            disabled={!currentName.trim()}
+            className="self-start"
+          >
             Save name
           </Button>
         </form>
@@ -57,12 +83,35 @@ export default function ProfilePage() {
         >
           <h2 className="label text-fg-2">Password</h2>
           <Field label="Current password">
-            {(p) => <Input {...p} type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrent(e.target.value)} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrent(e.target.value)}
+              />
+            )}
           </Field>
           <Field label="New password" hint="At least 10 characters.">
-            {(p) => <Input {...p} type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={(e) => setNext(e.target.value)} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                autoComplete="new-password"
+                minLength={10}
+                value={newPassword}
+                onChange={(e) => setNext(e.target.value)}
+              />
+            )}
           </Field>
-          <Button type="submit" variant="secondary" loading={update.isPending && !!newPassword} disabled={!currentPassword || newPassword.length < 10} className="self-start">
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={update.isPending && !!newPassword}
+            disabled={!currentPassword || newPassword.length < 10}
+            className="self-start"
+          >
             Change password
           </Button>
         </form>

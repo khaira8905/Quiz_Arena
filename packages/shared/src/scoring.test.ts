@@ -5,7 +5,9 @@ const base = { correct: true, responseMs: 0, durationMs: 20_000, basePoints: 100
 
 describe("computePoints", () => {
   it("awards nothing for a wrong answer", () => {
-    expect(computePoints({ ...base, correct: false }, { mode: "SPEED", streakBonus: true })).toBe(0);
+    expect(computePoints({ ...base, correct: false }, { mode: "SPEED", streakBonus: true })).toBe(
+      0,
+    );
   });
 
   it("awards nothing on a zero-point question", () => {
@@ -29,7 +31,9 @@ describe("computePoints", () => {
   });
 
   it("ignores speed in accuracy mode", () => {
-    expect(computePoints({ ...base, responseMs: 19_000 }, { mode: "ACCURACY", streakBonus: false })).toBe(1000);
+    expect(
+      computePoints({ ...base, responseMs: 19_000 }, { mode: "ACCURACY", streakBonus: false }),
+    ).toBe(1000);
   });
 
   it("adds a capped streak bonus", () => {

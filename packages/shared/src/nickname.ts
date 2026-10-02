@@ -24,7 +24,16 @@ const BLOCKED_FRAGMENTS = [
   "asshole",
 ];
 
-const LEET: Record<string, string> = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", $: "s" };
+const LEET: Record<string, string> = {
+  "0": "o",
+  "1": "i",
+  "3": "e",
+  "4": "a",
+  "5": "s",
+  "7": "t",
+  "@": "a",
+  $: "s",
+};
 
 const ALLOWED = /^[\p{L}\p{N} _.\-!?']+$/u;
 

@@ -72,13 +72,22 @@ export function QuizPreview({ id }: { id: string }) {
         options: q.options.map((o) => ({ id: o.id, text: o.text || "—" })),
       }
     : null;
-  const timer: TimerState = { startedAt: 0, deadline: 0, durationMs, paused: true, remainingMs: durationMs };
+  const timer: TimerState = {
+    startedAt: 0,
+    deadline: 0,
+    durationMs,
+    paused: true,
+    remainingMs: durationMs,
+  };
 
   return (
     <div className="arena-floor flex h-dvh flex-col overflow-hidden">
       <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line px-5">
         <div className="flex items-center gap-4">
-          <Link href={`/admin/quizzes/${id}`} className="flex items-center gap-2 text-body-sm text-fg-2 hover:text-fg">
+          <Link
+            href={`/admin/quizzes/${id}`}
+            className="flex items-center gap-2 text-body-sm text-fg-2 hover:text-fg"
+          >
             <ArrowLeft className="h-4 w-4" /> Back to editor
           </Link>
           <span className="h-5 w-px bg-line" />
@@ -90,17 +99,30 @@ export function QuizPreview({ id }: { id: string }) {
             <Kbd>←</Kbd>
             <Kbd>→</Kbd> navigate · <Kbd>Space</Kbd> answer
           </span>
-          <Button variant="ghost" size="icon" aria-label="Previous question" disabled={index === 0} onClick={() => (setIndex(index - 1), setReveal(false))}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Previous question"
+            disabled={index === 0}
+            onClick={() => (setIndex(index - 1), setReveal(false))}
+          >
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <span className="numeric w-16 text-center text-body font-bold">
             {index + 1}/{total}
           </span>
-          <Button variant="ghost" size="icon" aria-label="Next question" disabled={index >= total - 1} onClick={() => (setIndex(index + 1), setReveal(false))}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Next question"
+            disabled={index >= total - 1}
+            onClick={() => (setIndex(index + 1), setReveal(false))}
+          >
             <ChevronRight className="h-5 w-5" />
           </Button>
           <Button variant="secondary" size="sm" onClick={() => setReveal((r) => !r)}>
-            {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />} {reveal ? "Hide answer" : "Show answer"}
+            {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{" "}
+            {reveal ? "Hide answer" : "Show answer"}
           </Button>
         </div>
       </header>

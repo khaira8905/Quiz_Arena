@@ -69,12 +69,18 @@ export function useDashboard() {
 export function useQuizzes(status?: "DRAFT" | "PUBLISHED") {
   return useQuery({
     queryKey: keys.quizzes(status),
-    queryFn: () => api<{ quizzes: QuizSummaryDto[] }>(`/quizzes${status ? `?status=${status}` : ""}`).then((r) => r.quizzes),
+    queryFn: () =>
+      api<{ quizzes: QuizSummaryDto[] }>(`/quizzes${status ? `?status=${status}` : ""}`).then(
+        (r) => r.quizzes,
+      ),
   });
 }
 
 export function useQuiz(id: string) {
-  return useQuery({ queryKey: keys.quiz(id), queryFn: () => api<{ quiz: QuizDto }>(`/quizzes/${id}`).then((r) => r.quiz) });
+  return useQuery({
+    queryKey: keys.quiz(id),
+    queryFn: () => api<{ quiz: QuizDto }>(`/quizzes/${id}`).then((r) => r.quiz),
+  });
 }
 
 const invalidateLists = (qc: QueryClient) => {
@@ -98,7 +104,9 @@ export function useUpdateQuiz(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (patch: QuizUpdateInput) =>
-      api<{ quiz: QuizDto }>(`/quizzes/${id}`, { method: "PATCH", json: patch }).then((r) => r.quiz),
+      api<{ quiz: QuizDto }>(`/quizzes/${id}`, { method: "PATCH", json: patch }).then(
+        (r) => r.quiz,
+      ),
     onSuccess: (quiz) => {
       qc.setQueryData(keys.quiz(id), quiz);
       invalidateLists(qc);
@@ -120,7 +128,8 @@ export function useDeleteQuiz() {
 export function useDuplicateQuiz() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<{ quiz: QuizDto }>(`/quizzes/${id}/duplicate`, { method: "POST" }).then((r) => r.quiz),
+    mutationFn: (id: string) =>
+      api<{ quiz: QuizDto }>(`/quizzes/${id}/duplicate`, { method: "POST" }).then((r) => r.quiz),
     onSuccess: () => invalidateLists(qc),
   });
 }
@@ -129,14 +138,19 @@ export function useDuplicateQuiz() {
 
 /** Question mutations patch the cached quiz in place so the editor never flickers. */
 function patchQuestion(qc: QueryClient, quizId: string, fn: (qs: QuestionDto[]) => QuestionDto[]) {
-  qc.setQueryData<QuizDto>(keys.quiz(quizId), (q) => (q ? { ...q, questions: fn(q.questions), questionCount: fn(q.questions).length } : q));
+  qc.setQueryData<QuizDto>(keys.quiz(quizId), (q) =>
+    q ? { ...q, questions: fn(q.questions), questionCount: fn(q.questions).length } : q,
+  );
 }
 
 export function useAddQuestion(quizId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { type: QuestionDto["type"] }) =>
-      api<{ question: QuestionDto }>(`/quizzes/${quizId}/questions`, { method: "POST", json: input }).then((r) => r.question),
+      api<{ question: QuestionDto }>(`/quizzes/${quizId}/questions`, {
+        method: "POST",
+        json: input,
+      }).then((r) => r.question),
     onSuccess: (question) => patchQuestion(qc, quizId, (qs) => [...qs, question]),
   });
 }
@@ -145,8 +159,11 @@ export function useUpdateQuestion(quizId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: QuestionUpdateInput }) =>
-      api<{ question: QuestionDto }>(`/questions/${id}`, { method: "PATCH", json: patch }).then((r) => r.question),
-    onSuccess: (question) => patchQuestion(qc, quizId, (qs) => qs.map((q) => (q.id === question.id ? question : q))),
+      api<{ question: QuestionDto }>(`/questions/${id}`, { method: "PATCH", json: patch }).then(
+        (r) => r.question,
+      ),
+    onSuccess: (question) =>
+      patchQuestion(qc, quizId, (qs) => qs.map((q) => (q.id === question.id ? question : q))),
   });
 }
 
@@ -155,14 +172,19 @@ export function useDeleteQuestion(quizId: string) {
   return useMutation({
     mutationFn: (id: string) => api(`/questions/${id}`, { method: "DELETE" }),
     onSuccess: (_r, id) =>
-      patchQuestion(qc, quizId, (qs) => qs.filter((q) => q.id !== id).map((q, i) => ({ ...q, order: i }))),
+      patchQuestion(qc, quizId, (qs) =>
+        qs.filter((q) => q.id !== id).map((q, i) => ({ ...q, order: i })),
+      ),
   });
 }
 
 export function useDuplicateQuestion(quizId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<{ question: QuestionDto }>(`/questions/${id}/duplicate`, { method: "POST" }).then((r) => r.question),
+    mutationFn: (id: string) =>
+      api<{ question: QuestionDto }>(`/questions/${id}/duplicate`, { method: "POST" }).then(
+        (r) => r.question,
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.quiz(quizId) }),
   });
 }
@@ -171,10 +193,15 @@ export function useReorderQuestions(quizId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (questionIds: string[]) =>
-      api<{ quiz: QuizDto }>(`/quizzes/${quizId}/questions/order`, { method: "PUT", json: { questionIds } }).then((r) => r.quiz),
+      api<{ quiz: QuizDto }>(`/quizzes/${quizId}/questions/order`, {
+        method: "PUT",
+        json: { questionIds },
+      }).then((r) => r.quiz),
     onMutate: (ids) => {
       const prev = qc.getQueryData<QuizDto>(keys.quiz(quizId));
-      patchQuestion(qc, quizId, (qs) => ids.map((id, i) => ({ ...qs.find((q) => q.id === id)!, order: i })));
+      patchQuestion(qc, quizId, (qs) =>
+        ids.map((id, i) => ({ ...qs.find((q) => q.id === id)!, order: i })),
+      );
       return { prev };
     },
     onError: (_e, _ids, ctx) => ctx?.prev && qc.setQueryData(keys.quiz(quizId), ctx.prev),
@@ -187,14 +214,18 @@ export function useReorderQuestions(quizId: string) {
 export function useSessions(scope: "active" | "past" | "all") {
   return useQuery({
     queryKey: keys.sessions(scope),
-    queryFn: () => api<{ sessions: SessionSummaryDto[] }>(`/sessions?scope=${scope}`).then((r) => r.sessions),
+    queryFn: () =>
+      api<{ sessions: SessionSummaryDto[] }>(`/sessions?scope=${scope}`).then((r) => r.sessions),
   });
 }
 
 export function useSession(id: string) {
   return useQuery({
     queryKey: keys.session(id),
-    queryFn: () => api<{ session: SessionSummaryDto; live: { phase: string; players: number } | null }>(`/sessions/${id}`),
+    queryFn: () =>
+      api<{ session: SessionSummaryDto; live: { phase: string; players: number } | null }>(
+        `/sessions/${id}`,
+      ),
   });
 }
 
@@ -210,7 +241,9 @@ export function useStartSession() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (quizId: string) =>
-      api<{ session: SessionSummaryDto }>("/sessions", { method: "POST", json: { quizId } }).then((r) => r.session),
+      api<{ session: SessionSummaryDto }>("/sessions", { method: "POST", json: { quizId } }).then(
+        (r) => r.session,
+      ),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["sessions"] });
       void qc.invalidateQueries({ queryKey: keys.dashboard });

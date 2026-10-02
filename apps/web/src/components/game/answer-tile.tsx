@@ -36,7 +36,12 @@ export function StageAnswerTile({
     <motion.div
       layout
       initial={reduced ? false : { opacity: 0, y: 24, scale: 0.97 }}
-      animate={{ opacity: dim ? 0.32 : 1, y: 0, scale: state === "correct" ? 1.025 : 1, filter: dim ? "saturate(0.35)" : "saturate(1)" }}
+      animate={{
+        opacity: dim ? 0.32 : 1,
+        y: 0,
+        scale: state === "correct" ? 1.025 : 1,
+        filter: dim ? "saturate(0.35)" : "saturate(1)",
+      }}
       transition={{ delay, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         "notch relative flex min-h-0 items-center gap-[1.4vw] overflow-hidden px-[1.6vw] py-[1.8vh] text-answer-ink",
@@ -53,14 +58,25 @@ export function StageAnswerTile({
           aria-hidden
         />
       )}
-      <span className="relative grid aspect-square w-[clamp(2.75rem,4.4vw,9rem)] shrink-0 place-items-center bg-answer-ink font-display text-[clamp(1.5rem,2.4vw,5rem)] font-extrabold" style={{ color: style.fill }}>
-        {state === "correct" ? <Check className="h-[55%] w-[55%]" strokeWidth={3.5} /> : style.letter}
+      <span
+        className="relative grid aspect-square w-[clamp(2.75rem,4.4vw,9rem)] shrink-0 place-items-center bg-answer-ink font-display text-[clamp(1.5rem,2.4vw,5rem)] font-extrabold"
+        style={{ color: style.fill }}
+      >
+        {state === "correct" ? (
+          <Check className="h-[55%] w-[55%]" strokeWidth={3.5} />
+        ) : (
+          style.letter
+        )}
       </span>
       <span className="relative min-w-0 flex-1 text-stage-answer">{text}</span>
       {showStats && count !== undefined && (
         <span className="relative shrink-0 text-right">
-          <span className="numeric block text-[clamp(1.5rem,2.6vw,5.5rem)] font-extrabold leading-none">{count}</span>
-          <span className="numeric mt-[0.6vh] block text-[clamp(0.9rem,1.2vw,2.6rem)] font-bold opacity-75">{Math.round((share ?? 0) * 100)}%</span>
+          <span className="numeric block text-[clamp(1.5rem,2.6vw,5.5rem)] font-extrabold leading-none">
+            {count}
+          </span>
+          <span className="numeric mt-[0.6vh] block text-[clamp(0.9rem,1.2vw,2.6rem)] font-bold opacity-75">
+            {Math.round((share ?? 0) * 100)}%
+          </span>
         </span>
       )}
     </motion.div>
@@ -118,14 +134,30 @@ export function PhoneAnswerButton({
       )}
     >
       <span className="flex items-start justify-between">
-        <span className={cn("grid aspect-square place-items-center bg-answer-ink font-display font-extrabold", compact ? "w-10 text-xl" : "w-12 text-2xl")} style={{ color: style.fill }}>
+        <span
+          className={cn(
+            "grid aspect-square place-items-center bg-answer-ink font-display font-extrabold",
+            compact ? "w-10 text-xl" : "w-12 text-2xl",
+          )}
+          style={{ color: style.fill }}
+        >
           {style.letter}
         </span>
         {state === "correct" && <Check className="h-8 w-8" strokeWidth={3.5} aria-hidden />}
         {state === "wrong" && <X className="h-8 w-8" strokeWidth={3.5} aria-hidden />}
-        {state === "selected" && <span className="label rounded-sm bg-answer-ink px-2 py-1 text-fg">Locked in</span>}
+        {state === "selected" && (
+          <span className="label rounded-sm bg-answer-ink px-2 py-1 text-fg">Locked in</span>
+        )}
       </span>
-      <span className={cn("font-display font-bold leading-tight tracking-[-0.015em]", compact ? "text-base" : "text-lg sm:text-xl", "line-clamp-4")}>{text}</span>
+      <span
+        className={cn(
+          "font-display font-bold leading-tight tracking-[-0.015em]",
+          compact ? "text-base" : "text-lg sm:text-xl",
+          "line-clamp-4",
+        )}
+      >
+        {text}
+      </span>
     </motion.button>
   );
 }

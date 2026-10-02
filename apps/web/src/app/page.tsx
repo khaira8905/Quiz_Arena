@@ -4,9 +4,17 @@ import { Logo } from "@/components/brand/logo";
 import { JoinCodeForm } from "@/components/landing/join-code-form";
 
 const steps = [
-  { n: "01", title: "Build", body: "Write questions in the editor. Timers, points, images — set per question." },
+  {
+    n: "01",
+    title: "Build",
+    body: "Write questions in the editor. Timers, points, images — set per question.",
+  },
   { n: "02", title: "Project", body: "Go live. The arena shows a code and QR on the big screen." },
-  { n: "03", title: "Compete", body: "Players answer on their phones. Fastest correct answers climb the board." },
+  {
+    n: "03",
+    title: "Compete",
+    body: "Players answer on their phones. Fastest correct answers climb the board.",
+  },
 ];
 
 export default function Home() {
@@ -14,7 +22,10 @@ export default function Home() {
     <main className="arena-floor relative flex min-h-dvh flex-col overflow-hidden">
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
         <Logo />
-        <Link href="/admin" className="label inline-flex items-center gap-2 text-fg-2 transition-colors hover:text-fg">
+        <Link
+          href="/admin"
+          className="label inline-flex items-center gap-2 text-fg-2 transition-colors hover:text-fg"
+        >
           Host a quiz <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
       </header>
@@ -31,14 +42,17 @@ export default function Home() {
             <span className="text-accent">One arena.</span>
           </h1>
           <p className="mt-6 max-w-lg text-body-lg text-fg-2">
-            Run a live quiz for a lecture hall, a hackathon or a company all-hands. One screen, every phone in the room, results the second the timer hits zero.
+            Run a live quiz for a lecture hall, a hackathon or a company all-hands. One screen,
+            every phone in the room, results the second the timer hits zero.
           </p>
         </div>
 
         <div className="notch relative border border-line-strong bg-surface/90 p-6 sm:p-8">
           <div className="label text-fg-3">Have a code?</div>
           <h2 className="mt-3 font-display text-h1">Enter the arena</h2>
-          <p className="mt-2 text-body text-fg-2">It&apos;s on the big screen — looks like QA4821.</p>
+          <p className="mt-2 text-body text-fg-2">
+            It&apos;s on the big screen — looks like QA4821.
+          </p>
           <JoinCodeForm />
         </div>
       </section>

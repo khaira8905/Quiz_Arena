@@ -29,7 +29,17 @@ function beatAt(elapsed: number): Beat {
  * Every screen derives the beat from the shared server deadline, so the projector and
  * phones count down together.
  */
-export function StartSequence({ endsAt, playerCount, variant = "stage", sound = false }: { endsAt: number; playerCount: number; variant?: "stage" | "phone"; sound?: boolean }) {
+export function StartSequence({
+  endsAt,
+  playerCount,
+  variant = "stage",
+  sound = false,
+}: {
+  endsAt: number;
+  playerCount: number;
+  variant?: "stage" | "phone";
+  sound?: boolean;
+}) {
   const reduced = useReducedMotion();
   const [beat, setBeat] = useState<Beat>(() => beatAt(START_COUNTDOWN_MS - (endsAt - serverNow())));
 
@@ -54,7 +64,10 @@ export function StartSequence({ endsAt, playerCount, variant = "stage", sound = 
   const big = stage ? "text-[min(42vh,30vw)]" : "text-[11rem]";
 
   return (
-    <div className="relative grid h-full w-full place-items-center overflow-hidden" aria-live="assertive">
+    <div
+      className="relative grid h-full w-full place-items-center overflow-hidden"
+      aria-live="assertive"
+    >
       {/* Scan line sweeping across on every beat */}
       {!reduced && (
         <motion.div
@@ -66,7 +79,15 @@ export function StartSequence({ endsAt, playerCount, variant = "stage", sound = 
         />
       )}
       {/* Constant frame so no beat is ever an empty screen mid-transition. */}
-      <p className={stage ? "label absolute top-[6vh] text-[min(2vh,1.4vw)] text-fg-3" : "label absolute top-8 text-fg-3"}>Get ready</p>
+      <p
+        className={
+          stage
+            ? "label absolute top-[6vh] text-[min(2vh,1.4vw)] text-fg-3"
+            : "label absolute top-8 text-fg-3"
+        }
+      >
+        Get ready
+      </p>
       <AnimatePresence mode="popLayout">
         {beat === "ready" && (
           <motion.div
@@ -77,8 +98,22 @@ export function StartSequence({ endsAt, playerCount, variant = "stage", sound = 
             exit={{ opacity: 0, scale: 1.1 }}
             transition={{ duration: 0.35 }}
           >
-            <div className={stage ? "numeric text-[min(22vh,16vw)] font-extrabold leading-none text-accent" : "numeric text-8xl font-extrabold text-accent"}>{playerCount}</div>
-            <div className={stage ? "label mt-[2vh] text-[min(2.4vh,1.6vw)] text-fg-2" : "label mt-3 text-fg-2"}>{playerCount === 1 ? "Player ready" : "Players ready"}</div>
+            <div
+              className={
+                stage
+                  ? "numeric text-[min(22vh,16vw)] font-extrabold leading-none text-accent"
+                  : "numeric text-8xl font-extrabold text-accent"
+              }
+            >
+              {playerCount}
+            </div>
+            <div
+              className={
+                stage ? "label mt-[2vh] text-[min(2.4vh,1.6vw)] text-fg-2" : "label mt-3 text-fg-2"
+              }
+            >
+              {playerCount === 1 ? "Player ready" : "Players ready"}
+            </div>
           </motion.div>
         )}
         {(beat === "3" || beat === "2" || beat === "1") && (
@@ -102,7 +137,13 @@ export function StartSequence({ endsAt, playerCount, variant = "stage", sound = 
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <LogoMark size={stage ? 140 : 72} />
-            <div className={stage ? "font-display text-[min(13vh,9vw)] font-extrabold uppercase leading-none tracking-[-0.045em]" : "font-display text-5xl font-extrabold uppercase tracking-[-0.045em]"}>
+            <div
+              className={
+                stage
+                  ? "font-display text-[min(13vh,9vw)] font-extrabold uppercase leading-none tracking-[-0.045em]"
+                  : "font-display text-5xl font-extrabold uppercase tracking-[-0.045em]"
+              }
+            >
               Quiz<span className="text-accent">Arena</span>
             </div>
           </motion.div>

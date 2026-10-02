@@ -24,7 +24,11 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
   const [draft, setDraft] = useState(quiz);
   const { schedule } = useAutosave<QuizUpdateInput>((patch) => update.mutateAsync(patch), 700);
 
-  const set = <K extends keyof QuizUpdateInput & keyof QuizDto>(key: K, value: QuizDto[K], immediate = true) => {
+  const set = <K extends keyof QuizUpdateInput & keyof QuizDto>(
+    key: K,
+    value: QuizDto[K],
+    immediate = true,
+  ) => {
     setDraft((d) => ({ ...d, [key]: value }));
     schedule({ [key]: value } as QuizUpdateInput, immediate);
   };
@@ -33,12 +37,30 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <Panel title="Basics" description="How the quiz appears in your library and on the projector.">
+      <Panel
+        title="Basics"
+        description="How the quiz appears in your library and on the projector."
+      >
         <Field label="Title" error={!draft.title.trim() ? "A title is required" : null}>
-          {(p) => <Input {...p} maxLength={QUIZ_TITLE_MAX} value={draft.title} onChange={(e) => set("title", e.target.value, false)} />}
+          {(p) => (
+            <Input
+              {...p}
+              maxLength={QUIZ_TITLE_MAX}
+              value={draft.title}
+              onChange={(e) => set("title", e.target.value, false)}
+            />
+          )}
         </Field>
         <Field label="Description">
-          {(p) => <Textarea {...p} rows={3} maxLength={QUIZ_DESCRIPTION_MAX} value={draft.description} onChange={(e) => set("description", e.target.value, false)} />}
+          {(p) => (
+            <Textarea
+              {...p}
+              rows={3}
+              maxLength={QUIZ_DESCRIPTION_MAX}
+              value={draft.description}
+              onChange={(e) => set("description", e.target.value, false)}
+            />
+          )}
         </Field>
         <Field label="Cover image URL" hint="Optional. Shown on the projector lobby screen.">
           {(p) => (
@@ -48,7 +70,8 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
               defaultValue={draft.coverImageUrl ?? ""}
               onBlur={(e) => {
                 const v = e.target.value.trim();
-                if (v && !/^https?:\/\//i.test(v)) return void toast.error("Use an https:// image URL");
+                if (v && !/^https?:\/\//i.test(v))
+                  return void toast.error("Use an https:// image URL");
                 if ((v || null) !== draft.coverImageUrl) set("coverImageUrl", v || null);
               }}
             />
@@ -56,10 +79,14 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
         </Field>
       </Panel>
 
-      <Panel title="Timing & scoring" description="Defaults for every question. Individual questions can override the timer.">
+      <Panel
+        title="Timing & scoring"
+        description="Defaults for every question. Individual questions can override the timer."
+      >
         <div>
           <div className="label mb-3 flex justify-between text-fg-2">
-            Default timer <span className="numeric text-body text-fg">{draft.defaultTimerSec}s</span>
+            Default timer{" "}
+            <span className="numeric text-body text-fg">{draft.defaultTimerSec}s</span>
           </div>
           <div className="grid grid-cols-5 gap-1 sm:grid-cols-9">
             {TIMER_PRESETS.map((t) => (
@@ -70,7 +97,9 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
                 onClick={() => set("defaultTimerSec", t)}
                 className={cn(
                   "numeric h-9 rounded-sm border text-body-sm font-bold transition-colors",
-                  draft.defaultTimerSec === t ? "border-accent bg-accent text-accent-ink" : "border-line bg-sunken text-fg-2 hover:text-fg",
+                  draft.defaultTimerSec === t
+                    ? "border-accent bg-accent text-accent-ink"
+                    : "border-line bg-sunken text-fg-2 hover:text-fg",
                 )}
               >
                 {t}
@@ -90,7 +119,10 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
                 if (!e.target.value) return;
                 const v = Math.round(Number(e.target.value));
                 if (v >= TIMER_MIN_SECONDS && v <= TIMER_MAX_SECONDS) set("defaultTimerSec", v);
-                else toast.error(`Timer must be between ${TIMER_MIN_SECONDS} and ${TIMER_MAX_SECONDS} seconds`);
+                else
+                  toast.error(
+                    `Timer must be between ${TIMER_MIN_SECONDS} and ${TIMER_MAX_SECONDS} seconds`,
+                  );
               }}
             />
           </label>
@@ -112,21 +144,66 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
               : "Every correct answer earns the full points, regardless of speed."}
           </p>
         </div>
-        <Switch label="Streak bonus" description="+5% per consecutive correct answer, up to +25%." checked={draft.streakBonus} onChange={(v) => set("streakBonus", v)} />
+        <Switch
+          label="Streak bonus"
+          description="+5% per consecutive correct answer, up to +25%."
+          checked={draft.streakBonus}
+          onChange={(v) => set("streakBonus", v)}
+        />
       </Panel>
 
       <Panel title="Gameplay" description="What players and the projector see during the game.">
-        <Switch label="Shuffle question order" description="Order is fixed when the game starts." checked={draft.randomizeQuestions} onChange={(v) => set("randomizeQuestions", v)} />
-        <Switch label="Shuffle answer order" description="Applies to every multiple-choice question." checked={draft.randomizeAnswers} onChange={(v) => set("randomizeAnswers", v)} />
-        <Switch label="Show leaderboard" description="Offer a leaderboard between questions." checked={draft.showLeaderboard} onChange={(v) => set("showLeaderboard", v)} />
-        <Switch label="Show correct answers" description="Reveal the right answer and explanation after each question." checked={draft.showCorrectAnswers} onChange={(v) => set("showCorrectAnswers", v)} />
-        <Switch label="Show answer statistics" description="Show how the room voted on the projector." checked={draft.showAnswerStats} onChange={(v) => set("showAnswerStats", v)} />
-        <Switch label="Sound effects" description="Countdown ticks and reveal cues on the projector and phones." checked={draft.soundEnabled} onChange={(v) => set("soundEnabled", v)} />
+        <Switch
+          label="Shuffle question order"
+          description="Order is fixed when the game starts."
+          checked={draft.randomizeQuestions}
+          onChange={(v) => set("randomizeQuestions", v)}
+        />
+        <Switch
+          label="Shuffle answer order"
+          description="Applies to every multiple-choice question."
+          checked={draft.randomizeAnswers}
+          onChange={(v) => set("randomizeAnswers", v)}
+        />
+        <Switch
+          label="Show leaderboard"
+          description="Offer a leaderboard between questions."
+          checked={draft.showLeaderboard}
+          onChange={(v) => set("showLeaderboard", v)}
+        />
+        <Switch
+          label="Show correct answers"
+          description="Reveal the right answer and explanation after each question."
+          checked={draft.showCorrectAnswers}
+          onChange={(v) => set("showCorrectAnswers", v)}
+        />
+        <Switch
+          label="Show answer statistics"
+          description="Show how the room voted on the projector."
+          checked={draft.showAnswerStats}
+          onChange={(v) => set("showAnswerStats", v)}
+        />
+        <Switch
+          label="Sound effects"
+          description="Countdown ticks and reveal cues on the projector and phones."
+          checked={draft.soundEnabled}
+          onChange={(v) => set("soundEnabled", v)}
+        />
       </Panel>
 
       <Panel title="Players" description="Who can get in, and when.">
-        <Switch label="Allow late joining" description="Players can join after the game has started." checked={draft.allowLateJoin} onChange={(v) => set("allowLateJoin", v)} />
-        <Switch label="Nickname filter" description="Block offensive nicknames." checked={draft.nicknameFilter} onChange={(v) => set("nicknameFilter", v)} />
+        <Switch
+          label="Allow late joining"
+          description="Players can join after the game has started."
+          checked={draft.allowLateJoin}
+          onChange={(v) => set("allowLateJoin", v)}
+        />
+        <Switch
+          label="Nickname filter"
+          description="Block offensive nicknames."
+          checked={draft.nicknameFilter}
+          onChange={(v) => set("nicknameFilter", v)}
+        />
         <Field label="Participant limit" hint={`Between 2 and ${PARTICIPANT_LIMIT_MAX}.`}>
           {(p) => (
             <Input
@@ -150,7 +227,15 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
   );
 }
 
-function Panel({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function Panel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="border border-line bg-surface">
       <header className="border-b border-line px-5 py-4">

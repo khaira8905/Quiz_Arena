@@ -32,8 +32,14 @@ import type { QuizSnapshot, SnapshotQuestion } from "./snapshot";
  */
 export interface RoomOutput {
   toPlayer(participantId: string, view: PlayerView): void;
-  toHosts<E extends keyof ServerToClientEvents>(event: E, ...args: Parameters<ServerToClientEvents[E]>): void;
-  toPlayers<E extends keyof ServerToClientEvents>(event: E, ...args: Parameters<ServerToClientEvents[E]>): void;
+  toHosts<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ): void;
+  toPlayers<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ): void;
   closePlayer(participantId: string, code: "SESSION_EXPIRED" | "GAME_ENDED", message: string): void;
 }
 
@@ -139,7 +145,9 @@ export class GameRoom {
   }
 
   get joinable() {
-    return this.phase === "LOBBY" || (this.phase !== "FINISHED" && this.snapshot.settings.allowLateJoin);
+    return (
+      this.phase === "LOBBY" || (this.phase !== "FINISHED" && this.snapshot.settings.allowLateJoin)
+    );
   }
 
   get participantCount() {
@@ -162,9 +170,12 @@ export class GameRoom {
 
   /* ======================================================================== players */
 
-  async join(rawNickname: string): Promise<{ participantId: string; token: string; view: PlayerView }> {
+  async join(
+    rawNickname: string,
+  ): Promise<{ participantId: string; token: string; view: PlayerView }> {
     if (this.phase === "FINISHED") throw new AppError("GAME_ENDED");
-    if (this.phase !== "LOBBY" && !this.snapshot.settings.allowLateJoin) throw new AppError("GAME_ALREADY_STARTED");
+    if (this.phase !== "LOBBY" && !this.snapshot.settings.allowLateJoin)
+      throw new AppError("GAME_ALREADY_STARTED");
     if (this.participants.size + this.reserved.size >= this.snapshot.settings.participantLimit) {
       throw new AppError("PARTICIPANT_LIMIT");
     }
@@ -188,7 +199,12 @@ export class GameRoom {
     const id = newId();
     const { token, hash } = createPlayerToken();
     try {
-      await this.persistence.participantJoined(this.sessionId, { id, nickname, nicknameKey: key, tokenHash: hash });
+      await this.persistence.participantJoined(this.sessionId, {
+        id,
+        nickname,
+        nicknameKey: key,
+        tokenHash: hash,
+      });
     } catch (err) {
       this.log.error({ err, code: this.code }, "failed to persist participant");
       throw new AppError("INTERNAL");
@@ -223,7 +239,8 @@ export class GameRoom {
     this.output.toHosts("session:player_joined", this.summarize(participant));
     this.emitCounts();
     // START becomes available with the first player: hosts need the new command set.
-    if (this.phase === "LOBBY" && this.participants.size === 1) this.output.toHosts("session:state", this.hostView());
+    if (this.phase === "LOBBY" && this.participants.size === 1)
+      this.output.toHosts("session:state", this.hostView());
     return { participantId: id, token, view: this.playerView(id) };
   }
 
@@ -277,18 +294,25 @@ export class GameRoom {
     if (closeReason) this.output.closePlayer(participantId, "SESSION_EXPIRED", closeReason);
     this.output.toHosts("session:player_left", { participantId });
     this.emitCounts();
-    if (this.phase === "LOBBY" && this.participants.size === 0) this.output.toHosts("session:state", this.hostView());
+    if (this.phase === "LOBBY" && this.participants.size === 0)
+      this.output.toHosts("session:state", this.hostView());
     this.persistence.participantRemoved(this.sessionId, participantId).catch((err) => {
       this.log.error({ err, code: this.code }, "failed to persist participant removal");
     });
     this.maybeAutoLock();
   }
 
-  submitAnswer(participantId: string, questionId: string, optionId: string, receivedAt = Date.now()): AnswerReceipt {
+  submitAnswer(
+    participantId: string,
+    questionId: string,
+    optionId: string,
+    receivedAt = Date.now(),
+  ): AnswerReceipt {
     const p = this.participants.get(participantId);
     if (!p) throw new AppError("SESSION_EXPIRED");
     const q = this.question;
-    if (this.phase !== "QUESTION_ACTIVE" || !q || this.paused) throw new AppError("QUESTION_NOT_ACTIVE");
+    if (this.phase !== "QUESTION_ACTIVE" || !q || this.paused)
+      throw new AppError("QUESTION_NOT_ACTIVE");
     if (q.id !== questionId) throw new AppError("QUESTION_NOT_ACTIVE");
     if (this.answers.has(participantId)) throw new AppError("ANSWER_DUPLICATE");
     if (!q.options.some((o) => o.id === optionId)) throw new AppError("ANSWER_INVALID");
@@ -296,7 +320,10 @@ export class GameRoom {
     if (receivedAt > this.deadline + ANSWER_GRACE_MS) throw new AppError("ANSWER_TOO_LATE");
 
     // Elapsed time measured against the (pause-adjusted) deadline, never against client clocks.
-    const responseMs = Math.min(q.durationMs, Math.max(0, q.durationMs - (this.deadline - receivedAt)));
+    const responseMs = Math.min(
+      q.durationMs,
+      Math.max(0, q.durationMs - (this.deadline - receivedAt)),
+    );
     this.answers.set(participantId, { optionId, receivedAt, responseMs });
 
     this.emitProgress();
@@ -317,7 +344,11 @@ export class GameRoom {
       case "QUESTION_LOCKED":
         return ["REVEAL", "SKIP", "END"];
       case "ANSWER_REVEAL":
-        return [...(this.snapshot.settings.showLeaderboard ? (["LEADERBOARD"] as const) : []), "NEXT", "END"];
+        return [
+          ...(this.snapshot.settings.showLeaderboard ? (["LEADERBOARD"] as const) : []),
+          "NEXT",
+          "END",
+        ];
       case "LEADERBOARD":
         return ["NEXT", "END"];
       case "FINISHED":
@@ -424,7 +455,13 @@ export class GameRoom {
       const correct = correctIds.has(a.optionId);
       const streak = correct ? p.streak + 1 : 0;
       const points = computePoints(
-        { correct, responseMs: a.responseMs, durationMs: q.durationMs, basePoints: q.points, streak },
+        {
+          correct,
+          responseMs: a.responseMs,
+          durationMs: q.durationMs,
+          basePoints: q.points,
+          streak,
+        },
         { mode: scoringMode, streakBonus },
       );
       p.streak = streak;
@@ -472,7 +509,8 @@ export class GameRoom {
   /** NEXT and SKIP: open the following question, or finish after the last one. */
   private advance() {
     this.clearPhaseTimer();
-    if (this.questionIndex + 1 < this.snapshot.questions.length) this.openQuestion(this.questionIndex + 1);
+    if (this.questionIndex + 1 < this.snapshot.questions.length)
+      this.openQuestion(this.questionIndex + 1);
     else this.finish();
   }
 
@@ -545,7 +583,8 @@ export class GameRoom {
    */
   private rank() {
     const sorted = [...this.participants.values()].sort(
-      (a, b) => b.score - a.score || a.totalResponseMs - b.totalResponseMs || a.joinedAt - b.joinedAt,
+      (a, b) =>
+        b.score - a.score || a.totalResponseMs - b.totalResponseMs || a.joinedAt - b.joinedAt,
     );
     sorted.forEach((p, i) => {
       p.previousRank = p.rank;
@@ -580,7 +619,9 @@ export class GameRoom {
       totalQuestions: this.snapshot.questions.length,
       playedQuestions: this.playedQuestions,
       participantCount: standings.length,
-      averageAccuracy: standings.length ? standings.reduce((s, x) => s + x.accuracy, 0) / standings.length : 0,
+      averageAccuracy: standings.length
+        ? standings.reduce((s, x) => s + x.accuracy, 0) / standings.length
+        : 0,
       averageResponseMs: answered.length
         ? answered.reduce((s, x) => s + (x.avgResponseMs ?? 0), 0) / answered.length
         : null,
@@ -589,7 +630,13 @@ export class GameRoom {
   }
 
   private summarize(p: Participant): PlayerSummary {
-    return { id: p.id, nickname: p.nickname, connected: p.connected, score: p.score, answered: this.answers.has(p.id) };
+    return {
+      id: p.id,
+      nickname: p.nickname,
+      connected: p.connected,
+      score: p.score,
+      answered: this.answers.has(p.id),
+    };
   }
 
   private publicQuestion(): PublicQuestion | null {
@@ -610,14 +657,19 @@ export class GameRoom {
 
   private timerState(): TimerState | null {
     const q = this.question;
-    if (!q || this.phase === "LOBBY" || this.phase === "COUNTDOWN" || this.phase === "FINISHED") return null;
+    if (!q || this.phase === "LOBBY" || this.phase === "COUNTDOWN" || this.phase === "FINISHED")
+      return null;
     const active = this.phase === "QUESTION_ACTIVE";
     return {
       startedAt: this.openedAt,
       deadline: this.deadline,
       durationMs: q.durationMs,
       paused: this.paused,
-      remainingMs: !active ? 0 : this.paused ? this.remainingAtPause : Math.max(0, this.deadline - Date.now()),
+      remainingMs: !active
+        ? 0
+        : this.paused
+          ? this.remainingAtPause
+          : Math.max(0, this.deadline - Date.now()),
     };
   }
 
@@ -636,7 +688,8 @@ export class GameRoom {
 
   hostView(): HostView {
     const q = this.question;
-    const showQuestion = this.phase !== "LOBBY" && this.phase !== "COUNTDOWN" && this.phase !== "FINISHED";
+    const showQuestion =
+      this.phase !== "LOBBY" && this.phase !== "COUNTDOWN" && this.phase !== "FINISHED";
     return {
       role: "host",
       sessionId: this.sessionId,
@@ -653,7 +706,8 @@ export class GameRoom {
       playerCount: this.participants.size,
       connectedCount: this.connectedCount,
       question: showQuestion ? this.publicQuestion() : null,
-      correctOptionIds: showQuestion && q ? q.options.filter((o) => o.isCorrect).map((o) => o.id) : null,
+      correctOptionIds:
+        showQuestion && q ? q.options.filter((o) => o.isCorrect).map((o) => o.id) : null,
       explanation: showQuestion && q?.explanation ? q.explanation : null,
       timer: this.timerState(),
       answeredCount: this.answers.size,
@@ -669,9 +723,11 @@ export class GameRoom {
     if (!p) throw new AppError("SESSION_EXPIRED");
     const q = this.question;
     const revealed = this.isRevealed();
-    const showQuestion = this.phase !== "LOBBY" && this.phase !== "COUNTDOWN" && this.phase !== "FINISHED";
+    const showQuestion =
+      this.phase !== "LOBBY" && this.phase !== "COUNTDOWN" && this.phase !== "FINISHED";
     const { showCorrectAnswers, showLeaderboard } = this.snapshot.settings;
-    const showBoard = (this.phase === "LEADERBOARD" && showLeaderboard) || this.phase === "FINISHED";
+    const showBoard =
+      (this.phase === "LEADERBOARD" && showLeaderboard) || this.phase === "FINISHED";
 
     return {
       role: "player",
@@ -695,8 +751,12 @@ export class GameRoom {
       myAnswerId: showQuestion ? (this.answers.get(p.id)?.optionId ?? null) : null,
       result: revealed ? p.lastResult : null,
       correctOptionIds:
-        revealed && showCorrectAnswers && q ? q.options.filter((o) => o.isCorrect).map((o) => o.id) : null,
-      leaderboard: showBoard ? this.leaderboard.slice(0, PLAYER_LEADERBOARD_SIZE).map((x) => this.entry(x)) : null,
+        revealed && showCorrectAnswers && q
+          ? q.options.filter((o) => o.isCorrect).map((o) => o.id)
+          : null,
+      leaderboard: showBoard
+        ? this.leaderboard.slice(0, PLAYER_LEADERBOARD_SIZE).map((x) => this.entry(x))
+        : null,
       explanation: revealed && showCorrectAnswers && q?.explanation ? q.explanation : null,
       soundEnabled: this.snapshot.settings.soundEnabled,
     };

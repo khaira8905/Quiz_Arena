@@ -37,7 +37,13 @@ export class PrismaGamePersistence implements GamePersistence {
 
   async participantJoined(sessionId: string, p: ParticipantRecord) {
     await this.db.participant.create({
-      data: { id: p.id, sessionId, nickname: p.nickname, nicknameKey: p.nicknameKey, tokenHash: p.tokenHash },
+      data: {
+        id: p.id,
+        sessionId,
+        nickname: p.nickname,
+        nicknameKey: p.nicknameKey,
+        tokenHash: p.tokenHash,
+      },
     });
   }
 

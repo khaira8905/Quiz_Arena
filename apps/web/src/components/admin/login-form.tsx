@@ -13,7 +13,11 @@ export function LoginForm({ next }: { next: string }) {
   const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const error = login.error ? (isApiError(login.error) ? login.error.message : "Sign-in failed.") : null;
+  const error = login.error
+    ? isApiError(login.error)
+      ? login.error.message
+      : "Sign-in failed."
+    : null;
 
   return (
     <form
@@ -25,19 +29,44 @@ export function LoginForm({ next }: { next: string }) {
       noValidate
     >
       <Field label="Email">
-        {(p) => <Input {...p} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />}
+        {(p) => (
+          <Input
+            {...p}
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        )}
       </Field>
       <Field label="Password">
         {(p) => (
-          <Input {...p} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            {...p}
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         )}
       </Field>
       {error && (
-        <p role="alert" className="border-l-2 border-danger bg-danger-soft px-3 py-2 text-body-sm text-fg">
+        <p
+          role="alert"
+          className="border-l-2 border-danger bg-danger-soft px-3 py-2 text-body-sm text-fg"
+        >
           {error}
         </p>
       )}
-      <Button type="submit" size="lg" loading={login.isPending} disabled={!email || !password} className="mt-2">
+      <Button
+        type="submit"
+        size="lg"
+        loading={login.isPending}
+        disabled={!email || !password}
+        className="mt-2"
+      >
         Enter control room <ArrowRight className="h-4 w-4" aria-hidden />
       </Button>
     </form>

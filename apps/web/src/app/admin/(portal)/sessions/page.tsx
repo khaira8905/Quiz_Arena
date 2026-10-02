@@ -16,7 +16,11 @@ export default function SessionsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Games" title="Sessions" description="Open arenas you can control, and the results of every game you've run." />
+      <PageHeader
+        eyebrow="Games"
+        title="Sessions"
+        description="Open arenas you can control, and the results of every game you've run."
+      />
       <Segmented
         label="Session scope"
         value={scope}
@@ -29,7 +33,11 @@ export default function SessionsPage() {
       />
       <div className="mt-6">
         {isError ? (
-          <EmptyState title="Couldn't load sessions" description="The server didn't respond." action={<Button onClick={() => refetch()}>Retry</Button>} />
+          <EmptyState
+            title="Couldn't load sessions"
+            description="The server didn't respond."
+            action={<Button onClick={() => refetch()}>Retry</Button>}
+          />
         ) : isPending ? (
           <div className="space-y-2">
             {[0, 1, 2, 3].map((i) => (
@@ -40,7 +48,11 @@ export default function SessionsPage() {
           <EmptyState
             icon={<Radio className="h-6 w-6" />}
             title={scope === "active" ? "No live arenas" : "No games played yet"}
-            description={scope === "active" ? "Go live from any quiz to open a lobby players can join." : "Finished games and their results will appear here."}
+            description={
+              scope === "active"
+                ? "Go live from any quiz to open a lobby players can join."
+                : "Finished games and their results will appear here."
+            }
             action={
               <Link href="/admin/quizzes">
                 <Button variant="secondary">Pick a quiz</Button>

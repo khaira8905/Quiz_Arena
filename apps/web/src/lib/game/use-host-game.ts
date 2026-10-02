@@ -54,7 +54,8 @@ export function useHostGame(code: string) {
       } else {
         setError(res.error);
         setConnection("failed");
-        if (["UNAUTHORIZED", "FORBIDDEN", "INVALID_GAME_CODE"].includes(res.error.code)) socket.disconnect();
+        if (["UNAUTHORIZED", "FORBIDDEN", "INVALID_GAME_CODE"].includes(res.error.code))
+          socket.disconnect();
       }
     };
 
@@ -78,16 +79,27 @@ export function useHostGame(code: string) {
       setView((v) => (v ? { ...v, players: v.players.filter((p) => p.id !== participantId) } : v)),
     );
     socket.on("session:player_status", ({ participantId, connected }) =>
-      setView((v) => (v ? { ...v, players: v.players.map((p) => (p.id === participantId ? { ...p, connected } : p)) } : v)),
+      setView((v) =>
+        v
+          ? {
+              ...v,
+              players: v.players.map((p) => (p.id === participantId ? { ...p, connected } : p)),
+            }
+          : v,
+      ),
     );
     socket.on("session:player_count", ({ count, connected }) =>
       setView((v) => (v ? { ...v, playerCount: count, connectedCount: connected } : v)),
     );
     socket.on("question:progress", ({ questionId, answered, distribution }) =>
-      setView((v) => (v && v.question?.id === questionId ? { ...v, answeredCount: answered, distribution } : v)),
+      setView((v) =>
+        v && v.question?.id === questionId ? { ...v, answeredCount: answered, distribution } : v,
+      ),
     );
     socket.on("timer:sync", ({ deadline, paused, remainingMs }) =>
-      setView((v) => (v && v.timer ? { ...v, paused, timer: { ...v.timer, deadline, paused, remainingMs } } : v)),
+      setView((v) =>
+        v && v.timer ? { ...v, paused, timer: { ...v.timer, deadline, paused, remainingMs } } : v,
+      ),
     );
 
     socket.connect();
@@ -99,13 +111,20 @@ export function useHostGame(code: string) {
     };
   }, [code]);
 
-  const command = useCallback(async (cmd: HostCommand) => {
-    const socket = socketRef.current;
-    if (!socket) return { ok: false as const, error: { code: "INTERNAL" as ErrorCode, message: "Not connected" } };
-    const res = await emitAck<HostView>(socket, "host:command", { code, command: cmd });
-    if (res.ok) setView(res.data);
-    return res;
-  }, [code]);
+  const command = useCallback(
+    async (cmd: HostCommand) => {
+      const socket = socketRef.current;
+      if (!socket)
+        return {
+          ok: false as const,
+          error: { code: "INTERNAL" as ErrorCode, message: "Not connected" },
+        };
+      const res = await emitAck<HostView>(socket, "host:command", { code, command: cmd });
+      if (res.ok) setView(res.data);
+      return res;
+    },
+    [code],
+  );
 
   const kick = useCallback(
     async (participantId: string) => {

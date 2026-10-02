@@ -28,21 +28,34 @@ export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: nu
       transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="group relative flex flex-col border border-line bg-surface transition-colors hover:border-line-strong"
     >
-      <Link href={`/admin/quizzes/${quiz.id}`} className="flex flex-1 flex-col p-5 focus-visible:outline-offset-[-2px]">
+      <Link
+        href={`/admin/quizzes/${quiz.id}`}
+        className="flex flex-1 flex-col p-5 focus-visible:outline-offset-[-2px]"
+      >
         <div className="flex items-center justify-between gap-3">
-          <Badge tone={quiz.status === "PUBLISHED" ? "success" : "neutral"}>{quiz.status === "PUBLISHED" ? "Published" : "Draft"}</Badge>
+          <Badge tone={quiz.status === "PUBLISHED" ? "success" : "neutral"}>
+            {quiz.status === "PUBLISHED" ? "Published" : "Draft"}
+          </Badge>
           <span className="text-caption text-fg-3">Edited {timeAgo(quiz.updatedAt)}</span>
         </div>
-        <h3 className="mt-4 line-clamp-2 font-display text-h3 font-bold leading-snug group-hover:text-accent">{quiz.title}</h3>
-        {quiz.description && <p className="mt-1.5 line-clamp-2 text-body-sm text-fg-3">{quiz.description}</p>}
+        <h3 className="mt-4 line-clamp-2 font-display text-h3 font-bold leading-snug group-hover:text-accent">
+          {quiz.title}
+        </h3>
+        {quiz.description && (
+          <p className="mt-1.5 line-clamp-2 text-body-sm text-fg-3">{quiz.description}</p>
+        )}
         <dl className="mt-auto flex gap-6 pt-5">
           <div>
             <dt className="label text-fg-3">Questions</dt>
-            <dd className="numeric mt-1.5 text-h2 font-bold">{String(quiz.questionCount).padStart(2, "0")}</dd>
+            <dd className="numeric mt-1.5 text-h2 font-bold">
+              {String(quiz.questionCount).padStart(2, "0")}
+            </dd>
           </div>
           <div>
             <dt className="label text-fg-3">Plays</dt>
-            <dd className="numeric mt-1.5 text-h2 font-bold">{String(quiz.playCount).padStart(2, "0")}</dd>
+            <dd className="numeric mt-1.5 text-h2 font-bold">
+              {String(quiz.playCount).padStart(2, "0")}
+            </dd>
           </div>
         </dl>
       </Link>
@@ -55,7 +68,11 @@ export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: nu
           <Play className="h-3.5 w-3.5 fill-current" aria-hidden /> Go live
         </button>
         <span className="h-5 w-px bg-line" />
-        <Link href={`/admin/quizzes/${quiz.id}`} aria-label={`Edit ${quiz.title}`} className="grid h-11 w-12 place-items-center text-fg-3 hover:text-fg">
+        <Link
+          href={`/admin/quizzes/${quiz.id}`}
+          aria-label={`Edit ${quiz.title}`}
+          className="grid h-11 w-12 place-items-center text-fg-3 hover:text-fg"
+        >
           <Pencil className="h-4 w-4" />
         </Link>
         <button
@@ -70,7 +87,11 @@ export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: nu
         >
           <Copy className="h-4 w-4" />
         </button>
-        <button aria-label={`Delete ${quiz.title}`} onClick={() => setConfirm(true)} className="grid h-11 w-12 place-items-center text-fg-3 hover:text-danger">
+        <button
+          aria-label={`Delete ${quiz.title}`}
+          onClick={() => setConfirm(true)}
+          className="grid h-11 w-12 place-items-center text-fg-3 hover:text-danger"
+        >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>

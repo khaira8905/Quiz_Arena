@@ -21,7 +21,11 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        eyebrow={new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+        eyebrow={new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })}
         title={firstName ? `Welcome back, ${firstName}` : "Dashboard"}
         description="Your quizzes, your sessions, and who's been playing."
         actions={
@@ -39,7 +43,10 @@ export default function DashboardPage() {
           </button>
         </div>
       ) : (
-        <section aria-label="Totals" className="mt-8 grid grid-cols-2 gap-px bg-line lg:grid-cols-4">
+        <section
+          aria-label="Totals"
+          className="mt-8 grid grid-cols-2 gap-px bg-line lg:grid-cols-4"
+        >
           {isPending ? (
             Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="bg-surface p-5">
@@ -49,10 +56,31 @@ export default function DashboardPage() {
             ))
           ) : (
             <>
-              <StatTile index={0} label="Quizzes" value={data.totals.quizzes} hint={`${data.totals.published} published · ${data.totals.drafts} drafts`} />
-              <StatTile index={1} label="Sessions" value={data.totals.sessions} hint="Games hosted all time" />
-              <StatTile index={2} label="Participants" value={data.totals.participants} hint="Players across all games" />
-              <StatTile index={3} label="Live now" value={data.totals.liveSessions} live={data.totals.liveSessions > 0} hint="Open lobbies and games" />
+              <StatTile
+                index={0}
+                label="Quizzes"
+                value={data.totals.quizzes}
+                hint={`${data.totals.published} published · ${data.totals.drafts} drafts`}
+              />
+              <StatTile
+                index={1}
+                label="Sessions"
+                value={data.totals.sessions}
+                hint="Games hosted all time"
+              />
+              <StatTile
+                index={2}
+                label="Participants"
+                value={data.totals.participants}
+                hint="Players across all games"
+              />
+              <StatTile
+                index={3}
+                label="Live now"
+                value={data.totals.liveSessions}
+                live={data.totals.liveSessions > 0}
+                hint="Open lobbies and games"
+              />
             </>
           )}
         </section>
@@ -88,7 +116,9 @@ export default function DashboardPage() {
             />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {data?.recentQuizzes.slice(0, 4).map((q, i) => <QuizCard key={q.id} quiz={q} index={i} />)}
+              {data?.recentQuizzes.slice(0, 4).map((q, i) => (
+                <QuizCard key={q.id} quiz={q} index={i} />
+              ))}
             </div>
           )}
         </section>
@@ -111,10 +141,15 @@ export default function DashboardPage() {
             </div>
           ) : data && data.recentSessions.length === 0 ? (
             <p className="border border-dashed border-line-strong p-6 text-body-sm text-fg-3">
-              No games yet. Hit <span className="font-semibold text-accent">Go live</span> on any quiz to open an arena.
+              No games yet. Hit <span className="font-semibold text-accent">Go live</span> on any
+              quiz to open an arena.
             </p>
           ) : (
-            <ul className="border-t border-line">{data?.recentSessions.map((s) => <SessionRow key={s.id} session={s} />)}</ul>
+            <ul className="border-t border-line">
+              {data?.recentSessions.map((s) => (
+                <SessionRow key={s.id} session={s} />
+              ))}
+            </ul>
           )}
         </section>
       </div>

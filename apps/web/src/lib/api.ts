@@ -15,14 +15,20 @@ export class ApiError extends Error {
  * Same-origin fetch to `/api/*` (proxied to the API server by next.config rewrites), so the
  * httpOnly session cookie is sent automatically and never touched by JavaScript.
  */
-export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  init: RequestInit & { json?: unknown } = {},
+): Promise<T> {
   const { json, headers, ...rest } = init;
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       credentials: "same-origin",
       ...rest,
-      headers: { ...(json !== undefined ? { "content-type": "application/json" } : {}), ...headers },
+      headers: {
+        ...(json !== undefined ? { "content-type": "application/json" } : {}),
+        ...headers,
+      },
       body: json !== undefined ? JSON.stringify(json) : rest.body,
     });
   } catch {
@@ -36,7 +42,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     throw new ApiError(
       res.status,
       err?.code ?? (res.status >= 500 ? "INTERNAL" : "BAD_REQUEST"),
-      err?.message ?? (res.status >= 500 ? "The server is unavailable right now." : "Request failed."),
+      err?.message ??
+        (res.status >= 500 ? "The server is unavailable right now." : "Request failed."),
       err?.details,
     );
   }

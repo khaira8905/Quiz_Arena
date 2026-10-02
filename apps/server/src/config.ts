@@ -27,7 +27,9 @@ export type Config = z.infer<typeof envSchema> & { webOrigins: string[]; isProd:
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = envSchema.safeParse(env);
   if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+      .join("\n");
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   const cfg = parsed.data;
@@ -36,7 +38,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   return {
     ...cfg,
-    webOrigins: cfg.WEB_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean),
+    webOrigins: cfg.WEB_ORIGIN.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
     isProd: cfg.NODE_ENV === "production",
   };
 }

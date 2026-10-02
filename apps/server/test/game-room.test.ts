@@ -65,7 +65,9 @@ describe("joining", () => {
 
   it("enforces the limit under concurrent joins", async () => {
     const { room } = makeRoom({ participantLimit: 5 });
-    const results = await Promise.allSettled(Array.from({ length: 12 }, (_, i) => room.join(`Player${i}`)));
+    const results = await Promise.allSettled(
+      Array.from({ length: 12 }, (_, i) => room.join(`Player${i}`)),
+    );
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(5);
     expect(room.participantCount).toBe(5);
   });
@@ -185,8 +187,12 @@ describe("answers", () => {
     const { room, ids } = await startedRoom();
     const deadline = Date.now() + 20_000;
     // A late answer is rejected even though the lock timer hasn't fired yet.
-    expect(codeOf(() => room.submitAnswer(ids[0]!, "q0", "q0_a", deadline + ANSWER_GRACE_MS + 1))).toBe("ANSWER_TOO_LATE");
-    expect(codeOf(() => room.submitAnswer(ids[1]!, "q0", "q0_a", deadline + ANSWER_GRACE_MS))).toBeNull();
+    expect(
+      codeOf(() => room.submitAnswer(ids[0]!, "q0", "q0_a", deadline + ANSWER_GRACE_MS + 1)),
+    ).toBe("ANSWER_TOO_LATE");
+    expect(
+      codeOf(() => room.submitAnswer(ids[1]!, "q0", "q0_a", deadline + ANSWER_GRACE_MS)),
+    ).toBeNull();
   });
 
   it("rejects answers after a manual lock", async () => {
@@ -276,7 +282,12 @@ describe("scoring and privacy", () => {
     room.command("REVEAL");
     await vi.advanceTimersByTimeAsync(0);
     expect(persistence.answers).toHaveLength(1);
-    expect(persistence.answers[0]).toMatchObject({ questionId: "q0", isCorrect: true, responseMs: 4_000, points: 900 });
+    expect(persistence.answers[0]).toMatchObject({
+      questionId: "q0",
+      isCorrect: true,
+      responseMs: 4_000,
+      points: 900,
+    });
   });
 
   it("produces final results with accuracy and response stats", async () => {
@@ -290,8 +301,17 @@ describe("scoring and privacy", () => {
     }
     const results = room.hostView().results!;
     expect(results.playedQuestions).toBe(3);
-    expect(results.standings[0]).toMatchObject({ nickname: "Ada", correctCount: 3, accuracy: 1, bestStreak: 3 });
-    expect(results.standings[1]).toMatchObject({ nickname: "Grace", correctCount: 1, bestStreak: 1 });
+    expect(results.standings[0]).toMatchObject({
+      nickname: "Ada",
+      correctCount: 3,
+      accuracy: 1,
+      bestStreak: 3,
+    });
+    expect(results.standings[1]).toMatchObject({
+      nickname: "Grace",
+      correctCount: 1,
+      bestStreak: 1,
+    });
     expect(results.standings[1]!.accuracy).toBeCloseTo(1 / 3);
     expect(results.averageResponseMs).toBe(1_000);
   });

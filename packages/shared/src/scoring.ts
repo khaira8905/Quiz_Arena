@@ -34,7 +34,9 @@ export function computePoints(input: ScoreInput, config: ScoringConfig): number 
   const elapsed = Math.min(Math.max(0, input.responseMs), duration) / duration;
 
   const base =
-    config.mode === "SPEED" ? input.basePoints * (1 - (1 - SPEED_FLOOR) * elapsed) : input.basePoints;
+    config.mode === "SPEED"
+      ? input.basePoints * (1 - (1 - SPEED_FLOOR) * elapsed)
+      : input.basePoints;
 
   const steps = config.streakBonus ? Math.min(Math.max(0, input.streak - 1), STREAK_MAX_STEPS) : 0;
   const bonus = input.basePoints * STREAK_STEP * steps;

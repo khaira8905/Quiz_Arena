@@ -6,7 +6,14 @@ import { createDb } from "../src/db";
  * Creates the first admin account (from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD) and a sample
  * published quiz so a fresh install can go live in under a minute. Safe to re-run.
  */
-const SAMPLE: { text: string; type?: "TRUE_FALSE"; options: string[]; correct: number; time?: number; explanation?: string }[] = [
+const SAMPLE: {
+  text: string;
+  type?: "TRUE_FALSE";
+  options: string[];
+  correct: number;
+  time?: number;
+  explanation?: string;
+}[] = [
   {
     text: "Which data structure gives O(1) average lookup by key?",
     options: ["Linked list", "Hash table", "Binary heap", "Stack"],
@@ -71,7 +78,11 @@ async function main() {
   const admin = await db.user.upsert({
     where: { email },
     update: {},
-    create: { email, name: process.env.SEED_ADMIN_NAME ?? "Arena Admin", passwordHash: await hashPassword(password) },
+    create: {
+      email,
+      name: process.env.SEED_ADMIN_NAME ?? "Arena Admin",
+      passwordHash: await hashPassword(password),
+    },
   });
 
   const title = "CS Showdown: Warm-up Round";
@@ -81,7 +92,8 @@ async function main() {
       data: {
         ownerId: admin.id,
         title,
-        description: "A fast eight-question opener for tech events. Mixed difficulty, two true/false breathers.",
+        description:
+          "A fast eight-question opener for tech events. Mixed difficulty, two true/false breathers.",
         status: "PUBLISHED",
         defaultTimerSec: 20,
         questions: {
@@ -91,7 +103,9 @@ async function main() {
             text: q.text,
             timeLimitSec: q.time ?? null,
             explanation: q.explanation ?? "",
-            options: { create: q.options.map((text, i) => ({ order: i, text, isCorrect: i === q.correct })) },
+            options: {
+              create: q.options.map((text, i) => ({ order: i, text, isCorrect: i === q.correct })),
+            },
           })),
         },
       },

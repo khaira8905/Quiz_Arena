@@ -57,7 +57,9 @@ function clearSeat(code: string) {
  * Wi-Fi returns to the same seat and score.
  */
 export function usePlayerGame(initialCode: string | null) {
-  const [step, setStep] = useState<PlayerStep>(() => (initialCode ? { kind: "checking", code: initialCode } : { kind: "code" }));
+  const [step, setStep] = useState<PlayerStep>(() =>
+    initialCode ? { kind: "checking", code: initialCode } : { kind: "code" },
+  );
   const [view, setView] = useState<PlayerView | null>(null);
   const [connection, setConnection] = useState<Connection>("online");
   const [pendingAnswer, setPendingAnswer] = useState<string | null>(null);
@@ -85,13 +87,21 @@ export function usePlayerGame(initialCode: string | null) {
       // Every new transport connection must re-bind to the seat.
       const seat = seatRef.current;
       if (!seat) return;
-      const res = await emitAck<JoinResult>(socket, "player:reconnect", { code: seat.code, token: seat.token });
+      const res = await emitAck<JoinResult>(socket, "player:reconnect", {
+        code: seat.code,
+        token: seat.token,
+      });
       if (res.ok) {
         seedOffset(res.data.view.serverTime);
         setView(res.data.view);
         setStep({ kind: "playing" });
       } else if (res.error.code === "SESSION_EXPIRED" || res.error.code === "INVALID_GAME_CODE") {
-        closeWith(res.error.code, res.error.code === "INVALID_GAME_CODE" ? "This game is no longer running." : res.error.message);
+        closeWith(
+          res.error.code,
+          res.error.code === "INVALID_GAME_CODE"
+            ? "This game is no longer running."
+            : res.error.message,
+        );
       }
     });
     socket.on("disconnect", (reason) => {
@@ -103,9 +113,13 @@ export function usePlayerGame(initialCode: string | null) {
       setView(v);
       setPendingAnswer(null);
     });
-    socket.on("session:player_count", ({ count }) => setView((v) => (v ? { ...v, playerCount: count } : v)));
+    socket.on("session:player_count", ({ count }) =>
+      setView((v) => (v ? { ...v, playerCount: count } : v)),
+    );
     socket.on("timer:sync", ({ deadline, paused, remainingMs }) =>
-      setView((v) => (v && v.timer ? { ...v, paused, timer: { ...v.timer, deadline, paused, remainingMs } } : v)),
+      setView((v) =>
+        v && v.timer ? { ...v, paused, timer: { ...v.timer, deadline, paused, remainingMs } } : v,
+      ),
     );
     socket.on("session:closed", ({ code, message }) => closeWith(code, message));
     return socket;
@@ -136,19 +150,50 @@ export function usePlayerGame(initialCode: string | null) {
         const connected = await waitConnected(socket);
         if (gen !== generation.current) return;
         if (!connected) {
-          setStep({ kind: "code", attempted: code, error: { code: "INTERNAL", message: "Can't reach the game server. Check your connection." } });
+          setStep({
+            kind: "code",
+            attempted: code,
+            error: {
+              code: "INTERNAL",
+              message: "Can't reach the game server. Check your connection.",
+            },
+          });
         }
         return;
       }
       try {
         const game = await api<GameLookupDto>(`/games/${encodeURIComponent(code)}`);
         if (gen !== generation.current) return;
-        if (!game.joinable) setStep({ kind: "code", attempted: code, error: { code: "GAME_ALREADY_STARTED", message: "This game has already started and isn't accepting new players." } });
+        if (!game.joinable)
+          setStep({
+            kind: "code",
+            attempted: code,
+            error: {
+              code: "GAME_ALREADY_STARTED",
+              message: "This game has already started and isn't accepting new players.",
+            },
+          });
         else setStep({ kind: "name", game });
       } catch (err) {
         if (gen !== generation.current) return;
-        if (isApiError(err)) setStep({ kind: "code", attempted: code, error: { code: err.code, message: err.status === 0 || err.status >= 500 ? "Can't reach the game server right now." : err.message } });
-        else setStep({ kind: "code", attempted: code, error: { code: "INTERNAL", message: "Something went wrong." } });
+        if (isApiError(err))
+          setStep({
+            kind: "code",
+            attempted: code,
+            error: {
+              code: err.code,
+              message:
+                err.status === 0 || err.status >= 500
+                  ? "Can't reach the game server right now."
+                  : err.message,
+            },
+          });
+        else
+          setStep({
+            kind: "code",
+            attempted: code,
+            error: { code: "INTERNAL", message: "Something went wrong." },
+          });
       }
     },
     [ensureSocket],
@@ -173,19 +218,32 @@ export function usePlayerGame(initialCode: string | null) {
       const connected = await waitConnected(socket);
       if (gen !== generation.current) return;
       if (!connected) {
-        setStep({ kind: "name", game, error: { code: "INTERNAL", message: "Can't reach the game server. Try again." } });
+        setStep({
+          kind: "name",
+          game,
+          error: { code: "INTERNAL", message: "Can't reach the game server. Try again." },
+        });
         return;
       }
       const res = await emitAck<JoinResult>(socket, "session:join", { code: game.code, nickname });
       if (gen !== generation.current) return;
       if (res.ok) {
-        const seat = { code: game.code, token: res.data.token, participantId: res.data.participantId, nickname };
+        const seat = {
+          code: game.code,
+          token: res.data.token,
+          participantId: res.data.participantId,
+          nickname,
+        };
         seatRef.current = seat;
         saveSeat(seat);
         seedOffset(res.data.view.serverTime);
         setView(res.data.view);
         setStep({ kind: "playing" });
-      } else if (["INVALID_GAME_CODE", "GAME_ENDED", "GAME_ALREADY_STARTED", "PARTICIPANT_LIMIT"].includes(res.error.code)) {
+      } else if (
+        ["INVALID_GAME_CODE", "GAME_ENDED", "GAME_ALREADY_STARTED", "PARTICIPANT_LIMIT"].includes(
+          res.error.code,
+        )
+      ) {
         setStep({ kind: "code", error: res.error });
       } else {
         setStep({ kind: "name", game, error: res.error });
@@ -196,18 +254,29 @@ export function usePlayerGame(initialCode: string | null) {
 
   /** Answers are optimistic for feel; the server's ack is the truth. */
   const answer = useCallback(
-    async (optionId: string): Promise<{ ok: true; receipt: AnswerReceipt } | { ok: false; code: ErrorCode; message: string }> => {
+    async (
+      optionId: string,
+    ): Promise<
+      { ok: true; receipt: AnswerReceipt } | { ok: false; code: ErrorCode; message: string }
+    > => {
       const socket = socketRef.current;
       const q = view?.question;
-      if (!socket || !q) return { ok: false, code: "QUESTION_NOT_ACTIVE", message: "No open question." };
+      if (!socket || !q)
+        return { ok: false, code: "QUESTION_NOT_ACTIVE", message: "No open question." };
       setPendingAnswer(optionId);
-      const res = await emitAck<AnswerReceipt>(socket, "question:answer", { questionId: q.id, optionId }, 5000);
+      const res = await emitAck<AnswerReceipt>(
+        socket,
+        "question:answer",
+        { questionId: q.id, optionId },
+        5000,
+      );
       if (res.ok) {
         setView((v) => (v && v.question?.id === q.id ? { ...v, myAnswerId: optionId } : v));
         return { ok: true, receipt: res.data };
       }
       setPendingAnswer(null);
-      if (res.error.code === "ANSWER_DUPLICATE") return { ok: true, receipt: { questionId: q.id, optionId, receivedAt: Date.now() } };
+      if (res.error.code === "ANSWER_DUPLICATE")
+        return { ok: true, receipt: { questionId: q.id, optionId, receivedAt: Date.now() } };
       return { ok: false, code: res.error.code, message: res.error.message };
     },
     [view?.question],
@@ -247,5 +316,16 @@ export function usePlayerGame(initialCode: string | null) {
     [],
   );
 
-  return { step, view, connection, pendingAnswer, submitCode, join, answer, leave, reset, retryConnection };
+  return {
+    step,
+    view,
+    connection,
+    pendingAnswer,
+    submitCode,
+    join,
+    answer,
+    leave,
+    reset,
+    retryConnection,
+  };
 }

@@ -3,7 +3,17 @@
  * user has interacted with the page — browsers block autoplay otherwise. Players can mute
  * per device; organisers can disable sound per quiz.
  */
-export type Cue = "start" | "tick" | "tickUrgent" | "select" | "correct" | "wrong" | "reveal" | "leaderboard" | "winner" | "join";
+export type Cue =
+  | "start"
+  | "tick"
+  | "tickUrgent"
+  | "select"
+  | "correct"
+  | "wrong"
+  | "reveal"
+  | "leaderboard"
+  | "winner"
+  | "join";
 
 const STORAGE_KEY = "qa:sound";
 let ctx: AudioContext | null = null;
@@ -48,7 +58,9 @@ export const soundPreference = {
 export function unlockAudio() {
   if (typeof window === "undefined") return;
   if (!ctx) {
-    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return;
     ctx = new Ctor();
     master = ctx.createGain();
@@ -58,7 +70,14 @@ export function unlockAudio() {
   if (ctx.state === "suspended") void ctx.resume();
 }
 
-function tone(freq: number, start: number, dur: number, type: OscillatorType = "sine", gain = 1, slideTo?: number) {
+function tone(
+  freq: number,
+  start: number,
+  dur: number,
+  type: OscillatorType = "sine",
+  gain = 1,
+  slideTo?: number,
+) {
   if (!ctx || !master) return;
   const osc = ctx.createOscillator();
   const env = ctx.createGain();

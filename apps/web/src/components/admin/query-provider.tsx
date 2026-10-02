@@ -13,7 +13,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             staleTime: 15_000,
             refetchOnWindowFocus: true,
             // Don't hammer the API on auth or validation failures.
-            retry: (count, err) => count < 2 && !(isApiError(err) && err.status >= 400 && err.status < 500),
+            retry: (count, err) =>
+              count < 2 && !(isApiError(err) && err.status >= 400 && err.status < 500),
           },
         },
       }),

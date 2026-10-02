@@ -22,7 +22,15 @@ interface Particle {
  * Canvas confetti, reserved for big moments (winner, personal podium). One canvas, a few
  * hundred particles, stops itself when settled. Disabled under reduced motion.
  */
-export function Confetti({ fire, intensity = 1, origin = { x: 0.5, y: 0.35 } }: { fire: unknown; intensity?: number; origin?: { x: number; y: number } }) {
+export function Confetti({
+  fire,
+  intensity = 1,
+  origin = { x: 0.5, y: 0.35 },
+}: {
+  fire: unknown;
+  intensity?: number;
+  origin?: { x: number; y: number };
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
 
@@ -95,5 +103,11 @@ export function Confetti({ fire, intensity = 1, origin = { x: 0.5, y: 0.35 } }: 
     };
   }, [fire, intensity, origin.x, origin.y, reduced]);
 
-  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 z-50 h-full w-full" />;
+  return (
+    <canvas
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-50 h-full w-full"
+    />
+  );
 }
