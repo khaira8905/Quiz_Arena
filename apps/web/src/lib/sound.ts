@@ -22,6 +22,8 @@ export function isSoundEnabled() {
   return enabled;
 }
 
+const listeners = new Set<() => void>();
+
 export function setSoundEnabled(on: boolean) {
   enabled = on;
   try {
@@ -29,7 +31,18 @@ export function setSoundEnabled(on: boolean) {
   } catch {
     /* ignore */
   }
+  listeners.forEach((l) => l());
 }
+
+/** External-store adapter so components can read the device preference without effects. */
+export const soundPreference = {
+  subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  },
+  get: () => enabled,
+  getServer: () => true,
+};
 
 /** Call from a user gesture (tap/click/keypress) to unlock audio. */
 export function unlockAudio() {

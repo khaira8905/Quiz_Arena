@@ -139,7 +139,7 @@
   --text-stage-question--letter-spacing: -0.028em;
   --text-stage-question--font-weight: 700;
 
-  --text-stage-answer: clamp(1.25rem, 1.55vw + 0.4rem, 4.5rem);
+  --text-stage-answer: clamp(1.35rem, 2vw + 0.3rem, 5.5rem);
   --text-stage-answer--line-height: 1.15;
   --text-stage-answer--letter-spacing: -0.015em;
   --text-stage-answer--font-weight: 650;

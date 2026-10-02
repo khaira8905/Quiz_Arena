@@ -24,15 +24,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const me = useMe();
   const router = useRouter();
   const pathname = usePathname();
-  const [drawer, setDrawer] = useState(false);
+  // The drawer remembers which page it was opened on, so navigating closes it without an effect.
+  const [drawerPath, setDrawerPath] = useState<string | null>(null);
+  const drawer = drawerPath === pathname;
+  const setDrawer = (open: boolean) => setDrawerPath(open ? pathname : null);
 
   const unauthorized = me.isError && isApiError(me.error) && me.error.status === 401;
   useEffect(() => {
     if (unauthorized) router.replace(`/admin/login?next=${encodeURIComponent(pathname)}`);
   }, [unauthorized, pathname, router]);
-
-  // Close the mobile drawer on navigation.
-  useEffect(() => setDrawer(false), [pathname]);
 
   if (me.isPending || unauthorized) {
     return (

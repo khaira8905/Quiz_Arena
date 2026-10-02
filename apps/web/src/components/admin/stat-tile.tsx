@@ -10,12 +10,14 @@ export function StatTile({
   hint,
   live,
   index = 0,
+  format,
 }: {
   label: string;
   value: number;
   hint?: React.ReactNode;
   live?: boolean;
   index?: number;
+  format?: (n: number) => string;
 }) {
   return (
     <motion.div
@@ -28,7 +30,7 @@ export function StatTile({
         {live && <span className="h-1.5 w-1.5 animate-live-pulse rounded-full bg-accent" />}
         {label}
       </div>
-      <AnimatedNumber value={value} from={0} className="numeric mt-3 block text-[2.75rem] font-extrabold leading-none" />
+      <AnimatedNumber value={value} from={0} format={format} className="numeric mt-3 block text-[2.75rem] font-extrabold leading-none" />
       {hint && <div className="mt-2 text-body-sm text-fg-3">{hint}</div>}
     </motion.div>
   );
