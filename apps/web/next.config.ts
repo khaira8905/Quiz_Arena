@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // The admin portal must never be framed; the projector page may be embedded by event tooling.
       { source: "/admin/:path*", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
+      // The arena preview is framed by the Customize Arena panel on this same origin.
+      { source: "/arena-preview", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }] },
     ];
   },
 };

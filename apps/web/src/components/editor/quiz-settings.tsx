@@ -183,12 +183,6 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
           checked={draft.showAnswerStats}
           onChange={(v) => set("showAnswerStats", v)}
         />
-        <Switch
-          label="Sound effects"
-          description="Countdown ticks and reveal cues on the projector and phones."
-          checked={draft.soundEnabled}
-          onChange={(v) => set("soundEnabled", v)}
-        />
       </Panel>
 
       <Panel title="Players" description="Who can get in, and when.">
@@ -227,7 +221,7 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
   );
 }
 
-function Panel({
+export function Panel({
   title,
   description,
   children,

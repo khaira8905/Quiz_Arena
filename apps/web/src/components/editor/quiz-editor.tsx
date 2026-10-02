@@ -15,22 +15,29 @@ import { useAddQuestion, useQuiz, useReorderQuestions, useUpdateQuiz } from "@/l
 import { useGoLive } from "@/components/admin/use-go-live";
 import { QuestionEditor } from "./question-editor";
 import { QuestionNavigator } from "./question-navigator";
+import { ArenaCustomizer } from "./arena-customizer";
 import { QuizSettings } from "./quiz-settings";
 import { SaveStatus, SaveTracker, useSaveTracker } from "./save-tracker";
 
-type Tab = "questions" | "settings";
+export type EditorTab = "questions" | "settings" | "arena";
 
-export function QuizEditor({ id }: { id: string }) {
+const TAB_LABEL: Record<EditorTab, string> = {
+  questions: "Questions",
+  settings: "Settings",
+  arena: "Customize arena",
+};
+
+export function QuizEditor({ id, initialTab }: { id: string; initialTab?: EditorTab }) {
   return (
     <SaveTracker>
-      <EditorInner id={id} />
+      <EditorInner id={id} initialTab={initialTab ?? "questions"} />
     </SaveTracker>
   );
 }
 
-function EditorInner({ id }: { id: string }) {
+function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) {
   const { data: quiz, isPending, isError, error, refetch } = useQuiz(id);
-  const [tab, setTab] = useState<Tab>("questions");
+  const [tab, setTab] = useState<EditorTab>(initialTab);
   const [selected, setSelected] = useState<string | null>(null);
   const addQuestion = useAddQuestion(id);
   const reorder = useReorderQuestions(id);
@@ -117,14 +124,14 @@ function EditorInner({ id }: { id: string }) {
             aria-label="Editor sections"
             className="mr-2 flex border border-line bg-sunken p-1"
           >
-            {(["questions", "settings"] as const).map((t) => (
+            {(["questions", "settings", "arena"] as const).map((t) => (
               <button
                 key={t}
                 role="tab"
                 aria-selected={tab === t}
                 onClick={() => setTab(t)}
                 className={cn(
-                  "relative h-8 px-4 text-body-sm font-semibold capitalize transition-colors",
+                  "relative h-8 px-4 text-body-sm font-semibold transition-colors",
                   tab === t ? "text-fg" : "text-fg-3 hover:text-fg",
                 )}
               >
@@ -136,7 +143,7 @@ function EditorInner({ id }: { id: string }) {
                   />
                 )}
                 <span className="relative">
-                  {t}
+                  {TAB_LABEL[t]}
                   {t === "questions" && (
                     <span className="numeric ml-1.5 text-fg-3">{questions.length}</span>
                   )}
@@ -181,6 +188,10 @@ function EditorInner({ id }: { id: string }) {
       {tab === "settings" ? (
         <div className="mt-6">
           <QuizSettings quiz={quiz} />
+        </div>
+      ) : tab === "arena" ? (
+        <div className="mt-6">
+          <ArenaCustomizer quiz={quiz} />
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] wide:grid-cols-[14rem_minmax(0,1fr)_18rem] 2xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">

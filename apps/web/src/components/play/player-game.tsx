@@ -32,7 +32,7 @@ import { ordinal, pad2 } from "@/lib/format";
 import type { usePlayerGame } from "@/lib/game/use-player-game";
 import { play, setSoundEnabled, soundPreference, unlockAudio } from "@/lib/sound";
 
-type Game = ReturnType<typeof usePlayerGame>;
+export type Game = ReturnType<typeof usePlayerGame>;
 
 /**
  * The phone in a player's hand. One job per screen; the answer grid owns the viewport
