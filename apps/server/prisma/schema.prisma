@@ -1,0 +1,202 @@
+// QuizArena data model.
+//
+// Live game state is held in memory by the game engine while a session runs; this schema
+// stores everything that must survive it: content, sessions, participants, every accepted
+// answer (with the server receipt time) and the final standings.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+enum ScoringMode {
+  SPEED
+  ACCURACY
+}
+
+enum SessionStatus {
+  LOBBY
+  LIVE
+  FINISHED
+  ABANDONED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  quizzes  Quiz[]
+  sessions QuizSession[]
+}
+
+model Quiz {
+  id            String     @id @default(cuid())
+  ownerId       String
+  title         String
+  description   String     @default("")
+  coverImageUrl String?
+  status        QuizStatus @default(DRAFT)
+
+  // Settings
+  defaultTimerSec    Int         @default(20)
+  scoringMode        ScoringMode @default(SPEED)
+  streakBonus        Boolean     @default(true)
+  randomizeQuestions Boolean     @default(false)
+  randomizeAnswers   Boolean     @default(false)
+  showLeaderboard    Boolean     @default(true)
+  showCorrectAnswers Boolean     @default(true)
+  showAnswerStats    Boolean     @default(true)
+  allowLateJoin      Boolean     @default(false)
+  participantLimit   Int         @default(200)
+  soundEnabled       Boolean     @default(true)
+  nicknameFilter     Boolean     @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner     User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  questions Question[]
+  sessions  QuizSession[]
+
+  @@index([ownerId, updatedAt])
+  @@index([ownerId, status])
+}
+
+model Question {
+  id               String       @id @default(cuid())
+  quizId           String
+  order            Int
+  type             QuestionType @default(MULTIPLE_CHOICE)
+  text             String       @default("")
+  imageUrl         String?
+  /// null = use the quiz default timer
+  timeLimitSec     Int?
+  points           Int          @default(1000)
+  explanation      String       @default("")
+  randomizeAnswers Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  quiz    Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options AnswerOption[]
+
+  @@index([quizId, order])
+}
+
+model AnswerOption {
+  id         String  @id @default(cuid())
+  questionId String
+  order      Int
+  text       String  @default("")
+  isCorrect  Boolean @default(false)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, order])
+}
+
+model QuizSession {
+  id     String        @id @default(cuid())
+  /// Human-readable join code. Unique among non-finished sessions (enforced by the engine).
+  code   String
+  quizId String?
+  hostId String
+  status SessionStatus @default(LOBBY)
+
+  /// Frozen copy of the quiz (questions, options, settings) at session creation, so editing
+  /// the quiz later never changes a past game's results.
+  quizSnapshot Json
+  quizTitle    String
+
+  createdAt DateTime  @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  quiz         Quiz?               @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  host         User                @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  participants Participant[]
+  answers      ParticipantAnswer[]
+  results      QuizResult[]
+
+  @@index([code, status])
+  @@index([hostId, createdAt])
+  @@index([quizId])
+}
+
+model Participant {
+  id          String   @id @default(cuid())
+  sessionId   String
+  nickname    String
+  /// Lowercased nickname, unique per session.
+  nicknameKey String
+  /// SHA-256 of the reconnect token; the raw token only lives on the player's device.
+  tokenHash   String
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+  removed     Boolean  @default(false)
+
+  session QuizSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answers ParticipantAnswer[]
+  result  QuizResult?
+
+  @@unique([sessionId, nicknameKey])
+  @@index([sessionId])
+}
+
+model ParticipantAnswer {
+  id            String   @id @default(cuid())
+  sessionId     String
+  participantId String
+  /// Question id from the session snapshot (not a FK: the source question may be deleted).
+  questionId    String
+  questionIndex Int
+  optionId      String
+  isCorrect     Boolean
+  responseMs    Int
+  points        Int
+  /// Server receipt time — the authoritative timestamp for this answer.
+  receivedAt    DateTime
+
+  session     QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, questionId])
+  @@index([sessionId, questionIndex])
+}
+
+model QuizResult {
+  id             String @id @default(cuid())
+  sessionId      String
+  participantId  String @unique
+  rank           Int
+  score          Int
+  correctCount   Int
+  answeredCount  Int
+  totalQuestions Int
+  avgResponseMs  Int?
+  bestStreak     Int
+
+  session     QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, rank])
+}
