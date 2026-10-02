@@ -281,6 +281,12 @@ export class GameRoom {
   remove(participantId: string, closeReason?: string) {
     const p = this.participants.get(participantId);
     if (!p) return;
+    // After the final whistle a player belongs to the results: leaving just drops the seat.
+    if (this.phase === "FINISHED") {
+      if (closeReason) this.output.closePlayer(participantId, "SESSION_EXPIRED", closeReason);
+      this.setConnected(participantId, false);
+      return;
+    }
     const eviction = this.lobbyEvictions.get(participantId);
     if (eviction) clearTimeout(eviction);
     this.lobbyEvictions.delete(participantId);

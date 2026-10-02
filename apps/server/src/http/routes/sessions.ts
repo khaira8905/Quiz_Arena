@@ -200,7 +200,9 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
   /** Public: lets the join screen validate a code before asking for a nickname. */
   app.get(
     "/api/games/:code",
-    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    // Generous on purpose: a whole classroom often shares one public IP (campus Wi-Fi NAT),
+    // and every player's phone looks the code up once while joining.
+    { config: { rateLimit: { max: 1000, timeWindow: "1 minute" } } },
     async (req): Promise<GameLookupDto> => {
       const parsed = gameCodeSchema.safeParse((req.params as { code?: string }).code ?? "");
       if (!parsed.success) throw new AppError("INVALID_GAME_CODE");

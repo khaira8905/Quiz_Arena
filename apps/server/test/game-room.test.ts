@@ -357,6 +357,16 @@ describe("connections", () => {
     expect(room.participantCount).toBe(1);
   });
 
+  it("keeps players in the final results when they leave after the game", async () => {
+    const { room, ids, persistence } = await startedRoom(["Ada", "Grace"]);
+    room.command("END");
+    room.remove(ids[0]!);
+    expect(room.participantCount).toBe(2);
+    expect(room.hostView().results?.standings).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(persistence.participants).toHaveLength(2);
+  });
+
   it("kicking closes the player's connection", async () => {
     const { room, output } = makeRoom();
     const a = await room.join("Ada");
