@@ -115,7 +115,11 @@ export const THEME_TOKENS: Record<ArenaTheme, ThemeTokens> = {
 };
 
 const optionalUrl = z
-  .union([z.url({ protocol: /^https?$/ }).max(2048), z.literal(""), z.null()])
+  .union([
+    z.url({ protocol: /^https$/, error: "Use an https:// link" }).max(2048),
+    z.literal(""),
+    z.null(),
+  ])
   .transform((v) => (v ? v : null));
 
 const hex = z

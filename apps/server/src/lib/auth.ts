@@ -16,8 +16,8 @@ export class TokenService {
     this.key = new TextEncoder().encode(secret);
   }
 
-  private sign(userId: string, purpose: Purpose, ttlSeconds: number) {
-    return new SignJWT({ purpose })
+  private sign(userId: string, purpose: Purpose, ttlSeconds: number, version = 0) {
+    return new SignJWT({ purpose, sv: version })
       .setProtectedHeader({ alg: "HS256" })
       .setSubject(userId)
       .setIssuedAt()
@@ -27,8 +27,23 @@ export class TokenService {
       .sign(this.key);
   }
 
-  signSession(userId: string) {
-    return this.sign(userId, "session", SESSION_TTL_SECONDS);
+  /** `version` is the user's sessionVersion; tokens from an older version are refused. */
+  signSession(userId: string, version: number) {
+    return this.sign(userId, "session", SESSION_TTL_SECONDS, version);
+  }
+
+  async verifySession(token: string): Promise<{ userId: string; version: number } | null> {
+    try {
+      const { payload } = await jwtVerify(token, this.key, {
+        issuer: "quizarena",
+        audience: "quizarena:session",
+        algorithms: ["HS256"],
+      });
+      if (typeof payload.sub !== "string") return null;
+      return { userId: payload.sub, version: typeof payload.sv === "number" ? payload.sv : 0 };
+    } catch {
+      return null;
+    }
   }
 
   signSocketTicket(userId: string) {

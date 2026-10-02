@@ -41,6 +41,8 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  /// Embedded in session tokens; bumping it (password change) signs out every other device.
+  sessionVersion Int    @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -1,4 +1,5 @@
 import {
+  QUESTION_TYPES,
   QUESTION_TYPE_RULES,
   MAX_QUESTIONS_PER_QUIZ,
   questionInputSchema,
@@ -195,7 +196,8 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       );
     }
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const type = (body.type as QuestionType | undefined) ?? "MULTIPLE_CHOICE";
+    const type: QuestionType =
+      z.enum(QUESTION_TYPES).optional().parse(body.type) ?? "MULTIPLE_CHOICE";
     const input = questionInputSchema.parse({
       type,
       text: "",
