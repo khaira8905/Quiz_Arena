@@ -44,14 +44,15 @@ export function StageAnswerTile({
       }}
       transition={{ delay, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "notch relative flex min-h-0 items-center gap-[1.4vw] overflow-hidden px-[1.6vw] py-[1.8vh] text-answer-ink",
+        "notch relative flex min-h-0 items-center gap-[1.4vw] overflow-hidden px-[1.6vw] py-[1.8vh]",
         style.bg,
+        style.ink,
         state === "correct" && "z-10 outline outline-[0.35vw] -outline-offset-[0.35vw] outline-fg",
       )}
     >
       {showStats && share !== undefined && (
         <motion.div
-          className="absolute inset-y-0 left-0 bg-answer-ink/22"
+          className={cn("absolute inset-y-0 left-0", style.meter)}
           initial={{ width: 0 }}
           animate={{ width: `${Math.round(share * 100)}%` }}
           transition={{ delay: delay + 0.15, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
@@ -59,7 +60,10 @@ export function StageAnswerTile({
         />
       )}
       <span
-        className="relative grid aspect-square w-[clamp(2.75rem,4.4vw,9rem)] shrink-0 place-items-center bg-answer-ink font-display text-[clamp(1.5rem,2.4vw,5rem)] font-extrabold"
+        className={cn(
+          "relative grid aspect-square w-[clamp(2.75rem,4.4vw,9rem)] shrink-0 place-items-center font-display text-[clamp(1.5rem,2.4vw,5rem)] font-extrabold",
+          style.inkBg,
+        )}
         style={{ color: style.fill }}
       >
         {state === "correct" ? (
@@ -125,8 +129,9 @@ export function PhoneAnswerButton({
       animate={animate}
       transition={{ duration: state === "wrong" ? 0.42 : 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "notch relative flex min-h-0 flex-col justify-between overflow-hidden p-4 text-left text-answer-ink transition-[filter] disabled:cursor-default",
+        "notch relative flex min-h-0 flex-col justify-between overflow-hidden p-4 text-left transition-[filter] disabled:cursor-default",
         style.bg,
+        style.ink,
         compact ? "gap-2" : "gap-3",
         state === "selected" && "outline outline-4 -outline-offset-4 outline-fg",
         state === "correct" && "outline outline-4 -outline-offset-4 outline-fg",
@@ -136,7 +141,8 @@ export function PhoneAnswerButton({
       <span className="flex items-start justify-between">
         <span
           className={cn(
-            "grid aspect-square place-items-center bg-answer-ink font-display font-extrabold",
+            "grid aspect-square place-items-center font-display font-extrabold",
+            style.inkBg,
             compact ? "w-10 text-xl" : "w-12 text-2xl",
           )}
           style={{ color: style.fill }}
@@ -146,7 +152,12 @@ export function PhoneAnswerButton({
         {state === "correct" && <Check className="h-8 w-8" strokeWidth={3.5} aria-hidden />}
         {state === "wrong" && <X className="h-8 w-8" strokeWidth={3.5} aria-hidden />}
         {state === "selected" && (
-          <span className="label rounded-sm bg-answer-ink px-2 py-1 text-fg">Locked in</span>
+          <span
+            className={cn("label rounded-sm px-2 py-1", style.inkBg)}
+            style={{ color: style.fill }}
+          >
+            Locked in
+          </span>
         )}
       </span>
       <span

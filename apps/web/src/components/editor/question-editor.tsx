@@ -169,8 +169,9 @@ export function QuestionEditor({
                     >
                       <span
                         className={cn(
-                          "flex w-12 shrink-0 items-center justify-center font-display text-xl font-extrabold text-answer-ink",
+                          "flex w-12 shrink-0 items-center justify-center font-display text-xl font-extrabold",
                           style.bg,
+                          style.ink,
                         )}
                         aria-hidden
                       >

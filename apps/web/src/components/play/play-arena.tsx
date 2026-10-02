@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
+import { ArenaThemeProvider } from "@/components/arena/arena-theme";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Spinner, StatusScreen } from "@/components/ui/misc";
@@ -15,6 +16,19 @@ import { PlayerGame } from "./player-game";
 /** Player entry flow: code → nickname → game. Everything else is in <PlayerGame>. */
 export function PlayArena({ initialCode }: { initialCode: string | null }) {
   const game = usePlayerGame(initialCode);
+  const { step } = game;
+  // The arena's look applies from the moment the code is recognised, not only once inside.
+  const appearance =
+    game.view?.appearance ??
+    (step.kind === "name" || step.kind === "joining" ? step.game.appearance : null);
+  return (
+    <ArenaThemeProvider appearance={appearance} page>
+      <PlayArenaScreens game={game} />
+    </ArenaThemeProvider>
+  );
+}
+
+function PlayArenaScreens({ game }: { game: ReturnType<typeof usePlayerGame> }) {
   const { step } = game;
 
   if (step.kind === "playing" && game.view) return <PlayerGame game={game} view={game.view} />;

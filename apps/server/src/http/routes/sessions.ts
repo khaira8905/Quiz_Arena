@@ -214,6 +214,7 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
         quizTitle: room.quizTitle,
         joinable: room.joinable,
         phase: room.currentPhase,
+        appearance: room.appearance,
       };
     },
   );

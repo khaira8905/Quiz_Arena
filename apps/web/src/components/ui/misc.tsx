@@ -53,11 +53,23 @@ export function Badge({
   );
 }
 
-export function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Kbd({
+  children,
+  className,
+  onAccent,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** Sits on an accent-filled button: ink colours instead of surface colours. */
+  onAccent?: boolean;
+}) {
   return (
     <kbd
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-strong bg-sunken px-1 font-mono text-[10px] font-semibold text-fg-2",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border px-1 font-mono text-[10px] font-semibold",
+        onAccent
+          ? "border-accent-ink/40 bg-transparent text-accent-ink"
+          : "border-line-strong bg-sunken text-fg-2",
         className,
       )}
     >

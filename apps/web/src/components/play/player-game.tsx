@@ -420,8 +420,9 @@ function RevealScreen({ view }: { view: PlayerView }) {
             >
               <span
                 className={cn(
-                  "grid h-9 w-9 shrink-0 place-items-center font-display font-extrabold text-answer-ink",
+                  "grid h-9 w-9 shrink-0 place-items-center font-display font-extrabold",
                   answerStyle(i).bg,
+                  answerStyle(i).ink,
                 )}
               >
                 {answerStyle(i).letter}

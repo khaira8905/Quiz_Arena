@@ -175,8 +175,9 @@ export function LiveControl({
                           />
                           <span
                             className={cn(
-                              "relative grid h-8 w-8 shrink-0 place-items-center font-display font-extrabold text-answer-ink",
+                              "relative grid h-8 w-8 shrink-0 place-items-center font-display font-extrabold",
                               s.bg,
+                              s.ink,
                             )}
                           >
                             {s.letter}

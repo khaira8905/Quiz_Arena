@@ -215,7 +215,12 @@ describe.skipIf(!hasDb)("REST API", () => {
     const { code, id: sessionId } = session.json().session;
     expect(code).toMatch(/^QA\d{4}$/);
     const lookup = await app.inject({ method: "GET", url: `/api/games/${code.toLowerCase()}` });
-    expect(lookup.json()).toMatchObject({ code, joinable: true, phase: "LOBBY" });
+    expect(lookup.json()).toMatchObject({
+      code,
+      joinable: true,
+      phase: "LOBBY",
+      appearance: { theme: "BLACK", motion: "NORMAL" },
+    });
     expect(
       (
         await app.inject({

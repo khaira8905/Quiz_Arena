@@ -16,7 +16,7 @@ import { useResults } from "@/lib/queries";
 const PODIUM = [
   "bg-accent text-accent-ink",
   "bg-fg text-inverse",
-  "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-answer-ink",
+  "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-ink1",
 ];
 
 export function ResultsView({ session }: { session: SessionSummaryDto }) {

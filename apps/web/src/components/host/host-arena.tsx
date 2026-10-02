@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import { ArenaThemeProvider } from "@/components/arena/arena-theme";
 import { Logo } from "@/components/brand/logo";
 import { JoinPanel, PlayerCounter, Roster } from "@/components/game/lobby";
 import { Leaderboard } from "@/components/game/leaderboard";
@@ -203,187 +204,190 @@ export function HostArena({ code }: { code: string }) {
   const primary = primaryCommand(view);
 
   return (
-    <div className="arena-floor flex h-dvh flex-col overflow-hidden" onClick={unlockAudio}>
-      {/* ------------------------------------------------------------ top strip */}
-      <header className="flex h-[7vh] min-h-12 shrink-0 items-center justify-between gap-[2vw] border-b border-line px-[3vw]">
-        <div className="flex min-w-0 items-center gap-[1.5vw]">
-          <Logo
-            size="sm"
-            className="[&_svg]:h-[3vh] [&_svg]:w-[3vh] [&_span]:text-[clamp(0.9rem,1.4vw,2.5rem)]"
-          />
-          <span className="h-[2.5vh] w-px bg-line-strong" />
-          <span className="truncate text-[clamp(0.85rem,1.2vw,2.25rem)] font-medium text-fg-2">
-            {view.quizTitle}
-          </span>
-        </div>
-        <div className="flex items-center gap-[2vw]">
-          {view.phase !== "LOBBY" && (
-            <span className="flex items-baseline gap-[0.6vw]">
-              <span className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">Join</span>
-              <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold text-accent">
-                {view.code}
+    <ArenaThemeProvider appearance={view.settings.appearance} page>
+      <div className="arena-floor flex h-dvh flex-col overflow-hidden" onClick={unlockAudio}>
+        {/* ------------------------------------------------------------ top strip */}
+        <header className="flex h-[7vh] min-h-12 shrink-0 items-center justify-between gap-[2vw] border-b border-line px-[3vw]">
+          <div className="flex min-w-0 items-center gap-[1.5vw]">
+            <Logo
+              size="sm"
+              className="[&_svg]:h-[3vh] [&_svg]:w-[3vh] [&_span]:text-[clamp(0.9rem,1.4vw,2.5rem)]"
+            />
+            <span className="h-[2.5vh] w-px bg-line-strong" />
+            <span className="truncate text-[clamp(0.85rem,1.2vw,2.25rem)] font-medium text-fg-2">
+              {view.quizTitle}
+            </span>
+          </div>
+          <div className="flex items-center gap-[2vw]">
+            {view.phase !== "LOBBY" && (
+              <span className="flex items-baseline gap-[0.6vw]">
+                <span className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">Join</span>
+                <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold text-accent">
+                  {view.code}
+                </span>
               </span>
+            )}
+            <span className="flex items-baseline gap-[0.6vw]">
+              <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold">
+                {view.connectedCount}
+              </span>
+              <span className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">Online</span>
             </span>
-          )}
-          <span className="flex items-baseline gap-[0.6vw]">
-            <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold">
-              {view.connectedCount}
-            </span>
-            <span className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">Online</span>
-          </span>
-          <ConnectionDot state={connection} />
-        </div>
-      </header>
+            <ConnectionDot state={connection} />
+          </div>
+        </header>
 
-      {/* ------------------------------------------------------------ stage */}
-      <main className="relative min-h-0 flex-1 px-[3vw] py-[3.5vh]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={
-              view.phase === "QUESTION_ACTIVE" ||
-              view.phase === "QUESTION_LOCKED" ||
-              view.phase === "ANSWER_REVEAL"
-                ? "question"
-                : view.phase
-            }
-            className="h-full"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Stage view={view} sound={sound} />
-          </motion.div>
-        </AnimatePresence>
-      </main>
+        {/* ------------------------------------------------------------ stage */}
+        <main className="relative min-h-0 flex-1 px-[3vw] py-[3.5vh]">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={
+                view.phase === "QUESTION_ACTIVE" ||
+                view.phase === "QUESTION_LOCKED" ||
+                view.phase === "ANSWER_REVEAL"
+                  ? "question"
+                  : view.phase
+              }
+              className="h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Stage view={view} sound={sound} />
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-      {/* ------------------------------------------------------------ control dock (outside the stage) */}
-      <AnimatePresence initial={false}>
-        {dock && (
-          <motion.footer
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="shrink-0 overflow-hidden border-t border-line-strong bg-surface"
-            aria-label="Host controls"
-          >
-            <div className="flex flex-wrap items-center gap-3 px-5 py-3">
-              <div className="mr-2 min-w-36">
-                <div className="label text-fg-3">Phase</div>
-                <div className="mt-1 flex items-center gap-2 text-body font-semibold">
-                  {view.paused ? (
-                    <span className="text-warning">Paused</span>
-                  ) : (
-                    PHASE_LABEL[view.phase]
-                  )}
+        {/* ------------------------------------------------------------ control dock (outside the stage) */}
+        <AnimatePresence initial={false}>
+          {dock && (
+            <motion.footer
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="shrink-0 overflow-hidden border-t border-line-strong bg-surface"
+              aria-label="Host controls"
+            >
+              <div className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <div className="mr-2 min-w-36">
+                  <div className="label text-fg-3">Phase</div>
+                  <div className="mt-1 flex items-center gap-2 text-body font-semibold">
+                    {view.paused ? (
+                      <span className="text-warning">Paused</span>
+                    ) : (
+                      PHASE_LABEL[view.phase]
+                    )}
+                  </div>
+                </div>
+                {primary && (
+                  <Button
+                    size="lg"
+                    onClick={() => request(primary)}
+                    loading={busy}
+                    notch
+                    className="min-w-48"
+                  >
+                    {COMMAND_LABELS[primary]} <Kbd onAccent>Space</Kbd>
+                  </Button>
+                )}
+                {!primary && view.phase === "LOBBY" && (
+                  <Button size="lg" notch disabled className="min-w-48">
+                    Start game · waiting for players
+                  </Button>
+                )}
+                <DockButton
+                  cmd={view.paused ? "RESUME" : "PAUSE"}
+                  view={view}
+                  onRun={request}
+                  icon={view.paused ? Play : Pause}
+                  k="P"
+                />
+                <DockButton cmd="LOCK" view={view} onRun={request} icon={Lock} />
+                <DockButton cmd="SKIP" view={view} onRun={request} icon={SkipForward} k="S" />
+                <DockButton cmd="LEADERBOARD" view={view} onRun={request} icon={Trophy} k="L" />
+                <DockButton cmd="END" view={view} onRun={request} icon={Square} k="E" danger />
+                <div className="ml-auto flex items-center gap-1">
+                  <Link
+                    href={`/admin/sessions/${view.sessionId}`}
+                    target="_blank"
+                    className={buttonClasses({
+                      variant: "ghost",
+                      size: "sm",
+                      className: "hidden md:block",
+                    })}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" /> Control panel
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={soundOn ? "Mute sound (M)" : "Unmute sound (M)"}
+                    title={
+                      !view.settings.soundEnabled ? "Sound is off in quiz settings" : undefined
+                    }
+                    onClick={() => {
+                      unlockAudio();
+                      setSoundEnabled(!soundOn);
+                    }}
+                  >
+                    {sound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Hide controls (H)"
+                    onClick={() => setDock(false)}
+                  >
+                    <PanelBottomClose className="h-4 w-4" />
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={toggleFullscreen}>
+                    {fullscreen ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}{" "}
+                    {fullscreen ? "Exit projector" : "Projector mode"}
+                  </Button>
                 </div>
               </div>
-              {primary && (
-                <Button
-                  size="lg"
-                  onClick={() => request(primary)}
-                  loading={busy}
-                  notch
-                  className="min-w-48"
-                >
-                  {COMMAND_LABELS[primary]}{" "}
-                  <Kbd className="border-accent-ink/30 bg-transparent text-accent-ink">Space</Kbd>
-                </Button>
-              )}
-              {!primary && view.phase === "LOBBY" && (
-                <Button size="lg" notch disabled className="min-w-48">
-                  Start game · waiting for players
-                </Button>
-              )}
-              <DockButton
-                cmd={view.paused ? "RESUME" : "PAUSE"}
-                view={view}
-                onRun={request}
-                icon={view.paused ? Play : Pause}
-                k="P"
-              />
-              <DockButton cmd="LOCK" view={view} onRun={request} icon={Lock} />
-              <DockButton cmd="SKIP" view={view} onRun={request} icon={SkipForward} k="S" />
-              <DockButton cmd="LEADERBOARD" view={view} onRun={request} icon={Trophy} k="L" />
-              <DockButton cmd="END" view={view} onRun={request} icon={Square} k="E" danger />
-              <div className="ml-auto flex items-center gap-1">
-                <Link
-                  href={`/admin/sessions/${view.sessionId}`}
-                  target="_blank"
-                  className={buttonClasses({
-                    variant: "ghost",
-                    size: "sm",
-                    className: "hidden md:block",
-                  })}
-                >
-                  <SlidersHorizontal className="h-4 w-4" /> Control panel
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={soundOn ? "Mute sound (M)" : "Unmute sound (M)"}
-                  title={!view.settings.soundEnabled ? "Sound is off in quiz settings" : undefined}
-                  onClick={() => {
-                    unlockAudio();
-                    setSoundEnabled(!soundOn);
-                  }}
-                >
-                  {sound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Hide controls (H)"
-                  onClick={() => setDock(false)}
-                >
-                  <PanelBottomClose className="h-4 w-4" />
-                </Button>
-                <Button variant="secondary" size="sm" onClick={toggleFullscreen}>
-                  {fullscreen ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}{" "}
-                  {fullscreen ? "Exit projector" : "Projector mode"}
-                </Button>
-              </div>
-            </div>
-          </motion.footer>
-        )}
-      </AnimatePresence>
-      {!dock && !fullscreen && (
-        <button
-          onClick={() => setDock(true)}
-          aria-label="Show controls (H)"
-          className="fixed bottom-3 right-3 rounded-sm border border-line bg-surface/80 p-2 text-fg-3 hover:text-fg"
-        >
-          <PanelBottomOpen className="h-4 w-4" />
-        </button>
-      )}
-
-      <ConfirmDialog
-        open={confirm !== null}
-        onOpenChange={(o) => !o && setConfirm(null)}
-        title={confirm === "END" ? "End the game now?" : "Skip this question?"}
-        description={
-          confirm === "END"
-            ? "Final results are calculated from the questions played so far. This can't be undone."
-            : "Nobody scores on a skipped question. The next question opens immediately."
-        }
-        confirmLabel={confirm === "END" ? "End game" : "Skip question"}
-        onConfirm={() => (confirm ? run(confirm) : undefined)}
-      />
-
-      <AnimatePresence>
-        {connection === "reconnecting" && (
-          <motion.div
-            initial={{ y: -40 }}
-            animate={{ y: 0 }}
-            exit={{ y: -40 }}
-            className="fixed left-1/2 top-3 z-40 -translate-x-1/2 border border-warning/50 bg-elevated px-4 py-2 text-body-sm text-warning"
+            </motion.footer>
+          )}
+        </AnimatePresence>
+        {!dock && !fullscreen && (
+          <button
+            onClick={() => setDock(true)}
+            aria-label="Show controls (H)"
+            className="fixed bottom-3 right-3 rounded-sm border border-line bg-surface/80 p-2 text-fg-3 hover:text-fg"
           >
-            Connection lost — reconnecting…
-          </motion.div>
+            <PanelBottomOpen className="h-4 w-4" />
+          </button>
         )}
-      </AnimatePresence>
-    </div>
+
+        <ConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(o) => !o && setConfirm(null)}
+          title={confirm === "END" ? "End the game now?" : "Skip this question?"}
+          description={
+            confirm === "END"
+              ? "Final results are calculated from the questions played so far. This can't be undone."
+              : "Nobody scores on a skipped question. The next question opens immediately."
+          }
+          confirmLabel={confirm === "END" ? "End game" : "Skip question"}
+          onConfirm={() => (confirm ? run(confirm) : undefined)}
+        />
+
+        <AnimatePresence>
+          {connection === "reconnecting" && (
+            <motion.div
+              initial={{ y: -40 }}
+              animate={{ y: 0 }}
+              exit={{ y: -40 }}
+              className="fixed left-1/2 top-3 z-40 -translate-x-1/2 border border-warning/50 bg-elevated px-4 py-2 text-body-sm text-warning"
+            >
+              Connection lost — reconnecting…
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </ArenaThemeProvider>
   );
 }
 
@@ -474,7 +478,8 @@ function DockButton({
   danger?: boolean;
 }) {
   // Only show what this phase allows: a lobby or finished screen has no "Pause" to offer.
-  if (!view.availableCommands.includes(cmd)) return null;
+  // The primary command already has its own big button, so it isn't repeated here.
+  if (!view.availableCommands.includes(cmd) || cmd === primaryCommand(view)) return null;
   return (
     <Button
       variant="secondary"

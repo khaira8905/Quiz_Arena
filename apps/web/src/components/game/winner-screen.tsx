@@ -198,7 +198,7 @@ function PodiumColumn({
             ? "bg-accent text-accent-ink"
             : place === 2
               ? "bg-fg text-inverse"
-              : "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-answer-ink",
+              : "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-ink1",
         )}
         initial={{ height: 0 }}
         animate={{ height: show ? height : "4vh" }}

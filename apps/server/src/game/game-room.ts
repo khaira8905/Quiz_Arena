@@ -144,6 +144,10 @@ export class GameRoom {
     return this.snapshot.title;
   }
 
+  get appearance() {
+    return this.snapshot.settings.appearance;
+  }
+
   get joinable() {
     return (
       this.phase === "LOBBY" || (this.phase !== "FINISHED" && this.snapshot.settings.allowLateJoin)

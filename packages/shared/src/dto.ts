@@ -89,4 +89,6 @@ export interface GameLookupDto {
   quizTitle: string;
   joinable: boolean;
   phase: string;
+  /** So the join screen can switch to the arena's look before the player is in. */
+  appearance: ArenaAppearance;
 }
