@@ -50,9 +50,12 @@ TRUST_PROXY=true
 
 ### Render
 
-1. New → Blueprint → select the repo. `render.yaml` creates the web service and a database and
-   generates `JWT_SECRET`.
-2. Set `WEB_ORIGIN`. Use a paid instance type: free instances sleep and drop WebSockets.
+1. New → Blueprint → select the repo. `render.yaml` creates the game server on the **free**
+   instance type and generates `JWT_SECRET`. The database is external (e.g. Neon free plan).
+2. When prompted, paste `DATABASE_URL` and `WEB_ORIGIN`.
+3. Free instances sleep after ~15 minutes without traffic and take up to a minute to wake —
+   open the site a few minutes before an event and keep it open. For always-on, change the
+   instance type to Starter.
 
 ### Fly.io
 
