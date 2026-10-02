@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/brand/logo";
 import { StageQuestion } from "@/components/game/stage-question";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { Kbd, Spinner, StatusScreen } from "@/components/ui/misc";
 import { isApiError } from "@/lib/api";
 import { useQuiz } from "@/lib/queries";
@@ -49,8 +50,11 @@ export function QuizPreview({ id }: { id: string }) {
         title={auth ? "Sign in to preview" : "Quiz not found"}
         tone="danger"
         action={
-          <Link href={auth ? `/admin/login?next=/admin/quizzes/${id}/preview` : "/admin/quizzes"}>
-            <Button>{auth ? "Sign in" : "Back to quizzes"}</Button>
+          <Link
+            href={auth ? `/admin/login?next=/admin/quizzes/${id}/preview` : "/admin/quizzes"}
+            className={buttonClasses()}
+          >
+            {auth ? "Sign in" : "Back to quizzes"}
           </Link>
         }
       />

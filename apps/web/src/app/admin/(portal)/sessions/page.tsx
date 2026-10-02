@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/admin/page-header";
 import { SessionRow } from "@/components/admin/session-row";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { Segmented } from "@/components/ui/switch";
 import { useSessions } from "@/lib/queries";
@@ -54,8 +55,8 @@ export default function SessionsPage() {
                 : "Finished games and their results will appear here."
             }
             action={
-              <Link href="/admin/quizzes">
-                <Button variant="secondary">Pick a quiz</Button>
+              <Link href="/admin/quizzes" className={buttonClasses({ variant: "secondary" })}>
+                Pick a quiz
               </Link>
             }
           />

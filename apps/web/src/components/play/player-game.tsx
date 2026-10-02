@@ -182,7 +182,7 @@ function LobbyScreen({ view, onLeave }: { view: PlayerView; onLeave: () => void 
         </span>
       </div>
       <p className="label mt-8 text-accent">You&apos;re in</p>
-      <h1 className="mt-3 break-all font-display text-[2.5rem] font-extrabold leading-none tracking-[-0.04em]">
+      <h1 className="mt-3 break-words font-display text-[2.5rem] font-extrabold leading-none tracking-[-0.04em]">
         {view.me.nickname}
       </h1>
       <p className="mt-4 max-w-xs text-body-lg text-fg-2">

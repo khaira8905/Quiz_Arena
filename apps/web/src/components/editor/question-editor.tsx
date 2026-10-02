@@ -150,7 +150,7 @@ export function QuestionEditor({
 
             <ImageSlot url={draft.imageUrl} onChange={(v) => set("imageUrl", v, true)} />
 
-            <div className="mt-6 grid gap-3 @xl:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-3 @xl:grid-cols-2">
               <AnimatePresence initial={false}>
                 {draft.options.map((o, i) => {
                   const style = answerStyle(i);
@@ -163,7 +163,7 @@ export function QuestionEditor({
                       exit={{ opacity: 0, scale: 0.96 }}
                       transition={{ duration: 0.18 }}
                       className={cn(
-                        "group relative flex items-stretch border-2 bg-sunken transition-colors",
+                        "group relative flex min-w-0 items-stretch border-2 bg-sunken transition-colors",
                         o.isCorrect ? style.border : "border-line",
                       )}
                     >

@@ -16,7 +16,7 @@
 
   --text-primary: #f2f4f8;
   --text-secondary: #a2a9ba;
-  --text-muted: #6a7184;
+  --text-muted: #80879a; /* ≥ 4.8:1 on every surface (WCAG AA) */
   --text-inverse: #0a0b0f;
 
   /* Volt: the single brand accent. Used for primary actions, focus and live state. */

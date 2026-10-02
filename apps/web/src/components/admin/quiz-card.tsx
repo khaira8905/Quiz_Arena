@@ -38,9 +38,9 @@ export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: nu
           </Badge>
           <span className="text-caption text-fg-3">Edited {timeAgo(quiz.updatedAt)}</span>
         </div>
-        <h3 className="mt-4 line-clamp-2 font-display text-h3 font-bold leading-snug group-hover:text-accent">
+        <h2 className="mt-4 line-clamp-2 font-display text-h3 font-bold leading-snug group-hover:text-accent">
           {quiz.title}
-        </h3>
+        </h2>
         {quiz.description && (
           <p className="mt-1.5 line-clamp-2 text-body-sm text-fg-3">{quiz.description}</p>
         )}

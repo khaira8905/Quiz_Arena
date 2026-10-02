@@ -31,6 +31,9 @@ export function JoinPanel({ code }: { code: string }) {
         <div className="notch bg-fg p-[1vw]">
           <QRCodeSVG
             value={url}
+            title={`QR code: scan to join game ${code}`}
+            role="img"
+            aria-label={`QR code to join game ${code}`}
             size={512}
             level="M"
             bgColor="#f2f4f8"

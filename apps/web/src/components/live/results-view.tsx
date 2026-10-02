@@ -7,6 +7,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatTile } from "@/components/admin/stat-tile";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatNumber, formatPercent, formatSeconds } from "@/lib/format";
@@ -30,14 +31,19 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
         actions={
           <>
             {session.quizId && (
-              <Link href={`/admin/quizzes/${session.quizId}`}>
-                <Button variant="ghost">Open quiz</Button>
+              <Link
+                href={`/admin/quizzes/${session.quizId}`}
+                className={buttonClasses({ variant: "ghost" })}
+              >
+                Open quiz
               </Link>
             )}
-            <a href={`/api/sessions/${session.id}/results.csv`} download>
-              <Button variant="secondary">
-                <Download className="h-4 w-4" /> Export CSV
-              </Button>
+            <a
+              href={`/api/sessions/${session.id}/results.csv`}
+              download
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              <Download className="h-4 w-4" /> Export CSV
             </a>
           </>
         }

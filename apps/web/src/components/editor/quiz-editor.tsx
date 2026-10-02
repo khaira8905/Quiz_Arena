@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/misc";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -57,8 +58,8 @@ function EditorInner({ id }: { id: string }) {
         description={notFound ? "It may have been deleted." : "The server didn't respond."}
         action={
           notFound ? (
-            <Link href="/admin/quizzes">
-              <Button>Back to quizzes</Button>
+            <Link href="/admin/quizzes" className={buttonClasses()}>
+              Back to quizzes
             </Link>
           ) : (
             <Button onClick={() => refetch()}>Retry</Button>
@@ -77,10 +78,15 @@ function EditorInner({ id }: { id: string }) {
   const problems = questions.filter((q) => questionIssues(q).length > 0).length;
   const published = quiz.status === "PUBLISHED";
 
+  // Not routed through the save tracker: a refused publish is a validation result, not a
+  // failed save — the content is already saved, and the status line must not say otherwise.
   const togglePublish = () =>
-    track(updateQuiz.mutateAsync({ status: published ? "DRAFT" : "PUBLISHED" })).then(
+    updateQuiz.mutateAsync({ status: published ? "DRAFT" : "PUBLISHED" }).then(
       () => toast.success(published ? "Moved back to drafts" : "Quiz published"),
-      () => {},
+      (err) =>
+        toast.error(published ? "Couldn't unpublish" : "Can't publish yet", {
+          description: isApiError(err) ? err.message : "Please try again.",
+        }),
     );
 
   return (
@@ -138,15 +144,17 @@ function EditorInner({ id }: { id: string }) {
               </button>
             ))}
           </div>
-          <Link href={`/admin/quizzes/${id}/preview`}>
-            <Button variant="secondary" size="md">
-              <Eye className="h-4 w-4" /> Preview
-            </Button>
+          <Link
+            href={`/admin/quizzes/${id}/preview`}
+            className={buttonClasses({ variant: "secondary", size: "md" })}
+          >
+            <Eye className="h-4 w-4" /> Preview
           </Link>
           <Button
             variant="outline"
             onClick={togglePublish}
             loading={updateQuiz.isPending}
+            disabled={!published && problems > 0}
             title={!published && problems ? `${problems} question(s) need attention` : undefined}
           >
             {published ? "Unpublish" : "Publish"}
