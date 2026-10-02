@@ -1,0 +1,28 @@
+# Fly.io config for the QuizArena game server.
+#   fly launch --no-deploy --copy-config && fly secrets set DATABASE_URL=... JWT_SECRET=... WEB_ORIGIN=...
+#   fly deploy
+app = "quizarena-server"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/server/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "4000"
+  TRUST_PROXY = "true"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  # Live games are held in memory: never let Fly stop the machine mid-game.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"

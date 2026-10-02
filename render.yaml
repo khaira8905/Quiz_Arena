@@ -1,0 +1,27 @@
+# Render Blueprint for the QuizArena game server + Postgres.
+# The Next.js frontend deploys to Vercel separately (see docs/DEPLOYMENT.md).
+services:
+  - type: web
+    name: quizarena-server
+    runtime: docker
+    dockerfilePath: ./apps/server/Dockerfile
+    dockerContext: .
+    plan: starter # WebSockets need an always-on instance; free plans sleep.
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quizarena-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false # e.g. https://quiz-arena.vercel.app
+
+databases:
+  - name: quizarena-db
+    plan: basic-256mb
