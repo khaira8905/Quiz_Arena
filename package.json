@@ -1,0 +1,29 @@
+{
+  "name": "quizarena",
+  "private": true,
+  "description": "QuizArena — 100 Players. One Arena. A real-time multiplayer quiz platform.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @quizarena/server --filter @quizarena/web dev",
+    "dev:server": "pnpm --filter @quizarena/server dev",
+    "dev:web": "pnpm --filter @quizarena/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "pnpm --filter @quizarena/server db:migrate",
+    "db:deploy": "pnpm --filter @quizarena/server db:deploy",
+    "db:seed": "pnpm --filter @quizarena/server db:seed",
+    "db:generate": "pnpm --filter @quizarena/server db:generate",
+    "loadtest": "pnpm --filter @quizarena/server loadtest"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9",
+    "typescript": "6.0.3"
+  }
+}

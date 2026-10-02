@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# generated
+apps/server/src/generated/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials*.json
+service-account*.json
+
+# logs & tooling
+*.log
+npm-debug.log*
+pnpm-debug.log*
+coverage/
+.vercel/
+.turbo/
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# local verification output
+.screenshots/
