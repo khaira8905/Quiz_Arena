@@ -16,6 +16,7 @@ import { Badge, Skeleton } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
 import { joinUrl, pad2 } from "@/lib/format";
 import { COMMAND_LABELS, primaryCommand, useHostGame } from "@/lib/game/use-host-game";
+import { useKeepServerAwake } from "@/lib/use-keep-server-awake";
 
 const PHASES: Record<
   HostView["phase"],
@@ -44,6 +45,7 @@ export function LiveControl({
   onFinished: () => void;
 }) {
   const { view, connection, error, command, kick } = useHostGame(session.code);
+  useKeepServerAwake();
   const [confirm, setConfirm] = useState<HostCommand | null>(null);
   const [kickTarget, setKickTarget] = useState<{ id: string; nickname: string } | null>(null);
   const [busy, setBusy] = useState<HostCommand | null>(null);

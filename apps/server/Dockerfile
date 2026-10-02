@@ -2,10 +2,16 @@
 # Build from the REPOSITORY ROOT so the shared workspace package is available:
 #   docker build -f apps/server/Dockerfile -t quizarena-server .
 
-FROM node:22-slim AS build
+FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+# Prisma's migration engine needs OpenSSL; the slim image doesn't ship it.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /app
+
+FROM base AS build
 
 # Install dependencies first (cached unless manifests change).
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -19,10 +25,8 @@ COPY packages/shared packages/shared
 COPY apps/server apps/server
 RUN pnpm --filter @quizarena/server build
 
-FROM node:22-slim AS runtime
-ENV NODE_ENV=production PNPM_HOME=/pnpm PATH=/pnpm:$PATH
-RUN corepack enable
-WORKDIR /app
+FROM base AS runtime
+ENV NODE_ENV=production
 COPY --from=build /app /app
 USER node
 EXPOSE 4000

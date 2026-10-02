@@ -28,10 +28,12 @@ import { StageQuestion } from "@/components/game/stage-question";
 import { StartSequence } from "@/components/game/start-sequence";
 import { WinnerScreen } from "@/components/game/winner-screen";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Kbd, Spinner, StatusScreen } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
 import { COMMAND_LABELS, primaryCommand, useHostGame } from "@/lib/game/use-host-game";
+import { useKeepServerAwake } from "@/lib/use-keep-server-awake";
 import { play, setSoundEnabled, soundPreference, unlockAudio } from "@/lib/sound";
 
 const PHASE_LABEL: Record<HostView["phase"], string> = {
@@ -51,6 +53,7 @@ const PHASE_LABEL: Record<HostView["phase"], string> = {
  */
 export function HostArena({ code }: { code: string }) {
   const { view, connection, error, command } = useHostGame(code);
+  useKeepServerAwake();
   const [dock, setDock] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const soundOn = useSyncExternalStore(
@@ -178,8 +181,8 @@ export function HostArena({ code }: { code: string }) {
         description={copy.description}
         tone="danger"
         action={
-          <Link href={copy.href}>
-            <Button>{copy.cta}</Button>
+          <Link href={copy.href} className={buttonClasses()}>
+            {copy.cta}
           </Link>
         }
       />
@@ -288,6 +291,11 @@ export function HostArena({ code }: { code: string }) {
                   <Kbd className="border-accent-ink/30 bg-transparent text-accent-ink">Space</Kbd>
                 </Button>
               )}
+              {!primary && view.phase === "LOBBY" && (
+                <Button size="lg" notch disabled className="min-w-48">
+                  Start game · waiting for players
+                </Button>
+              )}
               <DockButton
                 cmd={view.paused ? "RESUME" : "PAUSE"}
                 view={view}
@@ -303,11 +311,13 @@ export function HostArena({ code }: { code: string }) {
                 <Link
                   href={`/admin/sessions/${view.sessionId}`}
                   target="_blank"
-                  className="hidden md:block"
+                  className={buttonClasses({
+                    variant: "ghost",
+                    size: "sm",
+                    className: "hidden md:block",
+                  })}
                 >
-                  <Button variant="ghost" size="sm">
-                    <SlidersHorizontal className="h-4 w-4" /> Control panel
-                  </Button>
+                  <SlidersHorizontal className="h-4 w-4" /> Control panel
                 </Link>
                 <Button
                   variant="ghost"
@@ -463,12 +473,12 @@ function DockButton({
   k?: string;
   danger?: boolean;
 }) {
-  const enabled = view.availableCommands.includes(cmd);
+  // Only show what this phase allows: a lobby or finished screen has no "Pause" to offer.
+  if (!view.availableCommands.includes(cmd)) return null;
   return (
     <Button
       variant="secondary"
       size="md"
-      disabled={!enabled}
       onClick={() => onRun(cmd)}
       className={cn(danger && "hover:border-danger hover:text-danger")}
     >
