@@ -2,6 +2,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Config } from "../config";
 import type { Db } from "../db";
 import type { GameManager } from "../game/game-manager";
+import type { StorageChoice } from "../media/storage";
+import type { GoogleContext } from "./routes/google";
 import { SESSION_COOKIE, type TokenService } from "../lib/auth";
 import { AppError } from "../lib/errors";
 
@@ -10,6 +12,9 @@ export interface AppContext {
   db: Db;
   tokens: TokenService;
   games: GameManager;
+  media: StorageChoice;
+  /** Null when the Google OAuth client isn't configured. */
+  google: GoogleContext | null;
 }
 
 /** Resolves the signed-in admin from the session cookie, or throws 401. */

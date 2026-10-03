@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, Layers, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
+import { ImageIcon, LayoutGrid, Layers, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
 import * as RD from "@radix-ui/react-dialog";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
@@ -18,6 +18,7 @@ const WIDE_ROUTES = /^\/admin\/(quizzes|sessions)\/[^/]+/;
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutGrid, exact: true },
   { href: "/admin/quizzes", label: "Quizzes", icon: Layers },
+  { href: "/admin/media", label: "Media", icon: ImageIcon },
   { href: "/admin/sessions", label: "Sessions", icon: Radio },
   { href: "/admin/profile", label: "Profile", icon: UserRound },
 ];

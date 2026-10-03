@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArenaThemeProvider } from "@/components/arena/arena-theme";
+import { preloadImage } from "@/components/media/question-image";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Kbd, Spinner, StatusScreen } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
@@ -34,6 +35,9 @@ export function ProjectorStage({ code, preview }: { code: string; preview: boole
   const [idle, setIdle] = useState(false);
   const lastPhase = useRef<string | null>(null);
   const busy = useRef(false);
+
+  // The next question's image loads in the background while the room looks at the reveal.
+  useEffect(() => preloadImage(view?.nextImageUrl), [view?.nextImageUrl]);
 
   // Phase-change sound cues (the countdown ticks itself).
   useEffect(() => {

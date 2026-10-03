@@ -155,6 +155,9 @@ function publicQuestion(s: ArenaPreviewState): {
       type: options.length === 2 ? "TRUE_FALSE" : "MULTIPLE_CHOICE",
       text: q.text || "Untitled question",
       imageUrl: null,
+      imageFit: "CONTAIN",
+      imagePosition: "CENTER",
+      imagePlaceholder: null,
       points: q.points,
       durationMs: q.durationSec * 1000,
       options,
@@ -238,6 +241,7 @@ export function previewProjectorView(s: ArenaPreviewState, now: number): Project
     leaderboard: phase === "LEADERBOARD" ? leaderboard() : null,
     results: phase === "FINISHED" ? results() : null,
     podiumStep: phase === "FINISHED" ? "FIRST" : null,
+    nextImageUrl: null,
   };
 }
 

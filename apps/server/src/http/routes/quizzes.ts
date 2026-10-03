@@ -36,7 +36,10 @@ function questionCreateData(q: QuestionInput, order: number) {
     order,
     type: q.type,
     text: q.text,
+    // Bulk paths (create, import) take external links only; library images attach by PATCH.
     imageUrl: q.imageUrl,
+    imageFit: q.imageFit,
+    imagePosition: q.imagePosition,
     timeLimitSec: q.timeLimitSec,
     points: q.points,
     explanation: q.explanation,
@@ -234,6 +237,8 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
         type: input.type,
         text: input.text,
         imageUrl: input.imageUrl,
+        imageFit: input.imageFit,
+        imagePosition: input.imagePosition,
         timeLimitSec: input.timeLimitSec,
         points: input.points,
         explanation: input.explanation,
@@ -328,11 +333,28 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       options = options.slice(0, rules.maxOptions);
     }
 
+    // The image: a library asset (its URL is filled in here, never trusted from the client),
+    // an external https link, or nothing.
+    let image = { imageUrl: existing.imageUrl, imageAssetId: existing.imageAssetId };
+    if (patch.imageAssetId) {
+      const asset = await ctx.db.mediaAsset.findFirst({
+        where: { id: patch.imageAssetId, ownerId: userId },
+        select: { id: true, url: true },
+      });
+      if (!asset) throw new AppError("NOT_FOUND", "That image isn't in your media library.");
+      image = { imageUrl: asset.url, imageAssetId: asset.id };
+    } else if (patch.imageUrl !== undefined || patch.imageAssetId === null) {
+      image = { imageUrl: patch.imageUrl ?? null, imageAssetId: null };
+    }
+
     // Full structural validation of the merged question.
     const merged = questionInputSchema.parse({
       type,
       text: patch.text ?? existing.text,
-      imageUrl: patch.imageUrl !== undefined ? patch.imageUrl : existing.imageUrl,
+      // Library URLs may be same-origin paths in development; only links are validated.
+      imageUrl: image.imageAssetId ? null : image.imageUrl,
+      imageFit: patch.imageFit ?? existing.imageFit,
+      imagePosition: patch.imagePosition ?? existing.imagePosition,
       timeLimitSec: patch.timeLimitSec !== undefined ? patch.timeLimitSec : existing.timeLimitSec,
       points: patch.points ?? existing.points,
       explanation: patch.explanation ?? existing.explanation,
@@ -365,7 +387,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const { options: _ignored, ...fields } = merged;
     await ctx.db.$transaction([
       ...ops,
-      ctx.db.question.update({ where: { id }, data: fields }),
+      ctx.db.question.update({ where: { id }, data: { ...fields, ...image } }),
       ctx.db.quiz.update({ where: { id: existing.quizId }, data: { updatedAt: new Date() } }),
     ]);
     const question = await ownedQuestion(userId, id);
@@ -410,6 +432,9 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
           type: q.type,
           text: q.text,
           imageUrl: q.imageUrl,
+          imageAssetId: q.imageAssetId,
+          imageFit: q.imageFit,
+          imagePosition: q.imagePosition,
           timeLimitSec: q.timeLimitSec,
           points: q.points,
           explanation: q.explanation,

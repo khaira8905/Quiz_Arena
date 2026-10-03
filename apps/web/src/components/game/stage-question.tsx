@@ -6,6 +6,7 @@ import { screenTransition, useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { formatNumber, pad2 } from "@/lib/format";
 import { answerScale, questionScale } from "@/lib/text-fit";
+import { QuestionImage } from "@/components/media/question-image";
 import { StageDistribution } from "@/components/stage/stage-distribution";
 import { useCountdown } from "@/lib/use-countdown";
 import { StageAnswerTile, type TileState } from "./answer-tile";
@@ -120,16 +121,18 @@ export function StageQuestion({
               </motion.h1>
               {question.imageUrl && (
                 <motion.div
-                  initial={reduced ? false : { opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                  className="shrink-0 overflow-hidden rounded-lg border border-line-strong bg-sunken"
+                  initial={reduced ? false : { opacity: 0, scale: 0.96, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className="w-[34vw] shrink-0"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- organiser-supplied image URL */}
-                  <img
+                  {/* A fixed 2:1 frame: the question and answers never move when it loads. */}
+                  <QuestionImage
                     src={question.imageUrl}
-                    alt=""
-                    className="block max-h-[30vh] max-w-[34vw] object-contain"
+                    fit={question.imageFit}
+                    position={question.imagePosition}
+                    placeholder={question.imagePlaceholder}
+                    className="aspect-[2/1] w-full"
                   />
                 </motion.div>
               )}

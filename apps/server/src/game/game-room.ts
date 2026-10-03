@@ -878,6 +878,9 @@ export class GameRoom {
       type: q.type,
       text: q.text,
       imageUrl: q.imageUrl,
+      imageFit: q.imageFit ?? "CONTAIN",
+      imagePosition: q.imagePosition ?? "CENTER",
+      imagePlaceholder: q.imagePlaceholder ?? null,
       points: q.points,
       durationMs: this.durationMs,
       options: hideOptions ? [] : q.options.map((o) => ({ id: o.id, text: o.text })),
@@ -985,7 +988,22 @@ export class GameRoom {
           : null,
       results: this.phase === "FINISHED" ? this.results : null,
       podiumStep: this.podiumStep,
+      nextImageUrl: this.nextImageUrl(),
     };
+  }
+
+  /**
+   * From the reveal on, the stage gets the next question's image URL to load in the
+   * background, so it appears instantly. Only the stage: phones load theirs while reading.
+   */
+  private nextImageUrl(): string | null {
+    if (
+      !["ANSWER_REVEAL", "ANSWER_DISTRIBUTION", "LEADERBOARD", "QUESTION_LOCKED"].includes(
+        this.phase,
+      )
+    )
+      return null;
+    return this.snapshot.questions[this.questionIndex + 1]?.imageUrl ?? null;
   }
 
   hostView(): HostView {

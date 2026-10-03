@@ -8,6 +8,7 @@ import { Check, ImageIcon, UserX } from "lucide-react";
 import { motion } from "motion/react";
 import { memo, useMemo } from "react";
 import { answerStyle } from "@/components/game/answer-style";
+import { QuestionImage } from "@/components/media/question-image";
 import { Select } from "@/components/ui/field";
 import { Segmented, Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/cn";
@@ -189,14 +190,16 @@ export function QuestionPanel({ view }: { view: HostView }) {
           </ul>
         </div>
         {q.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- organiser-supplied image URL
-          <img
+          <QuestionImage
             src={q.imageUrl}
-            alt=""
-            className="hidden h-32 w-44 shrink-0 rounded-sm border border-line object-cover md:block"
+            fit={q.imageFit}
+            position={q.imagePosition}
+            placeholder={q.imagePlaceholder}
+            rounded={false}
+            className="hidden aspect-[2/1] w-48 shrink-0 self-start rounded-sm md:block"
           />
         ) : (
-          <div className="hidden h-32 w-44 shrink-0 place-items-center rounded-sm border border-dashed border-line text-fg-3 md:grid">
+          <div className="hidden aspect-[2/1] w-48 shrink-0 self-start place-items-center rounded-sm border border-dashed border-line text-fg-3 md:grid">
             <ImageIcon className="h-5 w-5" aria-label="No image" />
           </div>
         )}

@@ -1,3 +1,4 @@
+import type { ImageFit, ImagePosition } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { QuestionType } from "./question-types";
 import type { ScoringMode } from "./scoring";
@@ -82,6 +83,10 @@ export interface PublicQuestion {
   type: QuestionType;
   text: string;
   imageUrl: string | null;
+  /** How the image sits in its frame, and a tiny blurred preview while it loads. */
+  imageFit: ImageFit;
+  imagePosition: ImagePosition;
+  imagePlaceholder: string | null;
   points: number;
   durationMs: number;
   options: PublicOption[];
@@ -262,6 +267,8 @@ export interface ProjectorView {
   leaderboard: LeaderboardEntry[] | null;
   results: FinalResults | null;
   podiumStep: PodiumStep | null;
+  /** The next question's image, so the stage can load it before it's needed. */
+  nextImageUrl: string | null;
 }
 
 export type GameView = PlayerView | HostView | ProjectorView;

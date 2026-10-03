@@ -1,3 +1,4 @@
+import type { ImageFit, ImagePosition } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { FinalResults } from "./game";
 import type { QuestionType } from "./question-types";
@@ -28,6 +29,9 @@ export interface QuestionDto {
   type: QuestionType;
   text: string;
   imageUrl: string | null;
+  imageAssetId: string | null;
+  imageFit: ImageFit;
+  imagePosition: ImagePosition;
   timeLimitSec: number | null;
   points: number;
   explanation: string;

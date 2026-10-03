@@ -128,18 +128,22 @@ Sign in at <http://localhost:3000/admin> with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_P
 
 **Game server** — `apps/server/.env`
 
-| Variable                                                       | Required  | Description                                                                      |
-| -------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                 | ✓         | PostgreSQL connection string                                                     |
-| `JWT_SECRET`                                                   | ✓         | ≥ 32 chars; signs session cookies and socket tickets (`openssl rand -base64 48`) |
-| `WEB_ORIGIN`                                                   | ✓ in prod | Comma-separated allowed browser origins (your Vercel URL)                        |
-| `PORT` / `HOST`                                                |           | Listen address (default `4000` / `0.0.0.0`)                                      |
-| `NODE_ENV`                                                     |           | `production` enables secure cookies and JSON logs                                |
-| `TRUST_PROXY`                                                  |           | `true` behind a load balancer so rate limits see client IPs                      |
-| `REDIS_URL`                                                    |           | Enables the Socket.IO Redis adapter                                              |
-| `ALLOW_REGISTRATION`                                           |           | `true` allows `POST /api/auth/register`                                          |
-| `LOG_LEVEL`                                                    |           | `info` by default                                                                |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | seed only | First admin account                                                              |
+| Variable                                                                                                  | Required            | Description                                                                      |
+| --------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                            | ✓                   | PostgreSQL connection string                                                     |
+| `JWT_SECRET`                                                                                              | ✓                   | ≥ 32 chars; signs session cookies and socket tickets (`openssl rand -base64 48`) |
+| `WEB_ORIGIN`                                                                                              | ✓ in prod           | Comma-separated allowed browser origins (your Vercel URL)                        |
+| `PORT` / `HOST`                                                                                           |                     | Listen address (default `4000` / `0.0.0.0`)                                      |
+| `NODE_ENV`                                                                                                |                     | `production` enables secure cookies and JSON logs                                |
+| `TRUST_PROXY`                                                                                             |                     | `true` behind a load balancer so rate limits see client IPs                      |
+| `REDIS_URL`                                                                                               |                     | Enables the Socket.IO Redis adapter                                              |
+| `ALLOW_REGISTRATION`                                                                                      |                     | `true` allows `POST /api/auth/register`                                          |
+| `LOG_LEVEL`                                                                                               |                     | `info` by default                                                                |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME`                                            | seed only           | First admin account                                                              |
+| `MEDIA_STORAGE`                                                                                           |                     | `local` (dev disk), `s3` or `none` — see [docs/MEDIA.md](docs/MEDIA.md)          |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_PUBLIC_URL` / `S3_REGION` | for uploads in prod | Any S3-compatible bucket (Cloudflare R2, Supabase Storage, AWS S3)               |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI`                                       | for Drive           | Google OAuth web client for the Drive image picker                               |
+| `GOOGLE_TOKEN_KEY`                                                                                        |                     | Encrypts stored Google refresh tokens (default: derived from `JWT_SECRET`)       |
 
 **Web** — `apps/web/.env.local` (Vercel project settings in production)
 

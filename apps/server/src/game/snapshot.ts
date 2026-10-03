@@ -1,4 +1,4 @@
-import type { LiveSettings, QuestionType } from "@quizarena/shared";
+import type { ImageFit, ImagePosition, LiveSettings, QuestionType } from "@quizarena/shared";
 import { questionIssues, resolveAppearance } from "@quizarena/shared";
 import { AppError } from "../lib/errors";
 import { shuffle } from "../lib/random";
@@ -14,6 +14,10 @@ export interface SnapshotQuestion {
   type: QuestionType;
   text: string;
   imageUrl: string | null;
+  /** Optional: snapshots stored before images had framing options lack them. */
+  imageFit?: ImageFit;
+  imagePosition?: ImagePosition;
+  imagePlaceholder?: string | null;
   durationMs: number;
   points: number;
   explanation: string;
@@ -53,6 +57,9 @@ interface SourceQuiz {
     type: QuestionType;
     text: string;
     imageUrl: string | null;
+    imageFit?: ImageFit;
+    imagePosition?: ImagePosition;
+    imageAsset?: { placeholder: string } | null;
     timeLimitSec: number | null;
     points: number;
     explanation: string;
@@ -104,6 +111,9 @@ export function buildSnapshot(quiz: SourceQuiz): QuizSnapshot {
         type: q.type,
         text: q.text,
         imageUrl: q.imageUrl,
+        imageFit: q.imageFit ?? "CONTAIN",
+        imagePosition: q.imagePosition ?? "CENTER",
+        imagePlaceholder: q.imageUrl ? q.imageAsset?.placeholder || null : null,
         durationMs: (q.timeLimitSec ?? quiz.defaultTimerSec) * 1000,
         points: q.points,
         explanation: q.explanation,

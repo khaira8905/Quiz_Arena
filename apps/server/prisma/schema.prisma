@@ -35,6 +35,22 @@ enum ReadingMode {
   MANUAL
 }
 
+enum ImageFit {
+  CONTAIN
+  COVER
+}
+
+enum ImagePosition {
+  CENTER
+  TOP
+  BOTTOM
+}
+
+enum MediaSource {
+  UPLOAD
+  GOOGLE_DRIVE
+}
+
 enum SessionStatus {
   LOBBY
   LIVE
@@ -54,6 +70,21 @@ model User {
 
   quizzes  Quiz[]
   sessions QuizSession[]
+  media    MediaAsset[]
+  google   GoogleAccount?
+}
+
+/// A connected Google account for picking images from Drive (read-only scope).
+model GoogleAccount {
+  userId       String   @id
+  email        String
+  /// AES-256-GCM encrypted refresh token; never returned by the API.
+  refreshToken String
+  scope        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Quiz {
@@ -101,7 +132,11 @@ model Question {
   order            Int
   type             QuestionType @default(MULTIPLE_CHOICE)
   text             String       @default("")
+  /// The image shown with the question: a library asset's URL, or an external https link.
   imageUrl         String?
+  imageAssetId     String?
+  imageFit         ImageFit      @default(CONTAIN)
+  imagePosition    ImagePosition @default(CENTER)
   /// null = use the quiz default timer
   timeLimitSec     Int?
   points           Int          @default(1000)
@@ -110,10 +145,41 @@ model Question {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  quiz    Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  options AnswerOption[]
+  quiz       Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  imageAsset MediaAsset?    @relation(fields: [imageAssetId], references: [id], onDelete: SetNull)
+  options    AnswerOption[]
 
   @@index([quizId, order])
+  @@index([imageAssetId])
+}
+
+/// An uploaded image. Only metadata lives here; the optimized files live in object storage
+/// (or the local media folder in development) under `storageKey`.
+model MediaAsset {
+  id          String      @id @default(cuid())
+  ownerId     String
+  /// Display name, editable; never used as a file path.
+  name        String
+  storageKey  String      @unique
+  /// Full-size optimized WebP (longest side at most 1920px).
+  url         String
+  /// Smaller renditions by width, e.g. { "960": url, "480": url }.
+  variants    Json        @default("{}")
+  /// A tiny (~24px) blurred preview as a data URI, for blur-up while the image loads.
+  placeholder String      @default("")
+  mimeType    String      @default("image/webp")
+  /// Stored bytes across all renditions.
+  bytes       Int
+  width       Int
+  height      Int
+  source      MediaSource @default(UPLOAD)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@index([ownerId, createdAt])
 }
 
 model AnswerOption {

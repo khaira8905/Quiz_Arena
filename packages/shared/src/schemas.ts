@@ -22,6 +22,7 @@ import {
 import { ARENA_THEMES, MOTION_LEVELS, arenaAppearanceSchema } from "./appearance";
 import { GAME_PHASES, HOST_COMMANDS, READING_MODES } from "./game";
 import { QUESTION_TYPES, QUESTION_TYPE_RULES } from "./question-types";
+import { IMAGE_FITS, IMAGE_POSITIONS } from "./media";
 import { SCORING_MODES } from "./scoring";
 
 /** Collapses control characters and trims — stored text is always plain text. */
@@ -113,7 +114,24 @@ export const quizCreateSchema = z.object({
 });
 export type QuizCreateInput = z.infer<typeof quizCreateSchema>;
 
-export const quizUpdateSchema = quizSettingsSchema.partial().extend({
+/**
+ * Optional versions of every field, with the create-time defaults removed. zod's .partial()
+ * keeps defaults, so a PATCH of one field would silently reset all the others.
+ */
+function partialNoDefaults<T extends z.ZodRawShape>(shape: T) {
+  return z.object(
+    Object.fromEntries(
+      Object.entries(shape).map(([k, v]) => [
+        k,
+        (v instanceof z.ZodDefault ? (v.unwrap() as z.ZodType) : (v as z.ZodType)).optional(),
+      ]),
+    ) as unknown as {
+      [K in keyof T]: z.ZodOptional<T[K] extends z.ZodDefault<infer I> ? I : T[K]>;
+    },
+  );
+}
+
+export const quizUpdateSchema = partialNoDefaults(quizSettingsSchema.shape).extend({
   title: plainText(QUIZ_TITLE_MAX).pipe(z.string().min(1, "Give your quiz a title")).optional(),
   description: plainText(QUIZ_DESCRIPTION_MAX).optional(),
   coverImageUrl: imageUrl.optional(),
@@ -133,6 +151,10 @@ const questionBase = z.object({
   type: z.enum(QUESTION_TYPES),
   text: plainText(QUESTION_TEXT_MAX),
   imageUrl: imageUrl.optional().default(null),
+  /** A media library image; when set, the server fills in imageUrl from the asset. */
+  imageAssetId: z.string().min(1).max(64).nullable().optional().default(null),
+  imageFit: z.enum(IMAGE_FITS).default("CONTAIN"),
+  imagePosition: z.enum(IMAGE_POSITIONS).default("CENTER"),
   timeLimitSec: timerSeconds.nullable().optional().default(null),
   points: z.number().int().min(0).max(MAX_POINTS).default(DEFAULT_POINTS),
   explanation: plainText(EXPLANATION_MAX).optional().default(""),
@@ -168,7 +190,24 @@ export const questionImportSchema = z.object({
 /** A Google Sheets or Drive share link to import from. */
 export const googleImportSchema = z.object({ url: z.string().trim().min(10).max(2048) });
 
-export const questionUpdateSchema = questionBase.partial();
+/**
+ * A partial update: only the fields sent change. Built without the create defaults —
+ * zod's .partial() still applies them, which would reset unsent fields (points, timer,
+ * image) on every edit.
+ */
+export const questionUpdateSchema = z.object({
+  type: z.enum(QUESTION_TYPES).optional(),
+  text: plainText(QUESTION_TEXT_MAX).optional(),
+  imageUrl: imageUrl.optional(),
+  imageAssetId: z.string().min(1).max(64).nullable().optional(),
+  imageFit: z.enum(IMAGE_FITS).optional(),
+  imagePosition: z.enum(IMAGE_POSITIONS).optional(),
+  timeLimitSec: timerSeconds.nullable().optional(),
+  points: z.number().int().min(0).max(MAX_POINTS).optional(),
+  explanation: plainText(EXPLANATION_MAX).optional(),
+  randomizeAnswers: z.boolean().optional(),
+  options: z.array(optionInputSchema).min(2).max(4).optional(),
+});
 export type QuestionUpdateInput = z.infer<typeof questionUpdateSchema>;
 
 export const reorderSchema = z.object({

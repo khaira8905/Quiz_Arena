@@ -22,6 +22,10 @@ export const ERROR_CODES = [
   "COMMAND_OUT_OF_DATE",
   "QUIZ_EMPTY",
   "REPLACED_BY_NEW_CONNECTION",
+  "MEDIA_UNAVAILABLE",
+  "UNSUPPORTED_MEDIA",
+  "FILE_TOO_LARGE",
+  "GOOGLE_NOT_CONNECTED",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
@@ -70,6 +74,17 @@ export const ERROR_COPY: Record<ErrorCode, { title: string; message: string }> =
     message: "Another screen advanced the game first. Your screen is up to date now.",
   },
   QUIZ_EMPTY: { title: "Empty quiz", message: "Add at least one question before going live." },
+  MEDIA_UNAVAILABLE: {
+    title: "Uploads are off",
+    message:
+      "Image uploads aren't set up on this server yet. Paste an https:// image link instead.",
+  },
+  UNSUPPORTED_MEDIA: { title: "Unsupported image", message: "Use a PNG, JPG or WEBP image." },
+  FILE_TOO_LARGE: { title: "Image too large", message: "Images can be up to 8 MB." },
+  GOOGLE_NOT_CONNECTED: {
+    title: "Connect Google Drive",
+    message: "Connect your Google account to pick images from Drive.",
+  },
   REPLACED_BY_NEW_CONNECTION: {
     title: "Opened elsewhere",
     message: "You joined this game from another tab or device.",

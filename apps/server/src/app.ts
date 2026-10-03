@@ -1,5 +1,6 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import type { ApiErrorBody } from "@quizarena/shared";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -12,9 +13,13 @@ import type { AppContext } from "./http/context";
 import { authRoutes } from "./http/routes/auth";
 import { quizRoutes } from "./http/routes/quizzes";
 import { importRoutes } from "./http/routes/imports";
+import { googleRoutes, type GoogleContext } from "./http/routes/google";
+import { mediaRoutes } from "./http/routes/media";
 import { sessionRoutes } from "./http/routes/sessions";
 import { TokenService } from "./lib/auth";
 import { isAppError } from "./lib/errors";
+import { GoogleDriveClient, TokenCipher } from "./lib/google-drive";
+import { createStorage, type StorageChoice } from "./media/storage";
 import { attachGateway, createIo, createRoomOutput, type IoServer } from "./realtime/gateway";
 
 export interface BuiltApp {
@@ -26,7 +31,13 @@ export interface BuiltApp {
 export async function buildApp(
   config: Config,
   db: Db,
-  options: { persistence?: GamePersistence; logger?: boolean } = {},
+  options: {
+    persistence?: GamePersistence;
+    logger?: boolean;
+    media?: StorageChoice;
+    /** Tests inject a mocked Google; null disables it. */
+    google?: GoogleContext | null;
+  } = {},
 ): Promise<BuiltApp> {
   const app = Fastify({
     logger:
@@ -49,6 +60,8 @@ export async function buildApp(
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
   });
   await app.register(cookie);
+  // Uploads only; the per-route limits (size, one file) are set where the file is read.
+  await app.register(multipart, { limits: { fields: 4, files: 1, parts: 6 } });
   await app.register(rateLimit, {
     max: 300,
     timeWindow: "1 minute",
@@ -132,7 +145,22 @@ export async function buildApp(
     },
   );
   const tokens = new TokenService(config.JWT_SECRET);
-  const ctx: AppContext = { config, db, tokens, games };
+  const media = options.media ?? createStorage(config);
+  if (!media.storage) app.log.warn(`media: uploads disabled — ${media.reason}`);
+  const google =
+    options.google !== undefined
+      ? options.google
+      : config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET && config.GOOGLE_REDIRECT_URI
+        ? {
+            client: new GoogleDriveClient({
+              clientId: config.GOOGLE_CLIENT_ID,
+              clientSecret: config.GOOGLE_CLIENT_SECRET,
+              redirectUri: config.GOOGLE_REDIRECT_URI,
+            }),
+            cipher: new TokenCipher(config.GOOGLE_TOKEN_KEY ?? config.JWT_SECRET),
+          }
+        : null;
+  const ctx: AppContext = { config, db, tokens, games, media, google };
 
   attachGateway({ io, games, tokens, log: app.log });
 
@@ -143,6 +171,8 @@ export async function buildApp(
   quizRoutes(app, ctx);
   sessionRoutes(app, ctx);
   importRoutes(app, ctx);
+  mediaRoutes(app, ctx);
+  googleRoutes(app, ctx);
 
   app.addHook("onClose", async () => {
     games.shutdown();
