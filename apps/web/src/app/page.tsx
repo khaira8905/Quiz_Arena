@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { JoinCodeForm } from "@/components/landing/join-code-form";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 const steps = [
   {
@@ -22,12 +23,15 @@ export default function Home() {
     <main className="arena-floor relative flex min-h-dvh flex-col overflow-hidden">
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
         <Logo />
-        <Link
-          href="/admin"
-          className="label inline-flex items-center gap-2 text-fg-2 transition-colors hover:text-fg"
-        >
-          Host a quiz <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
+        <div className="flex items-center gap-5">
+          <ThemeSwitcher />
+          <Link
+            href="/admin"
+            className="label inline-flex items-center gap-2 text-fg-2 transition-colors hover:text-fg"
+          >
+            Host a quiz <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        </div>
       </header>
 
       <section className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 items-center gap-12 px-5 pb-12 pt-6 sm:px-8 lg:grid-cols-[1.25fr_1fr] lg:gap-16">

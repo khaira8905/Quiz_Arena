@@ -4,6 +4,7 @@ import {
   DEFAULT_TIMER_SECONDS,
   EXPLANATION_MAX,
   GAME_CODE_PATTERN,
+  MAX_QUESTIONS_PER_QUIZ,
   MAX_POINTS,
   NICKNAME_MAX,
   OPTION_TEXT_MAX,
@@ -16,7 +17,7 @@ import {
   TIMER_MIN_SECONDS,
   normalizeGameCode,
 } from "./constants";
-import { arenaAppearanceSchema } from "./appearance";
+import { ARENA_THEMES, arenaAppearanceSchema } from "./appearance";
 import { GAME_PHASES, HOST_COMMANDS } from "./game";
 import { QUESTION_TYPES, QUESTION_TYPE_RULES } from "./question-types";
 import { SCORING_MODES } from "./scoring";
@@ -99,6 +100,12 @@ export type QuizSettings = z.infer<typeof quizSettingsSchema>;
 export const quizCreateSchema = z.object({
   title: plainText(QUIZ_TITLE_MAX).pipe(z.string().min(1, "Give your quiz a title")),
   description: plainText(QUIZ_DESCRIPTION_MAX).optional().default(""),
+  /** Starting arena theme; hosts get the look they work in. */
+  theme: z.enum(ARENA_THEMES).optional(),
+  /** Questions from an import. Without them the quiz starts with one blank question. */
+  questions: z
+    .lazy(() => z.array(questionInputSchema).min(1).max(MAX_QUESTIONS_PER_QUIZ))
+    .optional(),
 });
 export type QuizCreateInput = z.infer<typeof quizCreateSchema>;
 
@@ -148,6 +155,14 @@ export const questionInputSchema = questionBase.superRefine((q, ctx) => {
   }
 });
 export type QuestionInput = z.infer<typeof questionInputSchema>;
+
+/** Bulk add from a spreadsheet import. */
+export const questionImportSchema = z.object({
+  questions: z.array(questionInputSchema).min(1).max(MAX_QUESTIONS_PER_QUIZ),
+});
+
+/** A Google Sheets or Drive share link to import from. */
+export const googleImportSchema = z.object({ url: z.string().trim().min(10).max(2048) });
 
 export const questionUpdateSchema = questionBase.partial();
 export type QuestionUpdateInput = z.infer<typeof questionUpdateSchema>;

@@ -1,9 +1,10 @@
 "use client";
 
-import { Layers, Plus, Search } from "lucide-react";
+import { FileUp, Layers, Plus, Search } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { CreateQuizDialog } from "@/components/admin/create-quiz-dialog";
+import { ImportQuestionsDialog } from "@/components/editor/import-dialog";
 import { PageHeader } from "@/components/admin/page-header";
 import { QuizCard } from "@/components/admin/quiz-card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export default function QuizzesPage() {
   const [filter, setFilter] = useState<Filter>("ALL");
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const { data, isPending, isError, refetch } = useQuizzes();
 
   const visible = useMemo(() => {
@@ -42,9 +44,14 @@ export default function QuizzesPage() {
         title="Quizzes"
         description="Everything you've built. Drafts can be edited freely; publish when every question is ready."
         actions={
-          <Button onClick={() => setCreating(true)} notch>
-            <Plus className="h-4 w-4" /> New quiz
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setImporting(true)}>
+              <FileUp className="h-4 w-4" /> Import
+            </Button>
+            <Button onClick={() => setCreating(true)} notch>
+              <Plus className="h-4 w-4" /> New quiz
+            </Button>
+          </div>
         }
       />
 
@@ -115,6 +122,7 @@ export default function QuizzesPage() {
       </div>
 
       <CreateQuizDialog open={creating} onOpenChange={setCreating} />
+      <ImportQuestionsDialog open={importing} onOpenChange={setImporting} />
     </>
   );
 }

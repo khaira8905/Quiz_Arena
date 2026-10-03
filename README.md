@@ -29,6 +29,13 @@ the moment the timer hits zero.
 - Quiz settings: default timer (5–120s presets or custom), speed/accuracy scoring, streak bonus,
   shuffle questions/answers, leaderboard, correct answers, answer stats, late join, participant
   limit, sound, nickname filter
+- **Import questions** from a CSV or Excel (.xlsx) file, or from a Google Sheets / Google Drive
+  share link ("Anyone with the link can view"). Columns are matched by name (Question,
+  Option A–D, Correct answer, Time limit, Points, Explanation, Image URL), Kahoot's spreadsheet
+  template works as-is, and every row is previewed with its problems before anything is saved.
+  A template CSV can be downloaded from the import dialog
+- **Black / Blue / White themes** for the admin portal, sign-in, landing and join screens
+  (per browser); the projector and phones follow each quiz's own arena theme
 - Draft/published states; publishing and going live are blocked until every question is complete
 - Duplicate/delete quizzes and questions, projector preview, one-click **Go live**
 - Live control panel: answer key, live answer distribution, controls, leaderboard, kick players

@@ -6,6 +6,8 @@ export class ApiError extends Error {
     readonly code: ErrorCode,
     message: string,
     readonly details?: unknown,
+    /** True when the API itself answered with an error body (vs. a proxy or network failure). */
+    readonly fromApi = false,
   ) {
     super(message);
   }
@@ -45,6 +47,7 @@ export async function api<T>(
       err?.message ??
         (res.status >= 500 ? "The server is unavailable right now." : "Request failed."),
       err?.details,
+      !!err,
     );
   }
   return body as T;

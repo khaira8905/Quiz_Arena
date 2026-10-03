@@ -2,17 +2,21 @@
 
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { isApiError } from "@/lib/api";
 import { useLogin } from "@/lib/queries";
+import { pokeServer } from "@/lib/server-wake";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Start waking the free-tier server while the host types their password.
+  useEffect(pokeServer, []);
+  const waking = login.isPending && login.failureCount > 0;
   const error = login.error
     ? isApiError(login.error)
       ? login.error.message
@@ -52,6 +56,11 @@ export function LoginForm({ next }: { next: string }) {
           />
         )}
       </Field>
+      {waking && (
+        <p role="status" className="text-body-sm text-fg-2">
+          Waking up the server. This takes up to a minute after a quiet period.
+        </p>
+      )}
       {error && (
         <p
           role="alert"

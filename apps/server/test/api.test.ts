@@ -351,6 +351,76 @@ describe.skipIf(!hasDb)("REST API", () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it("imports questions in bulk, replacing the blank starter question", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/quizzes",
+      headers: { cookie: aliceCookie },
+      payload: { title: "Imported", theme: "WHITE" },
+    });
+    const quiz = created.json().quiz;
+    expect(quiz.appearance.theme).toBe("WHITE");
+    expect(quiz.questions).toHaveLength(1);
+
+    const questions = [
+      {
+        type: "MULTIPLE_CHOICE",
+        text: "Capital of France?",
+        options: [
+          { text: "Paris", isCorrect: true },
+          { text: "Rome", isCorrect: false },
+        ],
+      },
+      {
+        type: "TRUE_FALSE",
+        text: "The sun is a star.",
+        timeLimitSec: 15,
+        options: [
+          { text: "True", isCorrect: true },
+          { text: "False", isCorrect: false },
+        ],
+      },
+    ];
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/quizzes/${quiz.id}/questions/import`,
+      headers: { cookie: aliceCookie },
+      payload: { questions },
+    });
+    expect(res.statusCode).toBe(201);
+    const after = res.json().quiz;
+    expect(after.questions.map((q: { text: string }) => q.text)).toEqual([
+      "Capital of France?",
+      "The sun is a star.",
+    ]);
+    expect(after.questions.map((q: { order: number }) => q.order)).toEqual([0, 1]);
+
+    // Someone else's quiz is invisible, and malformed rows are refused as a whole.
+    const foreign = await app.inject({
+      method: "POST",
+      url: `/api/quizzes/${quiz.id}/questions/import`,
+      headers: { cookie: bobCookie },
+      payload: { questions },
+    });
+    expect(foreign.statusCode).toBe(404);
+    const bad = await app.inject({
+      method: "POST",
+      url: `/api/quizzes/${quiz.id}/questions/import`,
+      headers: { cookie: aliceCookie },
+      payload: { questions: [{ type: "MULTIPLE_CHOICE", text: "x", options: [] }] },
+    });
+    expect(bad.statusCode).toBe(400);
+
+    // A quiz can also be created straight from an import.
+    const direct = await app.inject({
+      method: "POST",
+      url: "/api/quizzes",
+      headers: { cookie: aliceCookie },
+      payload: { title: "From file", questions },
+    });
+    expect(direct.json().quiz.questions).toHaveLength(2);
+  });
+
   it("rejects unknown game codes on the public lookup", async () => {
     expect((await app.inject({ method: "GET", url: "/api/games/QA000001" })).json()).toMatchObject({
       error: { code: "INVALID_GAME_CODE" },

@@ -14,6 +14,7 @@ export function Dialog({
   description,
   children,
   className,
+  size = "md",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,6 +22,8 @@ export function Dialog({
   description?: string;
   children?: React.ReactNode;
   className?: string;
+  /** "lg" for dialogs with tables or previews. */
+  size?: "md" | "lg";
 }) {
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
@@ -39,7 +42,8 @@ export function Dialog({
             <RD.Content asChild forceMount>
               <motion.div
                 className={cn(
-                  "fixed left-1/2 top-1/2 z-50 w-[min(92vw,460px)] rounded-lg border border-line-strong bg-elevated p-6 text-fg shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] focus:outline-none",
+                  "fixed left-1/2 top-1/2 z-50 max-h-[92dvh] overflow-y-auto rounded-lg border border-line-strong bg-elevated p-6 text-fg shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] focus:outline-none",
+                  size === "lg" ? "w-[min(94vw,820px)]" : "w-[min(92vw,460px)]",
                   className,
                 )}
                 initial={{ opacity: 0, x: "-50%", y: "-46%", scale: 0.97 }}

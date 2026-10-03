@@ -1,5 +1,8 @@
 "use client";
 
+import type { ArenaTheme } from "@quizarena/shared/appearance";
+import type { QuestionInput } from "@quizarena/shared/schemas";
+
 import type {
   DashboardDto,
   QuestionDto,
@@ -12,6 +15,7 @@ import type {
 import type { QuestionUpdateInput, QuizUpdateInput } from "@quizarena/shared/schemas";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "./api";
+import { WAKE_RETRIES, WAKE_RETRY_MS, isServerWaking } from "./server-wake";
 
 export const keys = {
   me: ["me"] as const,
@@ -29,7 +33,9 @@ export function useMe() {
   return useQuery({
     queryKey: keys.me,
     queryFn: () => api<{ user: UserDto }>("/auth/me").then((r) => r.user),
-    retry: false,
+    // A sleeping server is retried for ~90s; anything else (401, 4xx) fails at once.
+    retry: (count, err) => isServerWaking(err) && count < WAKE_RETRIES,
+    retryDelay: WAKE_RETRY_MS,
     staleTime: 5 * 60_000,
   });
 }
@@ -39,6 +45,8 @@ export function useLogin() {
   return useMutation({
     mutationFn: (input: { email: string; password: string }) =>
       api<{ user: UserDto }>("/auth/login", { method: "POST", json: input }),
+    retry: (count, err) => isServerWaking(err) && count < WAKE_RETRIES,
+    retryDelay: WAKE_RETRY_MS,
     onSuccess: (r) => qc.setQueryData(keys.me, r.user),
   });
 }
@@ -88,11 +96,31 @@ const invalidateLists = (qc: QueryClient) => {
   void qc.invalidateQueries({ queryKey: keys.dashboard });
 };
 
+/** Bulk add from a spreadsheet import; the server answers with the updated quiz. */
+export function useImportQuestions(quizId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (questions: QuestionInput[]) =>
+      api<{ quiz: QuizDto; imported: number }>(`/quizzes/${quizId}/questions/import`, {
+        method: "POST",
+        json: { questions },
+      }),
+    onSuccess: ({ quiz }) => {
+      qc.setQueryData(keys.quiz(quiz.id), quiz);
+      invalidateLists(qc);
+    },
+  });
+}
+
 export function useCreateQuiz() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { title: string; description?: string }) =>
-      api<{ quiz: QuizDto }>("/quizzes", { method: "POST", json: input }).then((r) => r.quiz),
+    mutationFn: (input: {
+      title: string;
+      description?: string;
+      theme?: ArenaTheme;
+      questions?: QuestionInput[];
+    }) => api<{ quiz: QuizDto }>("/quizzes", { method: "POST", json: input }).then((r) => r.quiz),
     onSuccess: (quiz) => {
       qc.setQueryData(keys.quiz(quiz.id), quiz);
       invalidateLists(qc);

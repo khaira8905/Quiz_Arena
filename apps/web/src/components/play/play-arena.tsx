@@ -5,12 +5,14 @@ import { ERROR_COPY } from "@quizarena/shared/errors";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArenaThemeProvider } from "@/components/arena/arena-theme";
 import { Logo } from "@/components/brand/logo";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Spinner, StatusScreen } from "@/components/ui/misc";
 import { usePlayerGame } from "@/lib/game/use-player-game";
+import { pokeServer } from "@/lib/server-wake";
 import { unlockAudio } from "@/lib/sound";
 import { PlayerGame } from "./player-game";
 
@@ -18,6 +20,8 @@ import { PlayerGame } from "./player-game";
 export function PlayArena({ initialCode }: { initialCode: string | null }) {
   const game = usePlayerGame(initialCode);
   const { step } = game;
+  // Start waking the free-tier server while the player is still typing the PIN.
+  useEffect(pokeServer, []);
   // The arena's look applies from the moment the code is recognised, not only once inside.
   const appearance =
     game.view?.appearance ??
@@ -51,13 +55,20 @@ function PlayArenaScreens({ game }: { game: ReturnType<typeof usePlayerGame> }) 
     return (
       <div className="arena-floor flex min-h-dvh flex-col items-center justify-center gap-5 px-6">
         <Spinner className="h-8 w-8" />
-        <p className="label text-fg-2">
+        <p className="label text-fg-2" role="status">
           {step.kind === "resuming"
             ? `Rejoining ${step.code}`
             : step.kind === "checking"
-              ? `Finding game ${step.code}`
+              ? step.waking
+                ? "Waking up the game server"
+                : `Finding game ${step.code}`
               : "Entering the arena"}
         </p>
+        {step.kind === "checking" && step.waking && (
+          <p className="max-w-xs text-center text-body-sm text-fg-3">
+            It sleeps when nobody is playing and takes up to a minute to start. Keep this page open.
+          </p>
+        )}
       </div>
     );
   }
@@ -68,6 +79,8 @@ function PlayArenaScreens({ game }: { game: ReturnType<typeof usePlayerGame> }) 
         <Link href="/" aria-label="QuizArena home">
           <Logo size="sm" />
         </Link>
+        {/* Before a game is recognised the player picks the look; after, the quiz's theme rules. */}
+        {step.kind === "code" && <ThemeSwitcher />}
       </header>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
         <AnimatePresence mode="wait">

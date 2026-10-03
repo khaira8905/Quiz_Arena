@@ -22,6 +22,27 @@ describe("built-in themes", () => {
     for (const a of t.answers) expect(contrastRatio(a, inkFor(a))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it.each(ARENA_THEMES)("%s status colours are readable as small text", (name) => {
+    const t = THEME_TOKENS[name];
+    // Badges draw status text on a ~16% tint of itself over the surface.
+    const tint = (fg: string, bg: string) => {
+      const [a, b] = [fg, bg].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+      return `#${a!
+        .map((v, i) =>
+          Math.round(v * 0.16 + b![i]! * 0.84)
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("")}`;
+    };
+    for (const status of [t.success, t.warning, t.danger]) {
+      for (const bg of [t.bg, t.surface]) {
+        expect(contrastRatio(status, bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(status, tint(status, bg))).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   it("every theme passes its own validation", () => {
     for (const theme of ARENA_THEMES) {
       const c = resolveArenaColors({ ...DEFAULT_APPEARANCE, theme });

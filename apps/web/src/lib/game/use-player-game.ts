@@ -7,12 +7,13 @@ import type { AnswerReceipt, JoinResult } from "@quizarena/shared/events";
 import type { PlayerView } from "@quizarena/shared/game";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isApiError } from "../api";
+import { withWake } from "../server-wake";
 import { seedOffset, syncClock } from "../clock";
 import { createGameSocket, emitAck, type GameSocket } from "../socket";
 
 export type PlayerStep =
   | { kind: "code"; error?: { code: ErrorCode; message: string }; attempted?: string }
-  | { kind: "checking"; code: string }
+  | { kind: "checking"; code: string; waking?: boolean }
   | { kind: "name"; game: GameLookupDto; error?: { code: ErrorCode; message: string } }
   | { kind: "joining"; game: GameLookupDto }
   | { kind: "resuming"; code: string }
@@ -161,10 +162,11 @@ export function usePlayerGame(initialCode: string | null) {
     return socket;
   }, [closeWith, markBound]);
 
+  // Generous: a seat can be resumed straight after the server wakes from sleep.
   const waitConnected = (socket: GameSocket) =>
     new Promise<boolean>((resolve) => {
       if (socket.connected) return resolve(true);
-      const t = setTimeout(() => resolve(false), 8000);
+      const t = setTimeout(() => resolve(false), 45_000);
       socket.once("connect", () => {
         clearTimeout(t);
         resolve(true);
@@ -198,7 +200,14 @@ export function usePlayerGame(initialCode: string | null) {
         return;
       }
       try {
-        const game = await api<GameLookupDto>(`/games/${encodeURIComponent(code)}`);
+        const game = await withWake(
+          () => api<GameLookupDto>(`/games/${encodeURIComponent(code)}`),
+          {
+            onWaiting: () => {
+              if (gen === generation.current) setStep({ kind: "checking", code, waking: true });
+            },
+          },
+        );
         if (gen !== generation.current) return;
         if (!game.joinable)
           setStep({
