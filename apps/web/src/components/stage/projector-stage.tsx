@@ -166,7 +166,8 @@ export function ProjectorStage({ code, preview }: { code: string; preview: boole
 
         {!preview && (
           <AnimatePresence>
-            {!fullscreen && !idle && (
+            {/* Setup help for whoever is at the projector: only before the game starts. */}
+            {!fullscreen && !idle && view.phase === "LOBBY" && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}

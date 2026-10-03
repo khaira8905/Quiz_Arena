@@ -14,12 +14,8 @@ export function useGoLive() {
     pendingId: start.isPending ? start.variables : null,
     goLive: (quizId: string) =>
       start.mutate(quizId, {
-        onSuccess: (session) => {
-          toast.success(`Arena ${session.code} is open`, {
-            description: "Open the projector from the control room and let players in.",
-          });
-          router.push(`/host/${session.code}`);
-        },
+        // The control room itself says the arena is open; no toast to linger over it.
+        onSuccess: (session) => router.push(`/host/${session.code}`),
         onError: (err) =>
           toast.error("Can't go live yet", {
             description: isApiError(err) ? err.message : "Please try again.",

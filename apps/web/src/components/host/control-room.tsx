@@ -56,6 +56,18 @@ import {
 } from "./control-panels";
 
 const CONFIRM: HostCommand[] = ["SKIP", "END"];
+const PRIMARY_SETTLE_MS = 900;
+
+/** The main button's wording, where the generic command name would mislead. */
+function primaryLabel(view: HostView, cmd: HostCommand) {
+  if (cmd === "NEXT" && view.questionIndex + 1 >= view.questionCount) return "Finish quiz";
+  return COMMAND_LABELS[cmd];
+}
+
+/** Every connected player has answered (the server locks the question early then). */
+function everyoneAnswered(view: HostView) {
+  return view.connectedCount > 0 && view.answeredCount >= view.connectedCount;
+}
 
 /**
  * The host laptop: the control room. Everything the audience must not see lives here —
@@ -71,10 +83,13 @@ export function HostControlRoom({ code }: { code: string }) {
   const [busy, setBusy] = useState<HostCommand | null>(null);
   const [kickTarget, setKickTarget] = useState<{ id: string; nickname: string } | null>(null);
 
+  const lastOwnCommandAt = useRef(0);
   const run = useCallback(
     async (cmd: HostCommand, amount?: number) => {
+      lastOwnCommandAt.current = Date.now();
       setBusy(cmd);
       const res = await command(cmd, amount);
+      lastOwnCommandAt.current = Date.now();
       setBusy(null);
       if (!res.ok)
         toast.error(ERROR_COPY[res.error.code]?.title ?? "Action failed", {
@@ -91,6 +106,28 @@ export function HostControlRoom({ code }: { code: string }) {
       else void run(cmd);
     },
     [view, run],
+  );
+
+  // The main button sometimes changes by itself (the reading countdown starts the timer,
+  // everyone answering locks the question). A press that lands just as that happens would
+  // trigger a step the host never saw, so presses are ignored for a moment after a change
+  // this screen didn't cause.
+  const currentPrimary = view ? primaryCommand(view) : null;
+  const previousPrimary = useRef<HostCommand | null>(null);
+  const autoChangedAt = useRef(0);
+  useEffect(() => {
+    const before = previousPrimary.current;
+    previousPrimary.current = currentPrimary;
+    const ownStep = Date.now() - lastOwnCommandAt.current < 2000;
+    if (before && currentPrimary && before !== currentPrimary && !ownStep)
+      autoChangedAt.current = Date.now();
+  }, [currentPrimary]);
+  const pressPrimary = useCallback(
+    (cmd: HostCommand) => {
+      if (Date.now() - autoChangedAt.current < PRIMARY_SETTLE_MS) return;
+      request(cmd);
+    },
+    [request],
   );
 
   const changeSettings = useCallback(
@@ -127,7 +164,7 @@ export function HostControlRoom({ code }: { code: string }) {
       if (key === " " || key === "enter" || key === "arrowright") {
         e.preventDefault();
         const primary = primaryCommand(view);
-        if (primary && !busy) request(primary);
+        if (primary && !busy) pressPrimary(primary);
       } else if (key === "p") request(view?.paused ? "RESUME" : "PAUSE");
       else if (key === "l") request("LEADERBOARD");
       else if (key === "s") request("SKIP");
@@ -138,7 +175,7 @@ export function HostControlRoom({ code }: { code: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, busy, confirm, kickTarget, request, openProjector]);
+  }, [view, busy, confirm, kickTarget, request, pressPrimary, openProjector]);
 
   if (error && !view) return <AttachError code={code} error={error} />;
   if (!view) {
@@ -221,7 +258,7 @@ export function HostControlRoom({ code }: { code: string }) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 items-start gap-5 p-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(24rem,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-5 p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
         {/* ------------------------------------------------------------ main */}
         <div className="flex min-w-0 flex-col gap-5">
           <StatusPanel view={view} />
@@ -236,7 +273,7 @@ export function HostControlRoom({ code }: { code: string }) {
                   className="min-w-72"
                   disabled={!primary}
                   loading={busy === "PODIUM_NEXT"}
-                  onClick={() => primary && request(primary)}
+                  onClick={() => primary && pressPrimary(primary)}
                 >
                   {podiumLabel(nextPodiumStep(view))}
                   {primary && <Kbd onAccent>Space</Kbd>}
@@ -247,7 +284,7 @@ export function HostControlRoom({ code }: { code: string }) {
                   notch
                   className="min-w-72"
                   loading={busy === primary}
-                  onClick={() => request(primary)}
+                  onClick={() => pressPrimary(primary)}
                 >
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.span
@@ -258,7 +295,7 @@ export function HostControlRoom({ code }: { code: string }) {
                       transition={{ duration: 0.18 }}
                       className="inline-flex items-center gap-3"
                     >
-                      {COMMAND_LABELS[primary]} <ArrowRight className="h-5 w-5" />
+                      {primaryLabel(view, primary)} <ArrowRight className="h-5 w-5" />
                     </motion.span>
                   </AnimatePresence>
                   <Kbd onAccent>Space</Kbd>
@@ -400,7 +437,7 @@ export function HostControlRoom({ code }: { code: string }) {
         </div>
 
         {/* ------------------------------------------------------------ side */}
-        <aside className="flex min-w-0 flex-col gap-5 xl:sticky xl:top-20">
+        <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-20">
           <AnimatePresence initial={false}>
             {showPreview && (
               <motion.section
@@ -516,13 +553,19 @@ function nextHint(view: HostView): string {
         ? "Players are reading. Start the timer when the room is ready."
         : "Players are reading. The timer starts on its own, or start it now.";
     case "QUESTION_ACTIVE":
-      return "Answers are open. Lock early once everyone has answered.";
+      return view.settings.readingMode === "TIMED"
+        ? "The reading time is over and the timer is running. Answers lock on their own when time runs out or everyone has answered."
+        : "Answers are open. They lock on their own when time runs out or everyone has answered.";
     case "QUESTION_LOCKED":
-      return "Time's up. Show the answers, or reveal the correct one.";
+      return everyoneAnswered(view)
+        ? "Everyone has answered, so answers locked early. Show the answers, or reveal the correct one."
+        : "Time's up. Show the answers, or reveal the correct one.";
     case "ANSWER_DISTRIBUTION":
       return "The room sees what everyone chose. Reveal when ready.";
     case "ANSWER_REVEAL":
-      return "Scores are in.";
+      return view.questionIndex + 1 >= view.questionCount
+        ? "That was the last question. Finish to start the podium."
+        : "Scores are in.";
     case "LEADERBOARD":
       return "Move on when the room is ready.";
     case "FINISHED":

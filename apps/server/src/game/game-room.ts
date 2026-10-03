@@ -576,7 +576,8 @@ export class GameRoom {
 
   /** Final ceremony, one beat per host press; places that don't exist are skipped. */
   private podiumNext() {
-    const n = this.participants.size;
+    // The frozen final standings decide which places exist (the same list the screens use).
+    const n = this.results?.standings.length ?? this.participants.size;
     const order: PodiumStep[] = [
       "COMPLETE",
       ...(n >= 3 ? (["THIRD"] as const) : []),
@@ -585,7 +586,8 @@ export class GameRoom {
       "BOARD",
     ];
     const i = order.indexOf(this.podiumStep ?? "COMPLETE");
-    this.podiumStep = order[Math.min(order.length - 1, i + 1)]!;
+    // Never step backwards: an unknown current step goes straight to the full board.
+    this.podiumStep = i === -1 ? "BOARD" : order[Math.min(order.length - 1, i + 1)]!;
     this.broadcast();
   }
 

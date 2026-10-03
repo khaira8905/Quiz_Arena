@@ -69,11 +69,13 @@ export function PodiumCeremony({
         intensity={1.5}
         origin={{ x: 0.5, y: 0.35 }}
       />
-      <AnimatePresence mode="wait">
+      {/* A crossfade, not "wait": the board never waits on the podium's exit animation
+          (which a background or minimised projector window would never finish). */}
+      <AnimatePresence initial={false}>
         {step === "BOARD" ? (
           <motion.div
             key="board"
-            className="h-full"
+            className="absolute inset-0"
             initial={reduced ? false : { opacity: 0, y: "3vh" }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -83,7 +85,7 @@ export function PodiumCeremony({
         ) : (
           <motion.div
             key="podium"
-            className="flex h-full flex-col"
+            className="absolute inset-0 flex flex-col"
             exit={reduced ? undefined : { opacity: 0, y: "-3vh" }}
             transition={{ duration: 0.5 }}
           >

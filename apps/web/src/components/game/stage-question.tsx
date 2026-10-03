@@ -220,7 +220,8 @@ export function StageQuestion({
                 className="flex items-center justify-center gap-[1vw] border-y border-danger/50 bg-danger-soft py-[1.2vh]"
               >
                 <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-extrabold uppercase tracking-[-0.02em] text-danger">
-                  Time&apos;s up
+                  {/* Locked before the clock ran out means everyone answered. */}
+                  {playerCount > 0 && answeredCount >= playerCount ? "Everyone's in" : "Time's up"}
                 </span>
                 <span className="label text-[clamp(0.75rem,1vw,2rem)] text-fg-2">
                   Answers locked
