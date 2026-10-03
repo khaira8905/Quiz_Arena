@@ -105,6 +105,8 @@ export interface ServerToClientEvents {
     questionId: string;
     answered: number;
     distribution: Record<string, number>;
+    /** Who has answered, so the control room can show who is still thinking. */
+    answeredIds: string[];
   }) => void;
   /** Stage-safe answer counter (no distribution) for projectors. */
   "question:answered": (payload: { questionId: string; answered: number }) => void;

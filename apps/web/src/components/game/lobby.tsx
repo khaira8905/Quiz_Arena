@@ -84,14 +84,17 @@ const MAX_VISIBLE = 140;
  */
 export function Roster({
   players,
+  total,
   size = "stage",
 }: {
-  players: PlayerSummary[];
+  /** Everyone in the room, when `players` is a capped list (the stage gets 140 names). */
+  total?: number;
+  players: Pick<PlayerSummary, "id" | "nickname" | "connected">[];
   size?: "stage" | "panel";
 }) {
   const reduced = useReducedMotion();
   const visible = players.slice(0, MAX_VISIBLE);
-  const hidden = players.length - visible.length;
+  const hidden = Math.max(0, (total ?? players.length) - visible.length);
   const stage = size === "stage";
 
   return (

@@ -1,34 +1,32 @@
 "use client";
 
-import type { HostView } from "@quizarena/shared/game";
-import { AnimatePresence, motion } from "motion/react";
+import type { ProjectorView } from "@quizarena/shared/game";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Logo } from "@/components/brand/logo";
 import { JoinPanel, PlayerCounter, Roster } from "@/components/game/lobby";
 import { Leaderboard } from "@/components/game/leaderboard";
 import { StageQuestion } from "@/components/game/stage-question";
 import { StartSequence } from "@/components/game/start-sequence";
-import { WinnerScreen } from "@/components/game/winner-screen";
 import { cn } from "@/lib/cn";
+import { PodiumCeremony } from "./podium-ceremony";
+
+const QUESTION_PHASES: ProjectorView["phase"][] = [
+  "QUESTION_READING",
+  "QUESTION_ACTIVE",
+  "QUESTION_LOCKED",
+  "ANSWER_DISTRIBUTION",
+  "ANSWER_REVEAL",
+];
 
 /**
- * Everything the audience sees on the projector: the top strip and the stage. Pure
- * presentation over a HostView, so the live arena and the admin's arena preview render
- * exactly the same thing.
+ * The stage: everything the audience sees on the projector, and nothing else — no
+ * controls, connection details or host-only data. It renders the server's audience-safe
+ * ProjectorView, and the projector window, the host's live preview and the admin's arena
+ * preview all render this same component, so what the host previews is what the room sees.
  */
-export function ProjectorScreen({
-  view,
-  connection,
-  sound,
-}: {
-  view: HostView;
-  connection: string;
-  sound: boolean;
-}) {
+export function ProjectorScreen({ view, sound }: { view: ProjectorView; sound: boolean }) {
   const { eventName, logoUrl, projectorLayout } = view.settings.appearance;
-  const inQuestion =
-    view.phase === "QUESTION_ACTIVE" ||
-    view.phase === "QUESTION_LOCKED" ||
-    view.phase === "ANSWER_REVEAL";
+  const inQuestion = QUESTION_PHASES.includes(view.phase);
   // MINIMAL drops the top strip while a question is on screen: nothing but the question.
   const showStrip = !(projectorLayout === "MINIMAL" && inQuestion);
   return (
@@ -66,11 +64,12 @@ export function ProjectorScreen({
             )}
             <span className="flex items-baseline gap-[0.6vw]">
               <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold">
-                {view.connectedCount}
+                {view.playerCount}
               </span>
-              <span className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">Online</span>
+              <span className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">
+                {view.playerCount === 1 ? "Player" : "Players"}
+              </span>
             </span>
-            <ConnectionDot state={connection} />
           </div>
         </header>
       )}
@@ -81,20 +80,12 @@ export function ProjectorScreen({
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={
-              view.phase === "QUESTION_READING" ||
-              view.phase === "QUESTION_ACTIVE" ||
-              view.phase === "QUESTION_LOCKED" ||
-              view.phase === "ANSWER_DISTRIBUTION" ||
-              view.phase === "ANSWER_REVEAL"
-                ? "question"
-                : view.phase
-            }
+            key={inQuestion ? "question" : view.phase}
             className="h-full"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4 }}
           >
             <Stage view={view} sound={sound} />
           </motion.div>
@@ -104,31 +95,10 @@ export function ProjectorScreen({
   );
 }
 
-function Stage({ view, sound }: { view: HostView; sound: boolean }) {
+function Stage({ view, sound }: { view: ProjectorView; sound: boolean }) {
   switch (view.phase) {
     case "LOBBY":
-      return (
-        <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
-          <h1 className="sr-only">
-            {view.quizTitle}: join with game PIN {view.code}
-          </h1>
-          <JoinPanel code={view.code} coverImageUrl={view.coverImageUrl} />
-          <div className="flex min-h-0 flex-col gap-[3vh] border-l border-line pl-[4vw]">
-            <div className="flex items-end justify-between">
-              <PlayerCounter count={view.playerCount} />
-              {view.playerCount === 0 && (
-                <span className="label animate-pulse text-[clamp(0.75rem,1vw,2rem)] text-fg-3">
-                  Waiting for players
-                </span>
-              )}
-            </div>
-            <div className="tick-rule" />
-            <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-              <Roster players={view.players} />
-            </div>
-          </div>
-        </div>
-      );
+      return <StageLobby view={view} />;
     case "COUNTDOWN":
       return (
         <StartSequence
@@ -153,7 +123,9 @@ function Stage({ view, sound }: { view: HostView; sound: boolean }) {
           correctOptionIds={view.correctOptionIds}
           showStats={view.settings.showAnswerStats}
           showCorrect={view.settings.showCorrectAnswers}
-          explanation={view.settings.showCorrectAnswers ? view.explanation : null}
+          explanation={view.explanation}
+          readingEndsAt={view.readingEndsAt}
+          serverTime={view.serverTime}
           sound={sound}
         />
       ) : null;
@@ -170,38 +142,58 @@ function Stage({ view, sound }: { view: HostView; sound: boolean }) {
               </span>
             )}
           </div>
-          <Leaderboard entries={view.leaderboard} />
+          <Leaderboard entries={view.leaderboard ?? []} />
         </div>
       );
     case "FINISHED":
       return view.results ? (
-        <WinnerScreen results={view.results} quizTitle={view.quizTitle} sound={sound} />
+        <PodiumCeremony
+          results={view.results}
+          quizTitle={view.quizTitle}
+          step={view.podiumStep ?? "COMPLETE"}
+          sound={sound}
+        />
       ) : null;
   }
 }
 
-function ConnectionDot({ state }: { state: string }) {
-  const label =
-    state === "live"
-      ? "Connected"
-      : state === "reconnecting"
-        ? "Reconnecting"
-        : state === "failed"
-          ? "Disconnected"
-          : "Connecting";
+function StageLobby({ view }: { view: ProjectorView }) {
+  const reduced = useReducedMotion();
   return (
-    <span className="flex items-center gap-[0.5vw]" title={label}>
-      <span
-        className={cn(
-          "h-[1vh] min-h-2 w-[1vh] min-w-2 rounded-full",
-          state === "live"
-            ? "animate-live-pulse bg-accent"
-            : state === "reconnecting"
-              ? "bg-warning"
-              : "bg-danger",
-        )}
-      />
-      <span className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">{label}</span>
-    </span>
+    <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
+      <h1 className="sr-only">
+        {view.quizTitle}: join with game PIN {view.code}
+      </h1>
+      <div className="flex min-h-0 flex-col">
+        <motion.p
+          initial={reduced ? false : { opacity: 0, y: "-2vh" }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          aria-hidden
+          className="font-display text-[clamp(2rem,4.2vw,9rem)] font-extrabold uppercase leading-[0.92] tracking-[-0.045em]"
+        >
+          Join the
+          <br />
+          <span className="text-accent">arena</span>
+        </motion.p>
+        <div className="min-h-0 flex-1">
+          <JoinPanel code={view.code} coverImageUrl={view.coverImageUrl} />
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-col gap-[3vh] border-l border-line pl-[4vw]">
+        <div className="flex items-end justify-between">
+          <PlayerCounter count={view.playerCount} />
+          {view.playerCount === 0 && (
+            <span className="label animate-pulse text-[clamp(0.75rem,1vw,2rem)] text-fg-3">
+              Waiting for players
+            </span>
+          )}
+        </div>
+        <div className="tick-rule" />
+        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+          <Roster players={view.lobbyPlayers} total={view.playerCount} />
+        </div>
+      </div>
+    </div>
   );
 }

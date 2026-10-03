@@ -254,6 +254,8 @@ export function useSession(id: string) {
       api<{ session: SessionSummaryDto; live: { phase: string; players: number } | null }>(
         `/sessions/${id}`,
       ),
+    // A running game finishes in the control room; poll so this page turns into results.
+    refetchInterval: (q) => (q.state.data?.live ? 10_000 : false),
   });
 }
 

@@ -43,9 +43,12 @@ const TYPE_SAMPLES: Record<TypographyPreset, { name: string; display: string; bo
 
 const SCENE_LABEL: Record<PreviewScene, string> = {
   lobby: "Lobby",
+  reading: "Reading",
   question: "Question",
+  stats: "Answers",
   reveal: "Reveal",
   leaderboard: "Leaderboard",
+  podium: "Podium",
 };
 
 /**

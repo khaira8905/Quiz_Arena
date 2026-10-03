@@ -508,6 +508,10 @@ describe("reading period, stats step, podium and timer control", () => {
     vi.advanceTimersByTime(START_COUNTDOWN_MS);
     vi.advanceTimersByTime(5_000);
     room.submitAnswer(ids[0]!, "q0", "q0_a");
+    vi.advanceTimersByTime(1_000);
+    // The control room learns who answered (to show who is still thinking).
+    const progress = output.hostEvents.filter((e) => e.event === "question:progress").at(-1);
+    expect((progress?.payload as { answeredIds: string[] }).answeredIds).toEqual([ids[0]]);
     room.command("LOCK");
     room.command("SHOW_STATS");
     for (const v of output.projectorViews) {

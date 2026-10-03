@@ -1,11 +1,11 @@
 import type { ArenaAppearance } from "@quizarena/shared/appearance";
 import type {
+  FinalResults,
   GamePhase,
-  HostView,
   LeaderboardEntry,
   LiveSettings,
-  PlayerSummary,
   PlayerView,
+  ProjectorView,
   PublicQuestion,
   TimerState,
 } from "@quizarena/shared/game";
@@ -20,7 +20,15 @@ import type {
 export const PREVIEW_MESSAGE = "qa:arena-preview";
 export const PREVIEW_READY = "qa:arena-preview-ready";
 
-export const PREVIEW_SCENES = ["lobby", "question", "reveal", "leaderboard"] as const;
+export const PREVIEW_SCENES = [
+  "lobby",
+  "reading",
+  "question",
+  "stats",
+  "reveal",
+  "leaderboard",
+  "podium",
+] as const;
 export type PreviewScene = (typeof PREVIEW_SCENES)[number];
 export type PreviewSurface = "projector" | "phone";
 
@@ -97,14 +105,25 @@ const NAMES = [
 const PREVIEW_CODE = "QA204816";
 const PLAYER_COUNT = 87;
 
-function players(): PlayerSummary[] {
-  return NAMES.map((nickname, i) => ({
-    id: `p${i}`,
-    nickname,
-    connected: true,
-    score: 0,
-    answered: i % 3 !== 0,
-  }));
+function players(): ProjectorView["lobbyPlayers"] {
+  return NAMES.map((nickname, i) => ({ id: `p${i}`, nickname, connected: true }));
+}
+
+function results(): FinalResults {
+  return {
+    totalQuestions: 12,
+    playedQuestions: 12,
+    participantCount: PLAYER_COUNT,
+    averageAccuracy: 0.64,
+    averageResponseMs: 5200,
+    standings: leaderboard().map((e, i) => ({
+      ...e,
+      accuracy: Math.max(0.3, 0.92 - i * 0.05),
+      avgResponseMs: 3100 + i * 260,
+      bestStreak: Math.max(1, 6 - Math.floor(i / 2)),
+      answeredCount: 12,
+    })),
+  };
 }
 
 function leaderboard(): LeaderboardEntry[] {
@@ -161,46 +180,64 @@ export function previewTimer(durationMs: number, elapsedMs: number, now: number)
 
 const PHASE: Record<PreviewScene, GamePhase> = {
   lobby: "LOBBY",
+  reading: "QUESTION_READING",
   question: "QUESTION_ACTIVE",
+  stats: "ANSWER_DISTRIBUTION",
   reveal: "ANSWER_REVEAL",
   leaderboard: "LEADERBOARD",
+  podium: "FINISHED",
 };
 
-export function previewHostView(s: ArenaPreviewState, now: number): HostView {
+/** The reading scene shows a countdown that is a few seconds from opening. */
+const READING_LEFT_MS = 4000;
+
+export function previewProjectorView(s: ArenaPreviewState, now: number): ProjectorView {
   const { question, correctIds, distribution } = publicQuestion(s);
   const phase = PHASE[s.scene];
+  const inQuestion = phase !== "LOBBY" && phase !== "FINISHED";
   const answered = Object.values(distribution).reduce((a, b) => a + b, 0);
+  const revealed = phase === "ANSWER_REVEAL" || phase === "LEADERBOARD";
+  const lobby = phase === "LOBBY";
   return {
-    role: "host",
-    sessionId: "preview",
+    role: "projector",
     code: PREVIEW_CODE,
     quizTitle: s.title,
     coverImageUrl: null,
     phase,
     paused: false,
     serverTime: now,
-    settings: { ...s.settings, soundEnabled: false, appearance: s.appearance },
+    settings: {
+      appearance: s.appearance,
+      soundEnabled: false,
+      showAnswerStats: s.settings.showAnswerStats,
+      showCorrectAnswers: s.settings.showCorrectAnswers,
+      showLeaderboard: s.settings.showLeaderboard,
+    },
     countdownEndsAt: null,
+    readingEndsAt: phase === "QUESTION_READING" ? now + READING_LEFT_MS : null,
     questionCount: Math.max(1, s.questionCount),
-    questionIndex: phase === "LOBBY" ? -1 : 0,
-    players: phase === "LOBBY" ? players() : [],
-    playerCount: phase === "LOBBY" ? NAMES.length : PLAYER_COUNT,
-    connectedCount: phase === "LOBBY" ? NAMES.length : PLAYER_COUNT,
-    question: phase === "LOBBY" ? null : question,
-    correctOptionIds: phase === "ANSWER_REVEAL" || phase === "LEADERBOARD" ? correctIds : null,
-    explanation: s.question?.explanation || (s.question ? null : FALLBACK_QUESTION.explanation),
-    timer:
-      phase === "QUESTION_ACTIVE"
+    playerCount: lobby ? NAMES.length : PLAYER_COUNT,
+    connectedCount: lobby ? NAMES.length : PLAYER_COUNT,
+    lobbyPlayers: lobby ? players() : [],
+    question: inQuestion ? question : null,
+    timer: !inQuestion
+      ? null
+      : phase === "QUESTION_ACTIVE"
         ? previewTimer(question.durationMs, Math.min(6000, question.durationMs / 3), now)
+        : { ...previewTimer(question.durationMs, 0, now), paused: true },
+    answeredCount: phase === "QUESTION_ACTIVE" ? 64 : phase === "QUESTION_READING" ? 0 : answered,
+    distribution:
+      phase === "ANSWER_DISTRIBUTION" || (revealed && s.settings.showAnswerStats)
+        ? distribution
         : null,
-    answeredCount: phase === "QUESTION_ACTIVE" ? 64 : answered,
-    distribution: phase === "QUESTION_ACTIVE" ? {} : distribution,
-    leaderboard: leaderboard(),
-    results: null,
-    readingEndsAt: null,
-    podiumStep: null,
-    timerOverrideSec: null,
-    availableCommands: [],
+    correctOptionIds: revealed && s.settings.showCorrectAnswers ? correctIds : null,
+    explanation:
+      revealed && s.settings.showCorrectAnswers
+        ? s.question?.explanation || (s.question ? null : FALLBACK_QUESTION.explanation)
+        : null,
+    leaderboard: phase === "LEADERBOARD" ? leaderboard() : null,
+    results: phase === "FINISHED" ? results() : null,
+    podiumStep: phase === "FINISHED" ? "FIRST" : null,
   };
 }
 
@@ -209,6 +246,7 @@ export function previewPlayerView(s: ArenaPreviewState, now: number): PlayerView
   const phase = PHASE[s.scene];
   const mine = correctIds[0] ?? question.options[0]!.id;
   const revealed = phase === "ANSWER_REVEAL";
+  const inQuestion = phase !== "LOBBY" && phase !== "FINISHED";
   return {
     role: "player",
     code: PREVIEW_CODE,
@@ -226,12 +264,12 @@ export function previewPlayerView(s: ArenaPreviewState, now: number): PlayerView
       streak: 2,
       correctCount: 2,
     },
-    question: phase === "LOBBY" ? null : question,
+    question: inQuestion ? question : null,
     timer:
       phase === "QUESTION_ACTIVE"
         ? previewTimer(question.durationMs, Math.min(6000, question.durationMs / 3), now)
         : null,
-    myAnswerId: revealed ? mine : null,
+    myAnswerId: revealed || phase === "ANSWER_DISTRIBUTION" ? mine : null,
     result: revealed
       ? {
           answered: true,
@@ -247,8 +285,8 @@ export function previewPlayerView(s: ArenaPreviewState, now: number): PlayerView
     correctOptionIds: revealed && s.settings.showCorrectAnswers ? correctIds : null,
     leaderboard: leaderboard(),
     explanation: revealed ? (s.question?.explanation ?? FALLBACK_QUESTION.explanation) : null,
-    readingEndsAt: null,
-    podiumStep: null,
+    readingEndsAt: phase === "QUESTION_READING" ? now + READING_LEFT_MS : null,
+    podiumStep: phase === "FINISHED" ? "FIRST" : null,
     soundEnabled: false,
     appearance: s.appearance,
   };

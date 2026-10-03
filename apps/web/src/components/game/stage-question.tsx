@@ -6,6 +6,8 @@ import { screenTransition, useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { formatNumber, pad2 } from "@/lib/format";
 import { answerScale, questionScale } from "@/lib/text-fit";
+import { StageDistribution } from "@/components/stage/stage-distribution";
+import { useCountdown } from "@/lib/use-countdown";
 import { StageAnswerTile, type TileState } from "./answer-tile";
 import { Countdown, StageTimerBar } from "./countdown";
 
@@ -25,18 +27,24 @@ export function StageQuestion({
   showCorrect,
   explanation,
   sound,
+  readingEndsAt = null,
+  serverTime = 0,
 }: {
   question: PublicQuestion;
   phase: GamePhase;
   timer: TimerState | null;
   answeredCount: number;
   playerCount: number;
-  distribution: Record<string, number>;
+  /** Null while it's private (before the stats step, or when the quiz hides stats). */
+  distribution: Record<string, number> | null;
   correctOptionIds: string[] | null;
   showStats: boolean;
   showCorrect: boolean;
   explanation: string | null;
   sound: boolean;
+  /** Reading period: when answers open (null = the host opens them). */
+  readingEndsAt?: number | null;
+  serverTime?: number;
 }) {
   const reduced = useReducedMotion();
   const { appearance, motion: arenaMotion } = useArena();
@@ -47,7 +55,12 @@ export function StageQuestion({
   const aScale = answerScale(question.options.map((o) => o.text)) * (layout === "WIDE" ? 0.86 : 1);
   const revealed = phase === "ANSWER_REVEAL" || phase === "LEADERBOARD";
   const active = phase === "QUESTION_ACTIVE";
-  const total = Object.values(distribution).reduce((a, b) => a + b, 0);
+  const reading = phase === "QUESTION_READING";
+  const dist = distribution ?? {};
+  const total = Object.values(dist).reduce((a, b) => a + b, 0);
+  // The stats step, and a reveal that keeps the stats on screen, use answer bars.
+  const bars =
+    distribution !== null && (phase === "ANSWER_DISTRIBUTION" || (revealed && showStats));
   const correct = new Set(revealed && showCorrect ? (correctOptionIds ?? []) : []);
 
   const tileState = (id: string): TileState => {
@@ -123,9 +136,12 @@ export function StageQuestion({
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-[1.5vh]">
-            <Countdown timer={timer} active={active} sound={sound} />
-            {!minimal && (
-              <AnsweredMeter answered={revealed ? total : answeredCount} players={playerCount} />
+            {!bars && <Countdown timer={timer} active={active} sound={sound} />}
+            {!minimal && !reading && (
+              <AnsweredMeter
+                answered={distribution ? total : answeredCount}
+                players={playerCount}
+              />
             )}
           </div>
         </div>
@@ -133,42 +149,65 @@ export function StageQuestion({
         {appearance.timerStyle === "PROGRESS" && <StageTimerBar timer={timer} active={active} />}
 
         {/* ------------------------------------------------ answers */}
-        <div
-          className={cn(
-            "grid min-h-[38vh] flex-1 gap-[1.2vw]",
-            layout === "WIDE"
-              ? question.options.length > 2
-                ? "grid-cols-4 grid-rows-1"
-                : "grid-cols-2 grid-rows-1"
-              : question.options.length > 2
-                ? "grid-cols-2 grid-rows-2"
-                : "grid-cols-2 grid-rows-1",
-          )}
-        >
-          {question.options.map((o, i) => {
-            const count = distribution[o.id] ?? 0;
-            return (
-              <StageAnswerTile
-                key={o.id}
-                index={i}
-                text={o.text}
-                state={tileState(o.id)}
-                count={count}
-                share={total ? count / total : 0}
-                showStats={revealed && showStats}
-                delay={reduced ? 0 : 0.18 + i * 0.07}
-                textScale={aScale}
-                vertical={layout === "WIDE" && question.options.length > 2}
-              />
-            );
-          })}
-        </div>
+        {reading ? (
+          <ReadingPanel endsAt={readingEndsAt} serverTime={serverTime} />
+        ) : bars ? (
+          <div className="min-h-[38vh] flex-1">
+            <StageDistribution
+              question={question}
+              distribution={dist}
+              correctOptionIds={revealed && showCorrect ? correctOptionIds : null}
+            />
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "grid min-h-[38vh] flex-1 gap-[1.2vw]",
+              layout === "WIDE"
+                ? question.options.length > 2
+                  ? "grid-cols-4 grid-rows-1"
+                  : "grid-cols-2 grid-rows-1"
+                : question.options.length > 2
+                  ? "grid-cols-2 grid-rows-2"
+                  : "grid-cols-2 grid-rows-1",
+            )}
+          >
+            {question.options.map((o, i) => {
+              const count = dist[o.id] ?? 0;
+              return (
+                <StageAnswerTile
+                  key={o.id}
+                  index={i}
+                  text={o.text}
+                  state={tileState(o.id)}
+                  count={count}
+                  share={total ? count / total : 0}
+                  showStats={false}
+                  delay={reduced ? 0 : 0.12 + i * 0.09}
+                  textScale={aScale}
+                  vertical={layout === "WIDE" && question.options.length > 2}
+                />
+              );
+            })}
+          </div>
+        )}
 
         {/* ------------------------------------------------ status ribbons */}
         {/* The slot is reserved while a question is open, so "Time's up" appearing never
             reflows the answer grid. */}
         <div className={cn("shrink-0", !revealed && "min-h-[6.5vh]")}>
           <AnimatePresence mode="wait">
+            {phase === "ANSWER_DISTRIBUTION" && (
+              <motion.p
+                key="stats"
+                initial={reduced ? false : { opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-center font-display text-[clamp(1.25rem,2.2vw,4.5rem)] font-extrabold uppercase tracking-[-0.02em] text-fg-2"
+              >
+                What did everyone choose?
+              </motion.p>
+            )}
             {phase === "QUESTION_LOCKED" && (
               <motion.div
                 key="locked"
@@ -201,6 +240,63 @@ export function StageQuestion({
         </div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+/**
+ * The reading period: the room reads the question before anyone can answer. The answer
+ * area holds its size so the tiles arrive without the question moving.
+ */
+function ReadingPanel({ endsAt, serverTime }: { endsAt: number | null; serverTime: number }) {
+  const reduced = useReducedMotion();
+  const timer: TimerState | null = endsAt
+    ? {
+        startedAt: serverTime,
+        deadline: endsAt,
+        durationMs: Math.max(1, endsAt - serverTime),
+        paused: false,
+        remainingMs: Math.max(0, endsAt - serverTime),
+      }
+    : null;
+  const { seconds, progress } = useCountdown(timer, !!timer, { fine: true });
+  return (
+    <div className="flex min-h-[38vh] flex-1 flex-col items-center justify-center gap-[3vh] border border-dashed border-line-strong">
+      <motion.p
+        initial={reduced ? false : { opacity: 0, letterSpacing: "0.3em" }}
+        animate={{ opacity: 1, letterSpacing: "0.08em" }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        className="font-display text-[clamp(1.5rem,3vw,6.5rem)] font-extrabold uppercase text-fg-2"
+      >
+        Read the question
+      </motion.p>
+      {timer ? (
+        <>
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={seconds}
+              initial={reduced ? false : { y: "-30%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduced ? undefined : { y: "30%", opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="numeric text-[clamp(3rem,7vw,15rem)] font-extrabold leading-none text-accent"
+            >
+              {seconds}
+            </motion.span>
+          </AnimatePresence>
+          <div className="h-[0.8vh] w-[30vw] bg-line">
+            <div
+              className="h-full origin-left bg-accent"
+              style={{ transform: `scaleX(${progress})` }}
+            />
+          </div>
+          <p className="label text-[clamp(0.8rem,1.1vw,2.2rem)] text-fg-3">Answers open soon</p>
+        </>
+      ) : (
+        <p className="label text-[clamp(0.8rem,1.1vw,2.2rem)] text-fg-3">
+          Answers open when the host starts the timer
+        </p>
+      )}
+    </div>
   );
 }
 

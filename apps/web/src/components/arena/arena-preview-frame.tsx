@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProjectorScreen } from "@/components/host/projector-screen";
+import { ProjectorScreen } from "@/components/stage/projector-screen";
 import { type Game, PlayerGame } from "@/components/play/player-game";
 import {
   type ArenaPreviewState,
   type PreviewSurface,
   PREVIEW_MESSAGE,
   PREVIEW_READY,
-  previewHostView,
+  previewProjectorView,
   previewPlayerView,
 } from "@/lib/arena-preview";
 import { ArenaThemeProvider } from "./arena-theme";
@@ -65,7 +65,7 @@ export function ArenaPreviewFrame({ surface }: { surface: PreviewSurface }) {
   return (
     <ArenaThemeProvider appearance={state.appearance} page>
       <div className="arena-floor flex h-dvh flex-col overflow-hidden">
-        <ProjectorScreen view={previewHostView(state, cycle)} connection="live" sound={false} />
+        <ProjectorScreen view={previewProjectorView(state, cycle)} sound={false} />
       </div>
     </ArenaThemeProvider>
   );

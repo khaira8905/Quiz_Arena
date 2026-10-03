@@ -1096,6 +1096,7 @@ export class GameRoom {
       questionId: q.id,
       answered: this.answers.size,
       distribution: this.distribution(),
+      answeredIds: [...this.answers.keys()],
     });
     this.output.toAudience("question:answered", { questionId: q.id, answered: this.answers.size });
   }

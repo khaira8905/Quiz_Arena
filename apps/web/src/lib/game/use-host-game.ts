@@ -2,6 +2,7 @@
 
 import type { ErrorCode } from "@quizarena/shared/errors";
 import type { HostCommand, HostView, PlayerSummary } from "@quizarena/shared/game";
+import type { LiveSettingsPatch } from "@quizarena/shared/schemas";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { seedOffset, syncClock } from "../clock";
@@ -95,14 +96,25 @@ export function useHostGame(code: string) {
     socket.on("session:player_count", ({ count, connected }) =>
       setView((v) => (v ? { ...v, playerCount: count, connectedCount: connected } : v)),
     );
-    socket.on("question:progress", ({ questionId, answered, distribution }) =>
-      setView((v) =>
-        v && v.question?.id === questionId ? { ...v, answeredCount: answered, distribution } : v,
-      ),
+    socket.on("question:progress", ({ questionId, answered, distribution, answeredIds }) =>
+      setView((v) => {
+        if (!v || v.question?.id !== questionId) return v;
+        const ids = new Set(answeredIds);
+        return {
+          ...v,
+          answeredCount: answered,
+          distribution,
+          players: v.players.map((p) =>
+            p.answered === ids.has(p.id) ? p : { ...p, answered: ids.has(p.id) },
+          ),
+        };
+      }),
     );
-    socket.on("timer:sync", ({ deadline, paused, remainingMs }) =>
+    socket.on("timer:sync", ({ deadline, paused, remainingMs, durationMs }) =>
       setView((v) =>
-        v && v.timer ? { ...v, paused, timer: { ...v.timer, deadline, paused, remainingMs } } : v,
+        v && v.timer
+          ? { ...v, paused, timer: { ...v.timer, deadline, paused, remainingMs, durationMs } }
+          : v,
       ),
     );
 
@@ -116,7 +128,7 @@ export function useHostGame(code: string) {
   }, [code]);
 
   const command = useCallback(
-    async (cmd: HostCommand) => {
+    async (cmd: HostCommand, amount?: number) => {
       const socket = socketRef.current;
       if (!socket)
         return {
@@ -129,6 +141,7 @@ export function useHostGame(code: string) {
       const res = await emitAck<HostView>(socket, "host:command", {
         code,
         command: cmd,
+        amount,
         expected: v ? { phase: v.phase, questionIndex: v.questionIndex } : undefined,
       });
       if (res.ok) setView(res.data);
@@ -146,7 +159,23 @@ export function useHostGame(code: string) {
     [code],
   );
 
-  return { view, connection, error, command, kick };
+  /** Lobby-only changes to how this session runs (the quiz itself is untouched). */
+  const updateSettings = useCallback(
+    async (patch: LiveSettingsPatch) => {
+      const socket = socketRef.current;
+      if (!socket)
+        return {
+          ok: false as const,
+          error: { code: "INTERNAL" as ErrorCode, message: "Not connected" },
+        };
+      const res = await emitAck<HostView>(socket, "host:settings", { code, patch });
+      if (res.ok) setView(res.data);
+      return res;
+    },
+    [code],
+  );
+
+  return { view, connection, error, command, kick, updateSettings };
 }
 
 /** The single "advance" action for Space / the big button: what a host most likely wants next. */
