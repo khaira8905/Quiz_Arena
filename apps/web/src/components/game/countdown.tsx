@@ -12,7 +12,8 @@ import { urgencyFor, useCountdown } from "@/lib/use-countdown";
 /**
  * The countdown is a core game element, not a widget. Urgency escalates through motion,
  * scale and weight — colour shifts too, but is never the only signal:
- *   >5s calm · 5s ring tightens · 3s pulse · 2s stronger pulse · 1s major pulse · 0 burst.
+ *   >10s calm · 10s soft wave, ring thickens · 5s ring tightens · 3s pulse ·
+ *   1s major pulse · 0 burst.
  */
 const RING = {
   stroke: ["var(--accent)", "var(--warning)", "var(--danger)", "var(--danger)", "var(--danger)"],
@@ -145,6 +146,19 @@ export function Countdown({
       className={cn("relative grid shrink-0 place-items-center", className)}
       style={{ width: size, height: size }}
     >
+      {/* Ten seconds left: one soft wave, the first signal that time is running down. */}
+      <AnimatePresence>
+        {lively && seconds === 10 && urgency === 0 && active && !timer?.paused && (
+          <motion.span
+            key="wave-10"
+            className="absolute inset-0 rounded-full border-2 border-accent"
+            initial={{ scale: 1, opacity: 0.6 }}
+            animate={{ scale: 1.25, opacity: 0 }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Shockwave on each urgent second */}
       <AnimatePresence>
         {lively && urgency >= 2 && urgency < 4 && (
@@ -184,7 +198,8 @@ export function Countdown({
           r={r}
           fill="none"
           stroke={RING.stroke[urgency]}
-          strokeWidth={urgency >= 2 ? 7 : 5}
+          // 10s: the ring thickens; 3s and under: thicker still.
+          strokeWidth={urgency >= 2 ? 7 : active && seconds <= 10 ? 6 : 5}
           strokeLinecap="butt"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - progress)}

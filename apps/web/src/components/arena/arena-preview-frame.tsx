@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProjectorScreen } from "@/components/host/projector-screen";
+import { ProjectorScreen } from "@/components/stage/projector-screen";
 import { type Game, PlayerGame } from "@/components/play/player-game";
 import {
   type ArenaPreviewState,
   type PreviewSurface,
   PREVIEW_MESSAGE,
   PREVIEW_READY,
-  previewHostView,
+  previewProjectorView,
   previewPlayerView,
 } from "@/lib/arena-preview";
 import { ArenaThemeProvider } from "./arena-theme";
@@ -40,12 +40,15 @@ export function ArenaPreviewFrame({ surface }: { surface: PreviewSurface }) {
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.source !== window.parent) return;
+      // From the editor that embeds this frame, or that opened it in its own window.
+      const from = window.parent !== window ? window.parent : window.opener;
+      if (e.origin !== window.location.origin || !from || e.source !== from) return;
       const data = e.data as { type?: string; state?: ArenaPreviewState } | null;
       if (data?.type === PREVIEW_MESSAGE && data.state) setState(data.state);
     };
     window.addEventListener("message", onMessage);
-    window.parent.postMessage({ type: PREVIEW_READY }, window.location.origin);
+    const host = window.parent !== window ? window.parent : window.opener;
+    host?.postMessage({ type: PREVIEW_READY }, window.location.origin);
     const loop = setInterval(() => setCycle(Date.now()), TIMER_LOOP_MS);
     return () => {
       window.removeEventListener("message", onMessage);
@@ -65,7 +68,7 @@ export function ArenaPreviewFrame({ surface }: { surface: PreviewSurface }) {
   return (
     <ArenaThemeProvider appearance={state.appearance} page>
       <div className="arena-floor flex h-dvh flex-col overflow-hidden">
-        <ProjectorScreen view={previewHostView(state, cycle)} connection="live" sound={false} />
+        <ProjectorScreen view={previewProjectorView(state, cycle)} sound={false} />
       </div>
     </ArenaThemeProvider>
   );

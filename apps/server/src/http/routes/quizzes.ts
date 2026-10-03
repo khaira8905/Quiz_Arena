@@ -1,4 +1,6 @@
 import {
+  copyQuestionsSchema,
+  userPreferencesSchema,
   QUESTION_TYPES,
   QUESTION_TYPE_RULES,
   MAX_QUESTIONS_PER_QUIZ,
@@ -36,11 +38,17 @@ function questionCreateData(q: QuestionInput, order: number) {
     order,
     type: q.type,
     text: q.text,
+    // Bulk paths (create, import) take external links only; library images attach by PATCH.
     imageUrl: q.imageUrl,
+    imageFit: q.imageFit,
+    imagePosition: q.imagePosition,
     timeLimitSec: q.timeLimitSec,
     points: q.points,
     explanation: q.explanation,
     randomizeAnswers: q.randomizeAnswers,
+    tags: q.tags,
+    category: q.category,
+    difficulty: q.difficulty,
     options: {
       create: q.options.map((o, i) => ({ order: i, text: o.text, isCorrect: o.isCorrect })),
     },
@@ -96,12 +104,23 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
   app.post("/api/quizzes", async (req, reply) => {
     const userId = await requireUser(ctx, req);
     const input = quizCreateSchema.parse(req.body);
+    // The organiser's defaults (Settings, Customize Arena) seed every new quiz.
+    const owner = await ctx.db.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    const prefs = userPreferencesSchema.safeParse(owner?.preferences ?? {});
+    const defaults = prefs.success ? prefs.data : {};
+    const appearance = input.theme
+      ? { ...(defaults.appearance ?? {}), theme: input.theme, accent: null, answerColors: null }
+      : (defaults.appearance ?? null);
     const quiz = await ctx.db.quiz.create({
       data: {
         ownerId: userId,
         title: input.title,
         description: input.description,
-        appearance: input.theme ? { theme: input.theme } : Prisma.JsonNull,
+        ...(defaults.quizDefaults ?? {}),
+        appearance: appearance ?? Prisma.JsonNull,
         questions: {
           create: input.questions
             ? input.questions.map((q, order) => questionCreateData(q, order))
@@ -234,10 +253,15 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
         type: input.type,
         text: input.text,
         imageUrl: input.imageUrl,
+        imageFit: input.imageFit,
+        imagePosition: input.imagePosition,
         timeLimitSec: input.timeLimitSec,
         points: input.points,
         explanation: input.explanation,
         randomizeAnswers: input.randomizeAnswers,
+        tags: input.tags,
+        category: input.category,
+        difficulty: input.difficulty,
         options: {
           create: input.options.map((o, i) => ({ order: i, text: o.text, isCorrect: o.isCorrect })),
         },
@@ -328,15 +352,35 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       options = options.slice(0, rules.maxOptions);
     }
 
+    // The image: a library asset (its URL is filled in here, never trusted from the client),
+    // an external https link, or nothing.
+    let image = { imageUrl: existing.imageUrl, imageAssetId: existing.imageAssetId };
+    if (patch.imageAssetId) {
+      const asset = await ctx.db.mediaAsset.findFirst({
+        where: { id: patch.imageAssetId, ownerId: userId },
+        select: { id: true, url: true },
+      });
+      if (!asset) throw new AppError("NOT_FOUND", "That image isn't in your media library.");
+      image = { imageUrl: asset.url, imageAssetId: asset.id };
+    } else if (patch.imageUrl !== undefined || patch.imageAssetId === null) {
+      image = { imageUrl: patch.imageUrl ?? null, imageAssetId: null };
+    }
+
     // Full structural validation of the merged question.
     const merged = questionInputSchema.parse({
       type,
       text: patch.text ?? existing.text,
-      imageUrl: patch.imageUrl !== undefined ? patch.imageUrl : existing.imageUrl,
+      // Library URLs may be same-origin paths in development; only links are validated.
+      imageUrl: image.imageAssetId ? null : image.imageUrl,
+      imageFit: patch.imageFit ?? existing.imageFit,
+      imagePosition: patch.imagePosition ?? existing.imagePosition,
       timeLimitSec: patch.timeLimitSec !== undefined ? patch.timeLimitSec : existing.timeLimitSec,
       points: patch.points ?? existing.points,
       explanation: patch.explanation ?? existing.explanation,
       randomizeAnswers: patch.randomizeAnswers ?? existing.randomizeAnswers,
+      tags: patch.tags ?? existing.tags,
+      category: patch.category ?? existing.category,
+      difficulty: patch.difficulty !== undefined ? patch.difficulty : existing.difficulty,
       options,
     });
 
@@ -365,7 +409,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const { options: _ignored, ...fields } = merged;
     await ctx.db.$transaction([
       ...ops,
-      ctx.db.question.update({ where: { id }, data: fields }),
+      ctx.db.question.update({ where: { id }, data: { ...fields, ...image } }),
       ctx.db.quiz.update({ where: { id: existing.quizId }, data: { updatedAt: new Date() } }),
     ]);
     const question = await ownedQuestion(userId, id);
@@ -385,6 +429,69 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       ctx.db.quiz.update({ where: { id: question.quizId }, data: { updatedAt: new Date() } }),
     ]);
     return reply.code(204).send();
+  });
+
+  /** Copies questions (typically from the question bank) to the end of a quiz. */
+  app.post("/api/quizzes/:id/questions/copy", async (req) => {
+    const userId = await requireUser(ctx, req);
+    const { id } = idParams.parse(req.params);
+    const { questionIds } = copyQuestionsSchema.parse(req.body);
+    const quiz = await ownedQuiz(userId, id);
+    const sources = await ctx.db.question.findMany({
+      where: { id: { in: questionIds }, quiz: { ownerId: userId } },
+      include: { options: { orderBy: { order: "asc" } } },
+    });
+    if (sources.length !== new Set(questionIds).size) throw new AppError("NOT_FOUND");
+    if (quiz.questions.length + sources.length > MAX_QUESTIONS_PER_QUIZ) {
+      throw new AppError(
+        "BAD_REQUEST",
+        `A quiz can have at most ${MAX_QUESTIONS_PER_QUIZ} questions (${MAX_QUESTIONS_PER_QUIZ - quiz.questions.length} more fit).`,
+      );
+    }
+    const byId = new Map(sources.map((q) => [q.id, q]));
+    const ordered = [...new Set(questionIds)].map((qid) => byId.get(qid)!);
+    // A brand-new quiz's untouched placeholder question gives way to the copies.
+    const blank =
+      quiz.questions.length === 1 &&
+      !quiz.questions[0]!.text.trim() &&
+      quiz.questions[0]!.options.every((o) => !o.text.trim()) &&
+      !quiz.questions[0]!.imageUrl
+        ? quiz.questions[0]!
+        : null;
+    const start = blank ? 0 : quiz.questions.length;
+    await ctx.db.$transaction([
+      ...(blank ? [ctx.db.question.delete({ where: { id: blank.id } })] : []),
+      ...ordered.map((q, i) =>
+        ctx.db.question.create({
+          data: {
+            quizId: id,
+            order: start + i,
+            type: q.type,
+            text: q.text,
+            imageUrl: q.imageUrl,
+            imageAssetId: q.imageAssetId,
+            imageFit: q.imageFit,
+            imagePosition: q.imagePosition,
+            timeLimitSec: q.timeLimitSec,
+            points: q.points,
+            explanation: q.explanation,
+            randomizeAnswers: q.randomizeAnswers,
+            tags: q.tags,
+            category: q.category,
+            difficulty: q.difficulty,
+            options: {
+              create: q.options.map((o) => ({
+                order: o.order,
+                text: o.text,
+                isCorrect: o.isCorrect,
+              })),
+            },
+          },
+        }),
+      ),
+      ctx.db.quiz.update({ where: { id }, data: { updatedAt: new Date() } }),
+    ]);
+    return { quiz: quizDto(await ownedQuiz(userId, id)) };
   });
 
   app.post("/api/questions/:id/duplicate", async (req, reply) => {
@@ -410,10 +517,16 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
           type: q.type,
           text: q.text,
           imageUrl: q.imageUrl,
+          imageAssetId: q.imageAssetId,
+          imageFit: q.imageFit,
+          imagePosition: q.imagePosition,
           timeLimitSec: q.timeLimitSec,
           points: q.points,
           explanation: q.explanation,
           randomizeAnswers: q.randomizeAnswers,
+          tags: q.tags,
+          category: q.category,
+          difficulty: q.difficulty,
           options: {
             create: q.options.map((o) => ({
               order: o.order,

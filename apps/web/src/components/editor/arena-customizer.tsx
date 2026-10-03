@@ -27,6 +27,7 @@ import {
   PREVIEW_MESSAGE,
   PREVIEW_READY,
   PREVIEW_SCENES,
+  type PreviewQuestion,
   type PreviewScene,
   type PreviewSurface,
 } from "@/lib/arena-preview";
@@ -43,9 +44,12 @@ const TYPE_SAMPLES: Record<TypographyPreset, { name: string; display: string; bo
 
 const SCENE_LABEL: Record<PreviewScene, string> = {
   lobby: "Lobby",
+  reading: "Reading",
   question: "Question",
+  stats: "Answers",
   reveal: "Reveal",
   leaderboard: "Leaderboard",
+  podium: "Podium",
 };
 
 /**
@@ -55,9 +59,58 @@ const SCENE_LABEL: Record<PreviewScene, string> = {
  */
 export function ArenaCustomizer({ quiz }: { quiz: QuizDto }) {
   const update = useUpdateQuiz(quiz.id);
-  const { schedule } = useAutosave<QuizUpdateInput>((patch) => update.mutateAsync(patch), 500);
-  const [draft, setDraft] = useState<ArenaAppearance>(quiz.appearance);
-  const [sound, setSound] = useState(quiz.soundEnabled);
+  const sample = quiz.questions.find((q) => q.text.trim() && q.options.length >= 2) ?? null;
+  return (
+    <ArenaEditor
+      source={{
+        appearance: quiz.appearance,
+        soundEnabled: quiz.soundEnabled,
+        title: quiz.title,
+        questionCount: quiz.questions.length,
+        settings: {
+          scoringMode: quiz.scoringMode,
+          streakBonus: quiz.streakBonus,
+          showLeaderboard: quiz.showLeaderboard,
+          showCorrectAnswers: quiz.showCorrectAnswers,
+          showAnswerStats: quiz.showAnswerStats,
+          allowLateJoin: quiz.allowLateJoin,
+          participantLimit: quiz.participantLimit,
+          nicknameFilter: quiz.nicknameFilter,
+          readingMode: quiz.readingMode,
+          readingTimeSec: quiz.readingTimeSec,
+          leaderboardEvery: quiz.leaderboardEvery,
+          autoRevealSec: quiz.autoRevealSec,
+        },
+        sample: sample
+          ? {
+              text: sample.text,
+              options: sample.options.map((o) => ({ text: o.text, correct: o.isCorrect })),
+              explanation: sample.explanation,
+              points: sample.points,
+              durationSec: sample.timeLimitSec ?? quiz.defaultTimerSec,
+            }
+          : null,
+        save: (patch) => update.mutateAsync(patch),
+      }}
+    />
+  );
+}
+
+/** What the arena editor edits: a quiz's arena, or the organiser's default for new quizzes. */
+export interface ArenaSource {
+  appearance: ArenaAppearance;
+  soundEnabled: boolean;
+  title: string;
+  questionCount: number;
+  settings: Omit<ArenaPreviewState["settings"], "soundEnabled">;
+  sample: PreviewQuestion | null;
+  save: (patch: { appearance?: ArenaAppearance; soundEnabled?: boolean }) => Promise<unknown>;
+}
+
+export function ArenaEditor({ source }: { source: ArenaSource }) {
+  const { schedule } = useAutosave<QuizUpdateInput>((patch) => source.save(patch), 500);
+  const [draft, setDraft] = useState<ArenaAppearance>(source.appearance);
+  const [sound, setSound] = useState(source.soundEnabled);
   const [scene, setScene] = useState<PreviewScene>("question");
 
   const parsed = useMemo(() => arenaAppearanceSchema.safeParse(draft), [draft]);
@@ -79,32 +132,13 @@ export function ArenaCustomizer({ quiz }: { quiz: QuizDto }) {
     if (valid.success) schedule({ appearance: valid.data });
   };
 
-  const sample = quiz.questions.find((q) => q.text.trim() && q.options.length >= 2) ?? null;
   const previewState: ArenaPreviewState = {
     appearance: draft,
     scene,
-    title: quiz.title,
-    questionCount: quiz.questions.length,
-    settings: {
-      scoringMode: quiz.scoringMode,
-      streakBonus: quiz.streakBonus,
-      showLeaderboard: quiz.showLeaderboard,
-      showCorrectAnswers: quiz.showCorrectAnswers,
-      showAnswerStats: quiz.showAnswerStats,
-      allowLateJoin: quiz.allowLateJoin,
-      participantLimit: quiz.participantLimit,
-      soundEnabled: sound,
-      nicknameFilter: quiz.nicknameFilter,
-    },
-    question: sample
-      ? {
-          text: sample.text,
-          options: sample.options.map((o) => ({ text: o.text, correct: o.isCorrect })),
-          explanation: sample.explanation,
-          points: sample.points,
-          durationSec: sample.timeLimitSec ?? quiz.defaultTimerSec,
-        }
-      : null,
+    title: source.title,
+    questionCount: source.questionCount,
+    settings: { ...source.settings, soundEnabled: sound },
+    question: source.sample,
   };
 
   return (
@@ -123,7 +157,7 @@ export function ArenaCustomizer({ quiz }: { quiz: QuizDto }) {
           </div>
           <Segmented
             label="Preview scene"
-            className="w-full sm:w-auto"
+            className="w-full"
             value={scene}
             onChange={setScene}
             options={PREVIEW_SCENES.map((s) => ({ value: s, label: SCENE_LABEL[s] }))}
@@ -131,8 +165,13 @@ export function ArenaCustomizer({ quiz }: { quiz: QuizDto }) {
         </header>
         <div className="grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_10.5rem] md:items-start">
           <div>
-            <p className="label mb-2 text-fg-3">Projector · 1920 × 1080</p>
-            <ScaledFrame surface="projector" width={1920} height={1080} state={previewState} />
+            <ScaledFrame
+              surface="projector"
+              width={1920}
+              height={1080}
+              state={previewState}
+              label="Projector · 1920 × 1080"
+            />
           </div>
           <div className="mx-auto w-40 md:w-full">
             <p className="label mb-2 text-fg-3">Phone · 390 × 844</p>
@@ -561,31 +600,43 @@ function ScaledFrame({
   height,
   state,
   className,
+  label,
 }: {
   surface: PreviewSurface;
   width: number;
   height: number;
   state: ArenaPreviewState;
   className?: string;
+  /** With a label, the frame gets Open / Fullscreen / Refresh controls (projector). */
+  label?: string;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
+  const popup = useRef<Window | null>(null);
   const latest = useRef(state);
   const [scale, setScale] = useState(0);
+  const [generation, setGeneration] = useState(0);
+  const [full, setFull] = useState(false);
 
   useEffect(() => {
     const el = box.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => setScale((entry?.contentRect.width ?? 0) / width));
     ro.observe(el);
-    return () => ro.disconnect();
+    const onFs = () => setFull(document.fullscreenElement === el);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => {
+      ro.disconnect();
+      document.removeEventListener("fullscreenchange", onFs);
+    };
   }, [width]);
 
-  const post = () =>
-    frame.current?.contentWindow?.postMessage(
-      { type: PREVIEW_MESSAGE, state: latest.current },
-      window.location.origin,
-    );
+  const post = () => {
+    const msg = { type: PREVIEW_MESSAGE, state: latest.current };
+    frame.current?.contentWindow?.postMessage(msg, window.location.origin);
+    if (popup.current && !popup.current.closed)
+      popup.current.postMessage(msg, window.location.origin);
+  };
 
   useEffect(() => {
     latest.current = state;
@@ -594,7 +645,7 @@ function ScaledFrame({
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.source !== frame.current?.contentWindow) return;
+      if (e.source !== frame.current?.contentWindow && e.source !== popup.current) return;
       if ((e.data as { type?: string } | null)?.type === PREVIEW_READY) post();
     };
     window.addEventListener("message", onMessage);
@@ -602,21 +653,65 @@ function ScaledFrame({
   }, []);
 
   return (
-    <div
-      ref={box}
-      className={cn("relative w-full overflow-hidden bg-sunken", className)}
-      style={{ aspectRatio: `${width} / ${height}` }}
-    >
-      <iframe
-        ref={frame}
-        src={`/arena-preview?surface=${surface}`}
-        title={`${surface === "phone" ? "Phone" : "Projector"} preview`}
-        tabIndex={-1}
-        width={width}
-        height={height}
-        className="pointer-events-none absolute left-0 top-0 origin-top-left border-0"
-        style={{ transform: `scale(${scale})`, visibility: scale ? "visible" : "hidden" }}
-      />
-    </div>
+    <>
+      {label && (
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="label text-fg-3">{label}</p>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className="label rounded-sm border border-line px-2 py-1 text-fg-2 hover:text-fg"
+              onClick={() => {
+                // A full-size window (e.g. on the projector itself) that follows every change.
+                popup.current = window.open(
+                  `/arena-preview?surface=${surface}`,
+                  "qa-arena-preview",
+                );
+              }}
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              className="label rounded-sm border border-line px-2 py-1 text-fg-2 hover:text-fg"
+              onClick={() => void box.current?.requestFullscreen().catch(() => {})}
+            >
+              Fullscreen
+            </button>
+            <button
+              type="button"
+              className="label rounded-sm border border-line px-2 py-1 text-fg-2 hover:text-fg"
+              onClick={() => setGeneration((g) => g + 1)}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      )}
+      <div
+        ref={box}
+        className={cn("relative w-full overflow-hidden bg-sunken", full && "bg-black", className)}
+        style={full ? undefined : { aspectRatio: `${width} / ${height}` }}
+      >
+        <iframe
+          key={generation}
+          ref={frame}
+          src={`/arena-preview?surface=${surface}`}
+          title={`${surface === "phone" ? "Phone" : "Projector"} preview`}
+          tabIndex={-1}
+          width={full ? undefined : width}
+          height={full ? undefined : height}
+          className={cn(
+            "pointer-events-none absolute left-0 top-0 border-0",
+            full ? "h-full w-full" : "origin-top-left",
+          )}
+          style={
+            full
+              ? undefined
+              : { transform: `scale(${scale})`, visibility: scale ? "visible" : "hidden" }
+          }
+        />
+      </div>
+    </>
   );
 }

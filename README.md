@@ -22,13 +22,28 @@ the moment the timer hits zero.
 **Admin portal** (`/admin`)
 
 - Sign-in, dashboard (quizzes, sessions, participants, live now), quiz library with filters
+- **Team** (admins): create sign-ins (email + password) for other people and share them, with
+  no email verification. Reset passwords, make admin / organiser, disable or delete. Each person
+  only sees their own quizzes
 - Three-pane question editor: navigator with drag-and-drop ordering (keyboard accessible),
   question workspace, and settings rail; autosave with an honest save-status line
-- Multiple choice (2–4 options) and true/false; per-question timer, points, image, explanation,
-  answer shuffling. New question types plug into a registry (`packages/shared/src/question-types.ts`)
-- Quiz settings: default timer (5–120s presets or custom), speed/accuracy scoring, streak bonus,
-  shuffle questions/answers, leaderboard, correct answers, answer stats, late join, participant
-  limit, sound, nickname filter
+- Multiple choice (2–4 options) and true/false; per-question timer, points, explanation, answer
+  shuffling, and tags / category / difficulty. New question types plug into a registry
+  (`packages/shared/src/question-types.ts`)
+- **Question images:** upload from the device (drag and drop, progress bar, automatic
+  resizing), the media library, **Google Drive** (real OAuth, read-only) or a link. Frame the
+  image with Fit (whole / fill) and Position (center / top / bottom). See [docs/MEDIA.md](docs/MEDIA.md)
+- **Media library:** search, sort, unused filter, preview, rename, delete (warns about questions
+  that use the image). Images are stored as optimized WebP in object storage, never in the
+  database
+- **Question bank:** every question across all quizzes, filtered by text, tag, category,
+  difficulty, type or quiz; add copies to any quiz
+- Quiz settings: default timer, reading period (countdown / host starts / none), speed/accuracy
+  scoring, streak bonus, shuffle questions/answers, leaderboard every N questions, auto-reveal
+  after time's up, correct answers, answer stats, late join, participant limit, sound, nickname
+  filter. **Settings** holds the defaults every new quiz starts from
+- **Customize arena:** theme, colours, type, motion and branding for the projector and phones,
+  per quiz or as the default, previewed live by the real screens (Open / Fullscreen / Refresh)
 - **Import questions** from a CSV or Excel (.xlsx) file, or from a Google Sheets / Google Drive
   share link ("Anyone with the link can view"). Columns are matched by name (Question,
   Option A–D, Correct answer, Time limit, Points, Explanation, Image URL), Kahoot's spreadsheet
@@ -37,25 +52,44 @@ the moment the timer hits zero.
 - **Black / Blue / White themes** for the admin portal, sign-in, landing and join screens
   (per browser); the projector and phones follow each quiz's own arena theme
 - Draft/published states; publishing and going live are blocked until every question is complete
-- Duplicate/delete quizzes and questions, projector preview, one-click **Go live**
-- Live control panel: answer key, live answer distribution, controls, leaderboard, kick players
+- Duplicate/delete quizzes and questions, one-click **Go live**
+- Admin sections: Dashboard, Quizzes, Question bank, Media library, Live sessions, Results,
+  Customize arena, Settings
 - Session history with results, podium, per-player accuracy/response time/streaks, **CSV export**
 
-**Projector arena** (`/host/QA482193`)
+**Host control room** (`/host/QA482193`, the host's laptop)
 
-- Built for 1080p → 4K and readability at distance (viewport-relative type scale)
-- Lobby with giant game code, join URL and QR code; players animate in (batched for 100s)
-- Synced `PLAYERS READY → 3 → 2 → 1 → QUIZARENA` start sequence
-- Question stage with an escalating countdown (5s / 3s / 2s / 1s / 0 urgency levels)
-- Reveal where answer tiles become distribution meters; explanation strip
-- Layout-animated leaderboard (overtakes are visible) and a game-show winner finale
-- Controls live in a dock **below** the stage; projector mode goes fullscreen and is driven by
-  the keyboard (`Space` continue · `P` pause · `L` leaderboard · `S` skip · `E` end · `H` dock)
+- Status at a glance: state, time left (to the tenth of a second), players, answered, waiting
+- The question with its **answer key** and live answer split; who is still thinking
+- Controls: start timer, pause/resume, −5s / +5s / +10s, lock, show answers, reveal,
+  leaderboard, next, skip, end. Keyboard: `Space` continue · `P` pause · `L` leaderboard ·
+  `S` skip · `E` end · `O` open projector · `F` fullscreen preview
+- Last-minute session settings in the lobby (theme, timer, reading time, leaderboard, sound,
+  animation, late join, player limit) that leave the saved quiz untouched
+- Host-paced podium: Reveal 3rd → 2nd → 1st → Show full leaderboard
+- **Live projector preview** of the real stage, with Open projector and Fullscreen
+
+**Projector stage** (`/host/QA482193/projector`, the audience screen)
+
+- Shows only audience content: no controls, answer key or connection details. It receives
+  only the server's audience-safe view
+- Built for 1080p, 1440p and 4K, readable at distance (viewport-relative type scale)
+- Lobby "Join the arena" with giant PIN, join URL and QR code; players animate in (batched)
+- Synced start sequence, then **Read the question** with its own countdown
+- Countdown escalating at 10 / 5 / 3 / 1 / 0 seconds; "Time's up" when locked
+- **What did everyone choose?** Bars grow from zero while counts and percentages tick up; the
+  correct bar takes the spotlight on the reveal
+- Layout-animated leaderboard (overtakes are visible) and a cinematic podium the host paces,
+  ending in a paged full leaderboard (rank, player, points, correct, accuracy, streak)
+- Next question's image preloads during the reveal; images fade in over a blurred placeholder
+  inside a fixed frame, so nothing jumps
 
 **Players** (`/play`)
 
 - Code → nickname → arena. Mobile-first, four thumb-sized answer buttons (`1–4`/`A–D` on desktop)
-- Locked-in state, correct/incorrect reveal with points, streaks and rank movement, final placement
+- Reading screen with a countdown, then the answers; locked-in state, "answers are in", a
+  correct/incorrect reveal with a "+850" score pop, streaks and rank movement, and a final
+  placement that waits for the podium on the big screen
 - Seats survive refreshes, phone locks and network drops (reconnect tokens)
 - Polished error states: invalid code, game started/ended, name taken, arena full, connection lost
 
@@ -128,18 +162,22 @@ Sign in at <http://localhost:3000/admin> with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_P
 
 **Game server** — `apps/server/.env`
 
-| Variable                                                       | Required  | Description                                                                      |
-| -------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                 | ✓         | PostgreSQL connection string                                                     |
-| `JWT_SECRET`                                                   | ✓         | ≥ 32 chars; signs session cookies and socket tickets (`openssl rand -base64 48`) |
-| `WEB_ORIGIN`                                                   | ✓ in prod | Comma-separated allowed browser origins (your Vercel URL)                        |
-| `PORT` / `HOST`                                                |           | Listen address (default `4000` / `0.0.0.0`)                                      |
-| `NODE_ENV`                                                     |           | `production` enables secure cookies and JSON logs                                |
-| `TRUST_PROXY`                                                  |           | `true` behind a load balancer so rate limits see client IPs                      |
-| `REDIS_URL`                                                    |           | Enables the Socket.IO Redis adapter                                              |
-| `ALLOW_REGISTRATION`                                           |           | `true` allows `POST /api/auth/register`                                          |
-| `LOG_LEVEL`                                                    |           | `info` by default                                                                |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | seed only | First admin account                                                              |
+| Variable                                                                                                  | Required            | Description                                                                      |
+| --------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                            | ✓                   | PostgreSQL connection string                                                     |
+| `JWT_SECRET`                                                                                              | ✓                   | ≥ 32 chars; signs session cookies and socket tickets (`openssl rand -base64 48`) |
+| `WEB_ORIGIN`                                                                                              | ✓ in prod           | Comma-separated allowed browser origins (your Vercel URL)                        |
+| `PORT` / `HOST`                                                                                           |                     | Listen address (default `4000` / `0.0.0.0`)                                      |
+| `NODE_ENV`                                                                                                |                     | `production` enables secure cookies and JSON logs                                |
+| `TRUST_PROXY`                                                                                             |                     | `true` behind a load balancer so rate limits see client IPs                      |
+| `REDIS_URL`                                                                                               |                     | Enables the Socket.IO Redis adapter                                              |
+| `ALLOW_REGISTRATION`                                                                                      |                     | `true` allows `POST /api/auth/register`                                          |
+| `LOG_LEVEL`                                                                                               |                     | `info` by default                                                                |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME`                                            | seed only           | First admin account                                                              |
+| `MEDIA_STORAGE`                                                                                           |                     | `local` (dev disk), `s3` or `none` — see [docs/MEDIA.md](docs/MEDIA.md)          |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_PUBLIC_URL` / `S3_REGION` | for uploads in prod | Any S3-compatible bucket (Cloudflare R2, Supabase Storage, AWS S3)               |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI`                                       | for Drive           | Google OAuth web client for the Drive image picker                               |
+| `GOOGLE_TOKEN_KEY`                                                                                        |                     | Encrypts stored Google refresh tokens (default: derived from `JWT_SECRET`)       |
 
 **Web** — `apps/web/.env.local` (Vercel project settings in production)
 

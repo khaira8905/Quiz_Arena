@@ -20,6 +20,26 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   /** Set when the API sits behind a proxy (Vercel rewrite, Railway, Render, Fly). */
   TRUST_PROXY: boolish,
+
+  /** Image uploads: "local" (dev disk), "s3" (any S3-compatible bucket) or "none". */
+  MEDIA_STORAGE: z.enum(["local", "s3", "none"]).optional(),
+  MEDIA_LOCAL_DIR: z.string().default("./uploads"),
+  /** e.g. https://<account>.r2.cloudflarestorage.com or https://<project>.supabase.co/storage/v1/s3 */
+  S3_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().default("auto"),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  /** Public base URL objects are served from (bucket public URL or CDN), https. */
+  S3_PUBLIC_URL: z.url().optional(),
+
+  /** Google Drive image picker (OAuth web client). */
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  /** Must match the redirect URI registered in Google Cloud: <web app>/api/google/callback */
+  GOOGLE_REDIRECT_URI: z.url().optional(),
+  /** Encrypts stored Google refresh tokens; defaults to a key derived from JWT_SECRET. */
+  GOOGLE_TOKEN_KEY: z.string().min(32).optional(),
 });
 
 export type Config = z.infer<typeof envSchema> & { webOrigins: string[]; isProd: boolean };

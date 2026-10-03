@@ -37,3 +37,6 @@ coverage/
 
 # local verification output
 .screenshots/
+
+# Development image uploads (MEDIA_STORAGE=local)
+uploads/

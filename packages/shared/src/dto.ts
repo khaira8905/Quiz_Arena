@@ -1,3 +1,5 @@
+import type { Difficulty } from "./constants";
+import type { ImageFit, ImagePosition } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { FinalResults } from "./game";
 import type { QuestionType } from "./question-types";
@@ -8,11 +10,21 @@ import type { QuizSettings } from "./schemas";
 export type QuizStatus = "DRAFT" | "PUBLISHED";
 export type SessionStatus = "LOBBY" | "LIVE" | "FINISHED" | "ABANDONED";
 
+export type UserRole = "ADMIN" | "ORGANISER";
+
 export interface UserDto {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
   createdAt: string;
+}
+
+/** A person on the team, as an admin sees them. Passwords are never returned. */
+export interface TeamMemberDto extends UserDto {
+  disabled: boolean;
+  lastLoginAt: string | null;
+  quizCount: number;
 }
 
 export interface OptionDto {
@@ -28,6 +40,12 @@ export interface QuestionDto {
   type: QuestionType;
   text: string;
   imageUrl: string | null;
+  imageAssetId: string | null;
+  imageFit: ImageFit;
+  imagePosition: ImagePosition;
+  tags: string[];
+  category: string;
+  difficulty: Difficulty | null;
   timeLimitSec: number | null;
   points: number;
   explanation: string;
@@ -91,4 +109,15 @@ export interface GameLookupDto {
   phase: string;
   /** So the join screen can switch to the arena's look before the player is in. */
   appearance: ArenaAppearance;
+}
+
+/** A question as listed in the question bank: with the quiz it lives in. */
+export interface BankQuestionDto extends QuestionDto {
+  quizId: string;
+  quizTitle: string;
+}
+
+export interface BankFacetsDto {
+  tags: { tag: string; count: number }[];
+  categories: { category: string; count: number }[];
 }

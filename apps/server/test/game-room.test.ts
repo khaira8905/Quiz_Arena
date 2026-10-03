@@ -1,4 +1,9 @@
-import { ANSWER_GRACE_MS, LOBBY_DISCONNECT_GRACE_MS, START_COUNTDOWN_MS } from "@quizarena/shared";
+import {
+  leaderboardDue,
+  ANSWER_GRACE_MS,
+  LOBBY_DISCONNECT_GRACE_MS,
+  START_COUNTDOWN_MS,
+} from "@quizarena/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "../src/lib/errors";
 import { makeRoom } from "./helpers";
@@ -128,7 +133,7 @@ describe("state machine", () => {
       room.command("NEXT");
     }
     expect(room.currentPhase).toBe("FINISHED");
-    expect(room.availableCommands()).toEqual([]);
+    expect(room.availableCommands()).toEqual(["PODIUM_NEXT"]);
   });
 
   it("omits the leaderboard step when the quiz hides it", async () => {
@@ -418,5 +423,182 @@ describe("production hardening", () => {
     expect(
       codeOf(() => room.submitAnswer(ids[0]!, q.id, q.options[0]!.id, deadline + 600)),
     ).toBeNull();
+  });
+});
+
+describe("reading period, stats step, podium and timer control", () => {
+  async function lobby(settings = {}, players = ["Ada", "Grace", "Linus"]) {
+    const ctx = makeRoom({ readingMode: "TIMED", readingTimeSec: 5, ...settings });
+    const ids: string[] = [];
+    for (const name of players) ids.push((await ctx.room.join(name)).participantId);
+    return { ...ctx, ids };
+  }
+
+  it("opens each question with answers closed, then starts the clock", async () => {
+    const { room, output, ids } = await lobby();
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    expect(room.currentPhase).toBe("QUESTION_READING");
+    // Nobody but the host sees the options yet, and nobody can answer.
+    expect(output.lastPlayerView(ids[0]!).question?.options).toEqual([]);
+    expect(output.lastProjectorView().question?.options).toEqual([]);
+    expect(room.hostView().question?.options).toHaveLength(4);
+    expect(output.lastProjectorView().readingEndsAt).not.toBeNull();
+    expect(codeOf(() => room.submitAnswer(ids[0]!, "q0", "q0_a"))).toBe("QUESTION_NOT_ACTIVE");
+
+    vi.advanceTimersByTime(5_000);
+    expect(room.currentPhase).toBe("QUESTION_ACTIVE");
+    expect(output.lastPlayerView(ids[0]!).question?.options).toHaveLength(4);
+  });
+
+  it("auto-reveals after time's up when the quiz asks for it", async () => {
+    const stats = await lobby({ readingMode: "OFF", autoRevealSec: 3 });
+    stats.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    stats.room.command("LOCK");
+    vi.advanceTimersByTime(2_900);
+    expect(stats.room.currentPhase).toBe("QUESTION_LOCKED");
+    vi.advanceTimersByTime(200);
+    // With answer stats on, the room first sees what everyone chose; the host reveals.
+    expect(stats.room.currentPhase).toBe("ANSWER_DISTRIBUTION");
+
+    const plain = await lobby({ readingMode: "OFF", autoRevealSec: 2, showAnswerStats: false });
+    plain.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS + 20_000 + 800 + 2_000);
+    expect(plain.room.currentPhase).toBe("ANSWER_REVEAL");
+
+    // A host who reveals first isn't overridden by the timer.
+    const manual = await lobby({ readingMode: "OFF", autoRevealSec: 2 });
+    manual.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    manual.room.command("REVEAL");
+    vi.advanceTimersByTime(5_000);
+    expect(manual.room.currentPhase).toBe("ANSWER_REVEAL");
+  });
+
+  it("knows when the leaderboard is due", () => {
+    const s = { showLeaderboard: true, leaderboardEvery: 3 };
+    expect([0, 1, 2, 3, 4, 5, 6].map((i) => leaderboardDue(s, i, 7))).toEqual([
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+    ]);
+    expect(leaderboardDue({ showLeaderboard: false, leaderboardEvery: 1 }, 6, 7)).toBe(false);
+  });
+
+  it("waits for the host in manual reading mode", async () => {
+    const { room } = await lobby({ readingMode: "MANUAL" });
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS + 60_000);
+    expect(room.currentPhase).toBe("QUESTION_READING");
+    expect(room.hostView().readingEndsAt).toBeNull();
+    room.command("OPEN_ANSWERS");
+    expect(room.currentPhase).toBe("QUESTION_ACTIVE");
+  });
+
+  it("adds and removes time, never below a second, and scores against the adjusted clock", async () => {
+    const { room, ids } = await lobby({ readingMode: "OFF" });
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    const before = room.hostView().timer!;
+    room.command("ADJUST_TIMER", undefined, 10);
+    const after = room.hostView().timer!;
+    expect(after.deadline - before.deadline).toBe(10_000);
+    expect(after.durationMs).toBe(30_000);
+    // The original deadline has passed, but the extended one hasn't: still answerable.
+    vi.advanceTimersByTime(25_000);
+    expect(room.currentPhase).toBe("QUESTION_ACTIVE");
+    room.submitAnswer(ids[0]!, "q0", "q0_a");
+    room.command("ADJUST_TIMER", undefined, -60);
+    expect(room.hostView().timer!.deadline - Date.now()).toBe(1_000);
+    expect(codeOf(() => room.command("ADJUST_TIMER", undefined, 0))).toBe("BAD_REQUEST");
+  });
+
+  it("can set the upcoming answer time while the question is being read", async () => {
+    const { room } = await lobby({ readingMode: "MANUAL" });
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    room.command("ADJUST_TIMER", undefined, -10);
+    room.command("OPEN_ANSWERS");
+    expect(room.hostView().timer!.durationMs).toBe(10_000);
+  });
+
+  it("shows how the room answered before revealing the correct answer", async () => {
+    const { room, output, ids } = await lobby({ readingMode: "OFF" });
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    room.submitAnswer(ids[0]!, "q0", "q0_a");
+    room.submitAnswer(ids[1]!, "q0", "q0_b");
+    room.command("LOCK");
+    expect(output.lastProjectorView().distribution).toBeNull();
+    room.command("SHOW_STATS");
+    expect(room.currentPhase).toBe("ANSWER_DISTRIBUTION");
+    const stage = output.lastProjectorView();
+    expect(stage.distribution).toMatchObject({ q0_a: 1, q0_b: 1 });
+    expect(stage.correctOptionIds).toBeNull();
+    expect(output.lastPlayerView(ids[0]!).result).toBeNull();
+    room.command("REVEAL");
+    expect(output.lastProjectorView().correctOptionIds).toEqual(["q0_a"]);
+    expect(output.lastPlayerView(ids[0]!).result?.correct).toBe(true);
+  });
+
+  it("never gives the stage the answer key before the reveal", async () => {
+    const { room, output, ids } = await lobby({ readingMode: "TIMED" });
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    vi.advanceTimersByTime(5_000);
+    room.submitAnswer(ids[0]!, "q0", "q0_a");
+    vi.advanceTimersByTime(1_000);
+    // The control room learns who answered (to show who is still thinking).
+    const progress = output.hostEvents.filter((e) => e.event === "question:progress").at(-1);
+    expect((progress?.payload as { answeredIds: string[] }).answeredIds).toEqual([ids[0]]);
+    room.command("LOCK");
+    room.command("SHOW_STATS");
+    for (const v of output.projectorViews) {
+      if (v.phase !== "ANSWER_REVEAL" && v.phase !== "LEADERBOARD") {
+        expect(v.correctOptionIds).toBeNull();
+        expect(v.explanation).toBeNull();
+      }
+      expect(v).not.toHaveProperty("players");
+      expect(v).not.toHaveProperty("availableCommands");
+    }
+    // The stage gets the answer counter, never the distribution, while answering.
+    expect(output.audienceEvents.some((e) => e.event === "question:progress")).toBe(false);
+  });
+
+  it("paces the podium by host presses, skipping places nobody holds", async () => {
+    const two = await lobby({ readingMode: "OFF" }, ["Ada", "Grace"]);
+    two.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    two.room.command("END");
+    const steps = [two.room.hostView().podiumStep];
+    while (two.room.availableCommands().includes("PODIUM_NEXT")) {
+      two.room.command("PODIUM_NEXT");
+      steps.push(two.room.hostView().podiumStep);
+    }
+    expect(steps).toEqual(["COMPLETE", "SECOND", "FIRST", "BOARD"]);
+
+    const three = await lobby({ readingMode: "OFF" });
+    three.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    three.room.command("END");
+    three.room.command("PODIUM_NEXT");
+    expect(three.room.hostView().podiumStep).toBe("THIRD");
+    expect(three.output.lastProjectorView().results?.standings).toHaveLength(3);
+  });
+
+  it("lets the host retune the session in the lobby only", async () => {
+    const { room, output } = await lobby({ readingMode: "TIMED" });
+    room.updateSettings({ theme: "WHITE", readingMode: "OFF", timerOverrideSec: 12 });
+    expect(output.lastProjectorView().settings.appearance.theme).toBe("WHITE");
+    room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    expect(room.currentPhase).toBe("QUESTION_ACTIVE");
+    expect(room.hostView().timer!.durationMs).toBe(12_000);
+    expect(codeOf(() => room.updateSettings({ theme: "BLUE" }))).toBe("COMMAND_NOT_ALLOWED");
   });
 });

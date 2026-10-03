@@ -3,6 +3,7 @@ import {
   type HostView,
   type LiveSettings,
   type PlayerView,
+  type ProjectorView,
   type ServerToClientEvents,
 } from "@quizarena/shared";
 import type { RoomOutput } from "../src/game/game-room";
@@ -30,6 +31,10 @@ export function makeSnapshot(
       participantLimit: 200,
       soundEnabled: true,
       nicknameFilter: true,
+      readingMode: "OFF",
+      readingTimeSec: 5,
+      leaderboardEvery: 1,
+      autoRevealSec: 0,
       appearance: DEFAULT_APPEARANCE,
       ...overrides,
     },
@@ -57,6 +62,21 @@ export class RecordingOutput implements RoomOutput {
   hostEvents: { event: keyof ServerToClientEvents; payload: unknown }[] = [];
   playerEvents: { event: keyof ServerToClientEvents; payload: unknown }[] = [];
   closed: { participantId: string; code: string }[] = [];
+  projectorViews: ProjectorView[] = [];
+  audienceEvents: { event: keyof ServerToClientEvents; payload: unknown }[] = [];
+
+  toProjectors(view: ProjectorView) {
+    this.projectorViews.push(view);
+  }
+  toAudience<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ) {
+    this.audienceEvents.push({ event, payload: args[0] });
+  }
+  lastProjectorView(): ProjectorView {
+    return this.projectorViews[this.projectorViews.length - 1]!;
+  }
 
   toPlayer(id: string, view: PlayerView) {
     const list = this.playerViews.get(id) ?? [];

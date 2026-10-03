@@ -2,6 +2,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Config } from "../config";
 import type { Db } from "../db";
 import type { GameManager } from "../game/game-manager";
+import type { StorageChoice } from "../media/storage";
+import type { GoogleContext } from "./routes/google";
 import { SESSION_COOKIE, type TokenService } from "../lib/auth";
 import { AppError } from "../lib/errors";
 
@@ -10,6 +12,9 @@ export interface AppContext {
   db: Db;
   tokens: TokenService;
   games: GameManager;
+  media: StorageChoice;
+  /** Null when the Google OAuth client isn't configured. */
+  google: GoogleContext | null;
 }
 
 /** Resolves the signed-in admin from the session cookie, or throws 401. */
@@ -20,10 +25,19 @@ export async function requireUser(ctx: AppContext, req: FastifyRequest): Promise
   // A password change bumps sessionVersion, which retires every session issued before it.
   const user = await ctx.db.user.findUnique({
     where: { id: session.userId },
-    select: { sessionVersion: true },
+    select: { sessionVersion: true, disabled: true },
   });
-  if (!user || user.sessionVersion !== session.version) throw new AppError("UNAUTHORIZED");
+  if (!user || user.disabled || user.sessionVersion !== session.version)
+    throw new AppError("UNAUTHORIZED");
   return session.userId;
+}
+
+/** Like requireUser, but only for admins (team management). */
+export async function requireAdmin(ctx: AppContext, req: FastifyRequest): Promise<string> {
+  const userId = await requireUser(ctx, req);
+  const user = await ctx.db.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role !== "ADMIN") throw new AppError("FORBIDDEN", "Only admins can manage the team.");
+  return userId;
 }
 
 export function setSessionCookie(

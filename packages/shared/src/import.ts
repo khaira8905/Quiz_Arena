@@ -1,4 +1,8 @@
 import {
+  CATEGORY_MAX,
+  type Difficulty,
+  TAG_MAX,
+  TAGS_MAX,
   DEFAULT_POINTS,
   EXPLANATION_MAX,
   MAX_POINTS,
@@ -113,7 +117,10 @@ type Field =
   | "points"
   | "explanation"
   | "image"
-  | "type";
+  | "type"
+  | "tags"
+  | "category"
+  | "difficulty";
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -130,6 +137,9 @@ const HEADERS: [Field, string[]][] = [
   ["explanation", ["explanation", "why", "feedback", "notes"]],
   ["image", ["imageurl", "image", "picture", "media"]],
   ["type", ["questiontype", "type"]],
+  ["tags", ["tags", "tag", "keywords"]],
+  ["category", ["category", "topic", "subject"]],
+  ["difficulty", ["difficulty", "level"]],
 ];
 
 /** Single letters only match a header that is exactly that letter. */
@@ -156,6 +166,9 @@ const FIELD_LABEL: Record<Field, string> = {
   explanation: "Explanation",
   image: "Image URL",
   type: "Type",
+  tags: "Tags",
+  category: "Category",
+  difficulty: "Difficulty",
 };
 
 /** Without a recognisable header row, columns are read in the template's order. */
@@ -170,6 +183,9 @@ const POSITIONAL: Field[] = [
   "points",
   "explanation",
   "image",
+  "tags",
+  "category",
+  "difficulty",
 ];
 
 function findHeader(rows: string[][]): { index: number; map: Map<number, Field> } | null {
@@ -308,14 +324,39 @@ export function questionsFromRows(input: unknown[][]): ImportResult {
     const imageUrl = /^https:\/\/\S+$/i.test(image) ? image : null;
     if (image && !imageUrl) notes.push("Image skipped: it must be an https:// link");
 
+    const difficultyRaw = get("difficulty").toLowerCase();
+    const difficulty: Difficulty | null = /^(easy|e|1)$/.test(difficultyRaw)
+      ? "EASY"
+      : /^(medium|med|m|2|normal)$/.test(difficultyRaw)
+        ? "MEDIUM"
+        : /^(hard|h|3|difficult)$/.test(difficultyRaw)
+          ? "HARD"
+          : null;
+    if (difficultyRaw && !difficulty)
+      notes.push(`Difficulty "${get("difficulty")}" not recognised`);
+    const tags = [
+      ...new Set(
+        get("tags")
+          .split(/[,;|]/)
+          .map((t) => t.trim().toLowerCase().slice(0, TAG_MAX))
+          .filter(Boolean),
+      ),
+    ].slice(0, TAGS_MAX);
+
     const question: QuestionInput = {
       type: isTrueFalse ? "TRUE_FALSE" : "MULTIPLE_CHOICE",
       text,
       imageUrl,
+      imageAssetId: null,
+      imageFit: "CONTAIN",
+      imagePosition: "CENTER",
       timeLimitSec,
       points,
       explanation: clip(get("explanation"), EXPLANATION_MAX, "Explanation", notes),
       randomizeAnswers: false,
+      tags,
+      category: get("category").slice(0, CATEGORY_MAX),
+      difficulty,
       options: options.map((o, k) => ({ text: o, isCorrect: k === correct })),
     };
     questions.push({
@@ -330,8 +371,8 @@ export function questionsFromRows(input: unknown[][]): ImportResult {
 
 /** A starter file organisers can download, fill in and import. */
 export const IMPORT_TEMPLATE_CSV = [
-  "Question,Option A,Option B,Option C,Option D,Correct answer,Time limit (sec),Points,Explanation,Image URL",
-  'Which planet has the shortest day?,Mercury,Jupiter,Saturn,Neptune,B,20,1000,"Jupiter spins once every 9 hours 56 minutes.",',
-  "The Great Wall of China is visible from space with the naked eye.,True,False,,,False,15,1000,It is far too narrow to see from orbit.,",
-  "How many bits are in a byte?,4,8,16,32,8,20,2000,,",
+  "Question,Option A,Option B,Option C,Option D,Correct answer,Time limit (sec),Points,Explanation,Image URL,Tags,Category,Difficulty",
+  'Which planet has the shortest day?,Mercury,Jupiter,Saturn,Neptune,B,20,1000,"Jupiter spins once every 9 hours 56 minutes.",,"space, planets",Science,Easy',
+  "The Great Wall of China is visible from space with the naked eye.,True,False,,,False,15,1000,It is far too narrow to see from orbit.,,myths,History,Medium",
+  "How many bits are in a byte?,4,8,16,32,8,20,2000,,,computing,Technology,Easy",
 ].join("\r\n");

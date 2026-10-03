@@ -21,6 +21,10 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   QUESTION_NOT_ACTIVE: 409,
   PARTICIPANT_LIMIT: 409,
   RATE_LIMITED: 429,
+  MEDIA_UNAVAILABLE: 503,
+  UNSUPPORTED_MEDIA: 415,
+  FILE_TOO_LARGE: 413,
+  GOOGLE_NOT_CONNECTED: 409,
 };
 
 /** An expected, user-facing failure. Anything else is treated as an internal error. */

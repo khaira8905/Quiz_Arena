@@ -1,5 +1,11 @@
 import { z } from "zod";
 import {
+  AUTO_REVEAL_MAX_SECONDS,
+  CATEGORY_MAX,
+  DIFFICULTIES,
+  LEADERBOARD_EVERY_MAX,
+  TAG_MAX,
+  TAGS_MAX,
   DEFAULT_POINTS,
   DEFAULT_TIMER_SECONDS,
   EXPLANATION_MAX,
@@ -15,11 +21,14 @@ import {
   QUIZ_TITLE_MAX,
   TIMER_MAX_SECONDS,
   TIMER_MIN_SECONDS,
+  READING_MAX_SECONDS,
+  READING_MIN_SECONDS,
   normalizeGameCode,
 } from "./constants";
-import { ARENA_THEMES, arenaAppearanceSchema } from "./appearance";
-import { GAME_PHASES, HOST_COMMANDS } from "./game";
+import { ARENA_THEMES, MOTION_LEVELS, arenaAppearanceSchema } from "./appearance";
+import { GAME_PHASES, HOST_COMMANDS, READING_MODES } from "./game";
 import { QUESTION_TYPES, QUESTION_TYPE_RULES } from "./question-types";
+import { IMAGE_FITS, IMAGE_POSITIONS } from "./media";
 import { SCORING_MODES } from "./scoring";
 
 /** Collapses control characters and trims — stored text is always plain text. */
@@ -38,6 +47,12 @@ const imageUrl = z
   .transform((v) => (v ? v : null));
 
 const cuid = z.string().min(1).max(64);
+
+/** Bank tags: short labels, trimmed, lower-cased, de-duplicated. */
+const tagsSchema = z
+  .array(plainText(TAG_MAX))
+  .max(TAGS_MAX)
+  .transform((tags) => [...new Set(tags.map((t) => t.toLowerCase()).filter(Boolean))]);
 
 /* ------------------------------------------------------------------ auth */
 
@@ -72,6 +87,31 @@ export const profileUpdateSchema = z
   });
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 
+/* ------------------------------------------------------------------ team (admins only) */
+
+const teamPassword = z.string().min(10, "Use at least 10 characters").max(200);
+
+/** An admin creates a sign-in for someone else. No email verification: it works at once. */
+export const teamCreateSchema = z.object({
+  email: z
+    .email("Enter a valid email address")
+    .max(254)
+    .transform((e) => e.toLowerCase()),
+  name: plainText(80).pipe(z.string().min(1, "Enter a name")),
+  password: teamPassword,
+  role: z.enum(["ADMIN", "ORGANISER"]).default("ORGANISER"),
+});
+export type TeamCreateInput = z.infer<typeof teamCreateSchema>;
+
+export const teamUpdateSchema = z.object({
+  name: plainText(80).pipe(z.string().min(1)).optional(),
+  role: z.enum(["ADMIN", "ORGANISER"]).optional(),
+  disabled: z.boolean().optional(),
+  /** Sets a new password and signs the person out everywhere. */
+  password: teamPassword.optional(),
+});
+export type TeamUpdateInput = z.infer<typeof teamUpdateSchema>;
+
 /* ------------------------------------------------------------------ quizzes */
 
 export const timerSeconds = z.number().int().min(TIMER_MIN_SECONDS).max(TIMER_MAX_SECONDS);
@@ -94,6 +134,12 @@ export const quizSettingsSchema = z.object({
     .default(PARTICIPANT_LIMIT_DEFAULT),
   soundEnabled: z.boolean().default(true),
   nicknameFilter: z.boolean().default(true),
+  readingMode: z.enum(READING_MODES).default("TIMED"),
+  readingTimeSec: z.number().int().min(READING_MIN_SECONDS).max(READING_MAX_SECONDS).default(5),
+  /** Leaderboard after every Nth question (and after the last one). */
+  leaderboardEvery: z.number().int().min(1).max(LEADERBOARD_EVERY_MAX).default(1),
+  /** Seconds after time's up before the answers show by themselves; 0 = the host decides. */
+  autoRevealSec: z.number().int().min(0).max(AUTO_REVEAL_MAX_SECONDS).default(0),
 });
 export type QuizSettings = z.infer<typeof quizSettingsSchema>;
 
@@ -109,7 +155,24 @@ export const quizCreateSchema = z.object({
 });
 export type QuizCreateInput = z.infer<typeof quizCreateSchema>;
 
-export const quizUpdateSchema = quizSettingsSchema.partial().extend({
+/**
+ * Optional versions of every field, with the create-time defaults removed. zod's .partial()
+ * keeps defaults, so a PATCH of one field would silently reset all the others.
+ */
+function partialNoDefaults<T extends z.ZodRawShape>(shape: T) {
+  return z.object(
+    Object.fromEntries(
+      Object.entries(shape).map(([k, v]) => [
+        k,
+        (v instanceof z.ZodDefault ? (v.unwrap() as z.ZodType) : (v as z.ZodType)).optional(),
+      ]),
+    ) as unknown as {
+      [K in keyof T]: z.ZodOptional<T[K] extends z.ZodDefault<infer I> ? I : T[K]>;
+    },
+  );
+}
+
+export const quizUpdateSchema = partialNoDefaults(quizSettingsSchema.shape).extend({
   title: plainText(QUIZ_TITLE_MAX).pipe(z.string().min(1, "Give your quiz a title")).optional(),
   description: plainText(QUIZ_DESCRIPTION_MAX).optional(),
   coverImageUrl: imageUrl.optional(),
@@ -129,10 +192,17 @@ const questionBase = z.object({
   type: z.enum(QUESTION_TYPES),
   text: plainText(QUESTION_TEXT_MAX),
   imageUrl: imageUrl.optional().default(null),
+  /** A media library image; when set, the server fills in imageUrl from the asset. */
+  imageAssetId: z.string().min(1).max(64).nullable().optional().default(null),
+  imageFit: z.enum(IMAGE_FITS).default("CONTAIN"),
+  imagePosition: z.enum(IMAGE_POSITIONS).default("CENTER"),
   timeLimitSec: timerSeconds.nullable().optional().default(null),
   points: z.number().int().min(0).max(MAX_POINTS).default(DEFAULT_POINTS),
   explanation: plainText(EXPLANATION_MAX).optional().default(""),
   randomizeAnswers: z.boolean().default(false),
+  tags: tagsSchema.default([]),
+  category: plainText(CATEGORY_MAX).default(""),
+  difficulty: z.enum(DIFFICULTIES).nullable().default(null),
   options: z.array(optionInputSchema).min(2).max(4),
 });
 
@@ -164,7 +234,27 @@ export const questionImportSchema = z.object({
 /** A Google Sheets or Drive share link to import from. */
 export const googleImportSchema = z.object({ url: z.string().trim().min(10).max(2048) });
 
-export const questionUpdateSchema = questionBase.partial();
+/**
+ * A partial update: only the fields sent change. Built without the create defaults —
+ * zod's .partial() still applies them, which would reset unsent fields (points, timer,
+ * image) on every edit.
+ */
+export const questionUpdateSchema = z.object({
+  type: z.enum(QUESTION_TYPES).optional(),
+  text: plainText(QUESTION_TEXT_MAX).optional(),
+  imageUrl: imageUrl.optional(),
+  imageAssetId: z.string().min(1).max(64).nullable().optional(),
+  imageFit: z.enum(IMAGE_FITS).optional(),
+  imagePosition: z.enum(IMAGE_POSITIONS).optional(),
+  timeLimitSec: timerSeconds.nullable().optional(),
+  points: z.number().int().min(0).max(MAX_POINTS).optional(),
+  explanation: plainText(EXPLANATION_MAX).optional(),
+  randomizeAnswers: z.boolean().optional(),
+  tags: tagsSchema.optional(),
+  category: plainText(CATEGORY_MAX).optional(),
+  difficulty: z.enum(DIFFICULTIES).nullable().optional(),
+  options: z.array(optionInputSchema).min(2).max(4).optional(),
+});
 export type QuestionUpdateInput = z.infer<typeof questionUpdateSchema>;
 
 export const reorderSchema = z.object({
@@ -227,6 +317,61 @@ export const hostCommandSchema = z.object({
   expected: z
     .object({ phase: z.enum(GAME_PHASES), questionIndex: z.number().int().min(-1).max(1000) })
     .optional(),
+  /** ADJUST_TIMER: seconds to add (negative removes). */
+  amount: z.number().int().min(-120).max(120).optional(),
+});
+
+/**
+ * Settings the host may still change in the lobby, before anything has been played. Applied
+ * to the running session only; the quiz itself is untouched.
+ */
+export const liveSettingsPatchSchema = z
+  .object({
+    leaderboardEvery: z.number().int().min(1).max(LEADERBOARD_EVERY_MAX),
+    autoRevealSec: z.number().int().min(0).max(AUTO_REVEAL_MAX_SECONDS),
+    readingMode: z.enum(READING_MODES),
+    readingTimeSec: z.number().int().min(READING_MIN_SECONDS).max(READING_MAX_SECONDS),
+    /** One timer for every question, overriding the per-question timers; null restores them. */
+    timerOverrideSec: timerSeconds.nullable(),
+    showLeaderboard: z.boolean(),
+    showAnswerStats: z.boolean(),
+    showCorrectAnswers: z.boolean(),
+    soundEnabled: z.boolean(),
+    allowLateJoin: z.boolean(),
+    participantLimit: z.number().int().min(2).max(PARTICIPANT_LIMIT_MAX),
+    theme: z.enum(ARENA_THEMES),
+    motion: z.enum(MOTION_LEVELS),
+  })
+  .partial();
+export type LiveSettingsPatch = z.infer<typeof liveSettingsPatchSchema>;
+export const hostSettingsSchema = z.object({
+  code: gameCodeSchema,
+  patch: liveSettingsPatchSchema,
 });
 
 export const hostKickSchema = z.object({ code: gameCodeSchema, participantId: cuid });
+
+/* ------------------------------------------------------------------ question bank */
+
+export const bankQuerySchema = z.object({
+  q: z.string().trim().max(120).optional(),
+  tag: z.string().trim().max(TAG_MAX).optional(),
+  category: z.string().trim().max(CATEGORY_MAX).optional(),
+  difficulty: z.enum(DIFFICULTIES).optional(),
+  type: z.enum(QUESTION_TYPES).optional(),
+  quizId: cuid.optional(),
+});
+
+/** Copy bank questions into a quiz (they're duplicated, so editing one never changes another). */
+export const copyQuestionsSchema = z.object({
+  questionIds: z.array(cuid).min(1).max(MAX_QUESTIONS_PER_QUIZ),
+});
+
+/* ------------------------------------------------------------------ organiser preferences */
+
+/** Defaults applied to every new quiz: its settings and its arena. */
+export const userPreferencesSchema = z.object({
+  quizDefaults: partialNoDefaults(quizSettingsSchema.shape).optional(),
+  appearance: arenaAppearanceSchema.optional(),
+});
+export type UserPreferences = z.infer<typeof userPreferencesSchema>;

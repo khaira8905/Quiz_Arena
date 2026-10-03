@@ -1,5 +1,13 @@
 import type { ErrorCode } from "./errors";
-import type { GamePhase, HostCommand, HostView, PlayerSummary, PlayerView } from "./game";
+import type { LiveSettingsPatch } from "./schemas";
+import type {
+  GamePhase,
+  HostCommand,
+  HostView,
+  PlayerSummary,
+  PlayerView,
+  ProjectorView,
+} from "./game";
 
 /**
  * Socket.IO contract. Both the server (`new Server<ClientToServerEvents, ServerToClientEvents>`)
@@ -62,6 +70,8 @@ export interface HostCommandPayload {
   command: HostCommand;
   /** The phase and question the sender was looking at (see hostCommandSchema). */
   expected?: { phase: GamePhase; questionIndex: number };
+  /** ADJUST_TIMER: seconds to add (negative removes). */
+  amount?: number;
 }
 
 export interface ClientToServerEvents {
@@ -71,13 +81,20 @@ export interface ClientToServerEvents {
   "question:answer": (payload: AnswerPayload, ack: Ack<AnswerReceipt>) => void;
   "timer:sync": (payload: TimerSyncRequest, ack: (res: TimerSyncResponse) => void) => void;
   "host:attach": (payload: HostAttachPayload, ack: Ack<HostView>) => void;
+  /** The stage: projector windows and the host's projector preview. Host-authenticated. */
+  "projector:attach": (payload: HostAttachPayload, ack: Ack<ProjectorView>) => void;
   "host:command": (payload: HostCommandPayload, ack: Ack<HostView>) => void;
+  /** Lobby-only changes to the running session's settings. */
+  "host:settings": (
+    payload: { code: string; patch: LiveSettingsPatch },
+    ack: Ack<HostView>,
+  ) => void;
   "host:kick": (payload: { code: string; participantId: string }, ack: Ack<null>) => void;
 }
 
 export interface ServerToClientEvents {
   /** Full role-specific snapshot. Sent on attach/reconnect and on every phase change. */
-  "session:state": (view: PlayerView | HostView) => void;
+  "session:state": (view: PlayerView | HostView | ProjectorView) => void;
   /** Host-only roster deltas. */
   "session:player_joined": (player: PlayerSummary) => void;
   "session:player_left": (payload: { participantId: string }) => void;
@@ -88,20 +105,25 @@ export interface ServerToClientEvents {
     questionId: string;
     answered: number;
     distribution: Record<string, number>;
+    /** Who has answered, so the control room can show who is still thinking. */
+    answeredIds: string[];
   }) => void;
-  /** Pushed when the deadline moves (pause/resume) so clocks re-align. */
+  /** Stage-safe answer counter (no distribution) for projectors. */
+  "question:answered": (payload: { questionId: string; answered: number }) => void;
+  /** Pushed when the deadline moves (pause/resume/adjust) so clocks re-align. */
   "timer:sync": (payload: {
     serverTime: number;
     deadline: number;
     paused: boolean;
     remainingMs: number;
+    durationMs: number;
   }) => void;
   /** The server is closing this seat (kicked, replaced, game deleted). */
   "session:closed": (payload: { code: ErrorCode; message: string }) => void;
 }
 
 export interface SocketData {
-  role: "anonymous" | "player" | "host";
+  role: "anonymous" | "player" | "host" | "projector";
   userId: string | null;
   gameCode: string | null;
   participantId: string | null;

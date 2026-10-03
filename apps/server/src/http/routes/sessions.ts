@@ -41,7 +41,10 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
       where: { id: quizId, ownerId: userId },
       include: {
         questions: {
-          include: { options: { orderBy: { order: "asc" } } },
+          include: {
+            options: { orderBy: { order: "asc" } },
+            imageAsset: { select: { placeholder: true } },
+          },
           orderBy: { order: "asc" },
         },
       },

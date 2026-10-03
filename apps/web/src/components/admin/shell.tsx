@@ -1,6 +1,19 @@
 "use client";
 
-import { LayoutGrid, Layers, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
+import {
+  BarChart3,
+  ImageIcon,
+  LayoutGrid,
+  Layers,
+  Library,
+  LogOut,
+  Menu,
+  Palette,
+  Radio,
+  Settings,
+  Users,
+  X,
+} from "lucide-react";
 import * as RD from "@radix-ui/react-dialog";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
@@ -13,13 +26,18 @@ import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useDashboard, useLogout, useMe } from "@/lib/queries";
 
-const WIDE_ROUTES = /^\/admin\/(quizzes|sessions)\/[^/]+/;
+const WIDE_ROUTES = /^\/admin\/((quizzes|sessions)\/[^/]+|arena)/;
 
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutGrid, exact: true },
   { href: "/admin/quizzes", label: "Quizzes", icon: Layers },
-  { href: "/admin/sessions", label: "Sessions", icon: Radio },
-  { href: "/admin/profile", label: "Profile", icon: UserRound },
+  { href: "/admin/bank", label: "Question bank", icon: Library },
+  { href: "/admin/media", label: "Media library", icon: ImageIcon },
+  { href: "/admin/sessions", label: "Live sessions", icon: Radio },
+  { href: "/admin/results", label: "Results", icon: BarChart3 },
+  { href: "/admin/arena", label: "Customize arena", icon: Palette },
+  { href: "/admin/team", label: "Team", icon: Users, adminOnly: true },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -109,7 +127,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <aside className="sticky top-0 hidden h-dvh lg:block">
-        <Sidebar userName={me.data.name} email={me.data.email} />
+        <Sidebar userName={me.data.name} email={me.data.email} isAdmin={me.data.role === "ADMIN"} />
       </aside>
 
       {/* A real modal: focus is trapped inside, Escape closes, the page behind is inert. */}
@@ -143,7 +161,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   {/* Its own layout group, so the active-item highlight doesn't fly in from
                       the (hidden) desktop sidebar. */}
                   <LayoutGroup id="drawer">
-                    <Sidebar userName={me.data.name} email={me.data.email} />
+                    <Sidebar
+                      userName={me.data.name}
+                      email={me.data.email}
+                      isAdmin={me.data.role === "ADMIN"}
+                    />
                   </LayoutGroup>
                 </motion.aside>
               </RD.Content>
@@ -162,7 +184,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Sidebar({ userName, email }: { userName: string; email: string }) {
+function Sidebar({
+  userName,
+  email,
+  isAdmin,
+}: {
+  userName: string;
+  email: string;
+  isAdmin: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const logout = useLogout();
@@ -178,39 +208,41 @@ function Sidebar({ userName, email }: { userName: string; email: string }) {
         <p className="label mt-3 text-fg-3">Control room</p>
       </div>
       <ul className="flex flex-col gap-1 px-3">
-        {nav.map((item) => {
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "relative flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors",
-                  active ? "text-fg" : "text-fg-2 hover:bg-elevated hover:text-fg",
-                )}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="nav-active"
-                    className="absolute inset-0 rounded-md border border-line-strong bg-elevated"
-                    transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                  />
-                )}
-                {active && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent" />}
-                <Icon className="relative h-4 w-4" aria-hidden />
-                <span className="relative">{item.label}</span>
-                {item.href === "/admin/sessions" && live > 0 && (
-                  <span className="label relative ml-auto inline-flex items-center gap-1.5 text-accent">
-                    <span className="h-1.5 w-1.5 animate-live-pulse rounded-full bg-accent" />
-                    {live}
-                  </span>
-                )}
-              </Link>
-            </li>
-          );
-        })}
+        {nav
+          .filter((item) => !("adminOnly" in item && item.adminOnly) || isAdmin)
+          .map((item) => {
+            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+            const Icon = item.icon;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors",
+                    active ? "text-fg" : "text-fg-2 hover:bg-elevated hover:text-fg",
+                  )}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="nav-active"
+                      className="absolute inset-0 rounded-md border border-line-strong bg-elevated"
+                      transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                    />
+                  )}
+                  {active && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent" />}
+                  <Icon className="relative h-4 w-4" aria-hidden />
+                  <span className="relative">{item.label}</span>
+                  {item.href === "/admin/sessions" && live > 0 && (
+                    <span className="label relative ml-auto inline-flex items-center gap-1.5 text-accent">
+                      <span className="h-1.5 w-1.5 animate-live-pulse rounded-full bg-accent" />
+                      {live}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
       </ul>
       <div className="mt-auto border-t border-line p-4">
         <div className="mb-4 flex items-center justify-between">

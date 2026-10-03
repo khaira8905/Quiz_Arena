@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  CATEGORY_MAX,
   DEFAULT_POINTS,
+  type Difficulty,
   OPTION_TEXT_MAX,
   POINT_PRESETS,
   QUESTION_TEXT_MAX,
@@ -12,7 +14,7 @@ import {
 import type { QuestionDto } from "@quizarena/shared/dto";
 import { QUESTION_TYPE_RULES } from "@quizarena/shared/question-types";
 import { questionIssues, type QuestionUpdateInput } from "@quizarena/shared/schemas";
-import { AlertTriangle, Check, Copy, ImageIcon, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Plus, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -24,6 +26,9 @@ import { Segmented, Switch } from "@/components/ui/switch";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useDeleteQuestion, useDuplicateQuestion, useUpdateQuestion } from "@/lib/queries";
+import { ImageField } from "@/components/media/image-field";
+import { DriveImageButton } from "@/components/media/google-drive";
+import { TagEditor } from "./tag-editor";
 import { useAutosave, useSaveTracker } from "./save-tracker";
 
 type Draft = Omit<QuestionDto, "id" | "order" | "updatedAt">;
@@ -32,10 +37,16 @@ const toDraft = (q: QuestionDto): Draft => ({
   type: q.type,
   text: q.text,
   imageUrl: q.imageUrl,
+  imageAssetId: q.imageAssetId,
+  imageFit: q.imageFit,
+  imagePosition: q.imagePosition,
   timeLimitSec: q.timeLimitSec,
   points: q.points,
   explanation: q.explanation,
   randomizeAnswers: q.randomizeAnswers,
+  tags: q.tags,
+  category: q.category,
+  difficulty: q.difficulty,
   options: q.options,
 });
 
@@ -148,7 +159,22 @@ export function QuestionEditor({
               {draft.text.length}/{QUESTION_TEXT_MAX}
             </div>
 
-            <ImageSlot url={draft.imageUrl} onChange={(v) => set("imageUrl", v, true)} />
+            <ImageField
+              value={{
+                url: draft.imageUrl,
+                assetId: draft.imageAssetId,
+                fit: draft.imageFit,
+                position: draft.imagePosition,
+              }}
+              onChange={(patch) => {
+                setDraft((d) => ({ ...d, ...patch }));
+                // A library image is sent by id; the server fills in its URL itself.
+                if ("imageAssetId" in patch && patch.imageAssetId) {
+                  schedule({ imageAssetId: patch.imageAssetId }, true);
+                } else schedule(patch, true);
+              }}
+              drive={(pick) => <DriveImageButton onPick={pick} />}
+            />
 
             <div className="mt-6 grid grid-cols-1 gap-3 @xl:grid-cols-2">
               <AnimatePresence initial={false}>
@@ -396,6 +422,38 @@ export function QuestionEditor({
           )}
         </Field>
 
+        <div className="border-t border-line pt-5">
+          <h3 className="label mb-3 text-fg-2">Question bank</h3>
+          <div className="flex flex-col gap-4">
+            <Field label="Category">
+              {(p) => (
+                <Input
+                  {...p}
+                  maxLength={CATEGORY_MAX}
+                  placeholder="e.g. Science"
+                  value={draft.category}
+                  onChange={(e) => set("category", e.target.value)}
+                />
+              )}
+            </Field>
+            <div>
+              <div className="mb-1.5 text-body-sm font-medium text-fg-2">Difficulty</div>
+              <Segmented<Difficulty | "NONE">
+                label="Difficulty"
+                value={draft.difficulty ?? "NONE"}
+                options={[
+                  { value: "NONE", label: "—" },
+                  { value: "EASY", label: "Easy" },
+                  { value: "MEDIUM", label: "Medium" },
+                  { value: "HARD", label: "Hard" },
+                ]}
+                onChange={(v) => set("difficulty", v === "NONE" ? null : v, true)}
+              />
+            </div>
+            <TagEditor tags={draft.tags} onChange={(tags) => set("tags", tags, true)} />
+          </div>
+        </div>
+
         <div className="mt-auto flex gap-2 border-t border-line pt-5">
           <Button
             variant="secondary"
@@ -496,85 +554,5 @@ function AutoGrowTextarea({
       )}
       {...props}
     />
-  );
-}
-
-function ImageSlot({
-  url,
-  onChange,
-}: {
-  url: string | null;
-  onChange: (v: string | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(url ?? "");
-  const [broken, setBroken] = useState(false);
-
-  if (url && !editing) {
-    return (
-      <div className="group relative mt-5 overflow-hidden rounded-md border border-line bg-sunken">
-        {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-supplied URLs */}
-        <img
-          src={url}
-          alt="Question illustration"
-          onError={() => setBroken(true)}
-          onLoad={() => setBroken(false)}
-          className="mx-auto max-h-64 w-auto object-contain"
-        />
-        {broken && (
-          <p className="p-4 text-center text-body-sm text-warning">
-            This image couldn&apos;t be loaded. Check the URL.
-          </p>
-        )}
-        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100">
-          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-            Change
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => (setValue(""), onChange(null))}>
-            Remove
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="mt-5 flex h-12 w-full items-center justify-center gap-2 border border-dashed border-line text-body-sm text-fg-3 hover:border-line-strong hover:text-fg"
-      >
-        <ImageIcon className="h-4 w-4" /> Add an image (optional)
-      </button>
-    );
-  }
-
-  return (
-    <form
-      className="mt-5 flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const v = value.trim();
-        if (v && !/^https?:\/\//i.test(v)) return void toast.error("Use an https:// image URL");
-        onChange(v || null);
-        setEditing(false);
-      }}
-    >
-      <Input
-        autoFocus
-        aria-label="Image URL"
-        placeholder="https://…/diagram.png"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="h-10"
-      />
-      <Button type="submit" size="md">
-        Save
-      </Button>
-      <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
-        Cancel
-      </Button>
-    </form>
   );
 }

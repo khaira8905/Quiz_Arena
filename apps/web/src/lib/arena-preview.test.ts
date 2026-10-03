@@ -1,6 +1,6 @@
 import { DEFAULT_APPEARANCE } from "@quizarena/shared/appearance";
 import { describe, expect, it } from "vitest";
-import { type ArenaPreviewState, previewHostView, previewPlayerView } from "./arena-preview";
+import { type ArenaPreviewState, previewProjectorView, previewPlayerView } from "./arena-preview";
 
 const state = (over: Partial<ArenaPreviewState> = {}): ArenaPreviewState => ({
   appearance: { ...DEFAULT_APPEARANCE, theme: "BLUE" },
@@ -17,6 +17,10 @@ const state = (over: Partial<ArenaPreviewState> = {}): ArenaPreviewState => ({
     participantLimit: 200,
     soundEnabled: true,
     nicknameFilter: true,
+    readingMode: "OFF",
+    readingTimeSec: 5,
+    leaderboardEvery: 1,
+    autoRevealSec: 0,
   },
   question: {
     text: "Speed of light?",
@@ -34,7 +38,7 @@ const state = (over: Partial<ArenaPreviewState> = {}): ArenaPreviewState => ({
 describe("arena preview views", () => {
   it("builds a live question for the projector with a running timer", () => {
     const now = 1_000_000;
-    const v = previewHostView(state(), now);
+    const v = previewProjectorView(state(), now);
     expect(v.phase).toBe("QUESTION_ACTIVE");
     expect(v.settings.appearance.theme).toBe("BLUE");
     expect(v.settings.soundEnabled).toBe(false);
@@ -46,15 +50,25 @@ describe("arena preview views", () => {
   });
 
   it("reveals the correct option and distribution on the reveal scene", () => {
-    const v = previewHostView(state({ scene: "reveal" }), 0);
+    const v = previewProjectorView(state({ scene: "reveal" }), 0);
     expect(v.correctOptionIds).toEqual(["o0"]);
-    expect(Object.keys(v.distribution)).toEqual(["o0", "o1"]);
+    expect(Object.keys(v.distribution ?? {})).toEqual(["o0", "o1"]);
   });
 
   it("fills the lobby with players and no question", () => {
-    const v = previewHostView(state({ scene: "lobby" }), 0);
+    const v = previewProjectorView(state({ scene: "lobby" }), 0);
     expect(v.question).toBeNull();
-    expect(v.players.length).toBe(v.playerCount);
+    expect(v.lobbyPlayers.length).toBe(v.playerCount);
+  });
+
+  it("keeps the distribution private until the stats step, and shows the podium", () => {
+    expect(previewProjectorView(state({ scene: "question" }), 0).distribution).toBeNull();
+    expect(previewProjectorView(state({ scene: "stats" }), 0).distribution).not.toBeNull();
+    expect(previewProjectorView(state({ scene: "stats" }), 0).correctOptionIds).toBeNull();
+    const podium = previewProjectorView(state({ scene: "podium" }), 0);
+    expect(podium.phase).toBe("FINISHED");
+    expect(podium.results?.standings[0]?.rank).toBe(1);
+    expect(podium.question).toBeNull();
   });
 
   it("gives the phone a correct answer on reveal, and falls back to a sample question", () => {

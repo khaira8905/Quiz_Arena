@@ -7,7 +7,7 @@ export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 /** Socket tickets are single-purpose and short-lived: fetched over the cookie-authenticated API, used once on connect. */
 const SOCKET_TICKET_TTL_SECONDS = 60;
 
-type Purpose = "session" | "socket";
+type Purpose = "session" | "socket" | "oauth";
 
 export class TokenService {
   private readonly key: Uint8Array;
@@ -48,6 +48,32 @@ export class TokenService {
 
   signSocketTicket(userId: string) {
     return this.sign(userId, "socket", SOCKET_TICKET_TTL_SECONDS);
+  }
+
+  /** OAuth `state`: binds the Google round trip to this user and a one-time nonce cookie. */
+  signOAuthState(userId: string, nonce: string) {
+    return new SignJWT({ purpose: "oauth", nonce })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject(userId)
+      .setIssuedAt()
+      .setIssuer("quizarena")
+      .setAudience("quizarena:oauth")
+      .setExpirationTime("600s")
+      .sign(this.key);
+  }
+
+  async verifyOAuthState(token: string): Promise<{ userId: string; nonce: string } | null> {
+    try {
+      const { payload } = await jwtVerify(token, this.key, {
+        issuer: "quizarena",
+        audience: "quizarena:oauth",
+        algorithms: ["HS256"],
+      });
+      if (typeof payload.sub !== "string" || typeof payload.nonce !== "string") return null;
+      return { userId: payload.sub, nonce: payload.nonce };
+    } catch {
+      return null;
+    }
   }
 
   /** Returns the user id, or null for any invalid/expired/mis-scoped token. */

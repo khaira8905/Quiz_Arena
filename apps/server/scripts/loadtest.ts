@@ -15,6 +15,7 @@ import type {
   HostView,
   JoinResult,
   PlayerView,
+  ProjectorView,
   QuizSummaryDto,
   ServerToClientEvents,
   SessionSummaryDto,
@@ -140,13 +141,20 @@ async function main() {
   const fanout: number[] = [];
 
   /** Time from issuing a host command until every player has received the resulting phase. */
+  // Quizzes with a reading period open each question with the answers closed: the host
+  // opens them (measured like every other broadcast).
+  const readingMode = attach.data.settings.readingMode;
+  async function openAnswers() {
+    if (readingMode !== "OFF") await commandAndMeasure("OPEN_ANSWERS", "QUESTION_ACTIVE");
+  }
+
   async function commandAndMeasure(command: string, phase: PlayerView["phase"]) {
     const t0 = Date.now();
     const waits = players.map(
       (p) =>
         new Promise<number>((resolve) => {
           if (p.latest?.phase === phase && command !== "NEXT") return resolve(0);
-          const h = (v: PlayerView | HostView) => {
+          const h = (v: PlayerView | HostView | ProjectorView) => {
             if (v.phase === phase) {
               p.socket.off("session:state", h);
               resolve(Date.now() - t0);
@@ -167,8 +175,8 @@ async function main() {
   const startWaits = players.map(
     (p) =>
       new Promise<void>((resolve) => {
-        const h = (v: PlayerView | HostView) => {
-          if (v.phase === "QUESTION_ACTIVE") {
+        const h = (v: PlayerView | HostView | ProjectorView) => {
+          if (v.phase === "QUESTION_READING" || v.phase === "QUESTION_ACTIVE") {
             p.socket.off("session:state", h);
             resolve();
           }
@@ -178,6 +186,7 @@ async function main() {
   );
   await call(host, "host:command", { code, command: "START" });
   await Promise.all(startWaits);
+  await openAnswers();
 
   const rounds = Math.min(MAX_QUESTIONS, created.session.questionCount);
   for (let q = 0; q < rounds; q++) {
@@ -202,7 +211,13 @@ async function main() {
     const correct = players.filter((p) => p.latest?.result?.correct).length;
     await commandAndMeasure("LEADERBOARD", "LEADERBOARD");
     console.log(`  Q${q + 1}: ${correct}/${players.length} correct`);
-    if (q + 1 < rounds) await commandAndMeasure("NEXT", "QUESTION_ACTIVE");
+    if (q + 1 < rounds) {
+      await commandAndMeasure(
+        "NEXT",
+        readingMode === "OFF" ? "QUESTION_ACTIVE" : "QUESTION_READING",
+      );
+      await openAnswers();
+    }
   }
 
   const final = await commandAndMeasure("END", "FINISHED");

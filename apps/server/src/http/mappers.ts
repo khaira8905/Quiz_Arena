@@ -14,6 +14,7 @@ export const userDto = (u: User): UserDto => ({
   id: u.id,
   email: u.email,
   name: u.name,
+  role: u.role,
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -23,6 +24,12 @@ export const questionDto = (q: Question & { options: AnswerOption[] }): Question
   type: q.type,
   text: q.text,
   imageUrl: q.imageUrl,
+  imageAssetId: q.imageAssetId,
+  imageFit: q.imageFit,
+  imagePosition: q.imagePosition,
+  tags: q.tags,
+  category: q.category,
+  difficulty: q.difficulty,
   timeLimitSec: q.timeLimitSec,
   points: q.points,
   explanation: q.explanation,
@@ -66,6 +73,10 @@ export const quizDto = (
   participantLimit: q.participantLimit,
   soundEnabled: q.soundEnabled,
   nicknameFilter: q.nicknameFilter,
+  readingMode: q.readingMode,
+  readingTimeSec: q.readingTimeSec,
+  leaderboardEvery: q.leaderboardEvery,
+  autoRevealSec: q.autoRevealSec,
   appearance: resolveAppearance(q.appearance),
   questions: [...q.questions].sort((a, b) => a.order - b.order).map(questionDto),
 });

@@ -4,15 +4,25 @@ import type { ArenaTheme } from "@quizarena/shared/appearance";
 import type { QuestionInput } from "@quizarena/shared/schemas";
 
 import type {
+  BankFacetsDto,
+  BankQuestionDto,
   DashboardDto,
   QuestionDto,
   QuizDto,
   QuizSummaryDto,
   SessionResultsDto,
   SessionSummaryDto,
+  TeamMemberDto,
   UserDto,
 } from "@quizarena/shared/dto";
-import type { QuestionUpdateInput, QuizUpdateInput } from "@quizarena/shared/schemas";
+import type { MediaAssetDto, MediaConfigDto } from "@quizarena/shared/media";
+import type {
+  QuestionUpdateInput,
+  QuizUpdateInput,
+  TeamCreateInput,
+  TeamUpdateInput,
+  UserPreferences,
+} from "@quizarena/shared/schemas";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { WAKE_RETRIES, WAKE_RETRY_MS, isServerWaking } from "./server-wake";
@@ -25,6 +35,10 @@ export const keys = {
   sessions: (scope: string) => ["sessions", scope] as const,
   session: (id: string) => ["session", id] as const,
   results: (id: string) => ["results", id] as const,
+  mediaConfig: ["media-config"] as const,
+  bank: (f: object) => ["bank", f] as const,
+  preferences: ["preferences"] as const,
+  media: (q: string, sort: string, unused: boolean) => ["media", q, sort, unused] as const,
 };
 
 /* ---------------------------------------------------------------- auth */
@@ -254,6 +268,8 @@ export function useSession(id: string) {
       api<{ session: SessionSummaryDto; live: { phase: string; players: number } | null }>(
         `/sessions/${id}`,
       ),
+    // A running game finishes in the control room; poll so this page turns into results.
+    refetchInterval: (q) => (q.state.data?.live ? 10_000 : false),
   });
 }
 
@@ -276,5 +292,162 @@ export function useStartSession() {
       void qc.invalidateQueries({ queryKey: ["sessions"] });
       void qc.invalidateQueries({ queryKey: keys.dashboard });
     },
+  });
+}
+
+/* ---------------------------------------------------------------- media */
+
+export function useMediaConfig() {
+  return useQuery({
+    queryKey: keys.mediaConfig,
+    queryFn: () => api<MediaConfigDto>("/media/config"),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMedia(
+  { q = "", sort = "recent", unused = false }: { q?: string; sort?: string; unused?: boolean } = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: keys.media(q, sort, unused),
+    queryFn: () => {
+      const params = new URLSearchParams({ sort });
+      if (q) params.set("q", q);
+      if (unused) params.set("unused", "1");
+      return api<{ assets: MediaAssetDto[] }>(`/media?${params}`).then((r) => r.assets);
+    },
+    enabled,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** After an upload, rename or delete: every library listing refreshes. */
+export const invalidateMedia = (qc: QueryClient) => qc.invalidateQueries({ queryKey: ["media"] });
+
+export function useRenameMedia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      api<{ asset: MediaAssetDto }>(`/media/${id}`, { method: "PATCH", json: { name } }).then(
+        (r) => r.asset,
+      ),
+    onSuccess: () => invalidateMedia(qc),
+  });
+}
+
+export function useDeleteMedia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, force }: { id: string; force?: boolean }) =>
+      api<void>(`/media/${id}${force ? "?force=1" : ""}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void invalidateMedia(qc);
+      // Questions that used the image lost it.
+      void qc.invalidateQueries({ queryKey: ["quiz"] });
+    },
+  });
+}
+
+/* ---------------------------------------------------------------- question bank */
+
+export interface BankFilters {
+  q?: string;
+  tag?: string;
+  category?: string;
+  difficulty?: string;
+  type?: string;
+  quizId?: string;
+}
+
+export function useBank(filters: BankFilters) {
+  return useQuery({
+    queryKey: keys.bank(filters),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);
+      return api<{ questions: BankQuestionDto[]; total: number; facets: BankFacetsDto }>(
+        `/bank?${params}`,
+      );
+    },
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCopyQuestions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quizId, questionIds }: { quizId: string; questionIds: string[] }) =>
+      api<{ quiz: QuizDto }>(`/quizzes/${quizId}/questions/copy`, {
+        method: "POST",
+        json: { questionIds },
+      }).then((r) => r.quiz),
+    onSuccess: (quiz) => {
+      qc.setQueryData(keys.quiz(quiz.id), quiz);
+      void qc.invalidateQueries({ queryKey: ["quizzes"] });
+      void qc.invalidateQueries({ queryKey: ["bank"] });
+    },
+  });
+}
+
+/* ---------------------------------------------------------------- organiser defaults */
+
+export function usePreferences() {
+  return useQuery({
+    queryKey: keys.preferences,
+    queryFn: () =>
+      api<{ preferences: UserPreferences }>("/me/preferences").then((r) => r.preferences),
+  });
+}
+
+export function useUpdatePreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: UserPreferences) =>
+      api<{ preferences: UserPreferences }>("/me/preferences", {
+        method: "PATCH",
+        json: patch,
+      }).then((r) => r.preferences),
+    onSuccess: (prefs) => qc.setQueryData(keys.preferences, prefs),
+  });
+}
+
+/* ---------------------------------------------------------------- team (admins) */
+
+export function useTeam(enabled = true) {
+  return useQuery({
+    queryKey: ["team"],
+    queryFn: () => api<{ members: TeamMemberDto[] }>("/team").then((r) => r.members),
+    enabled,
+  });
+}
+
+export function useCreateMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TeamCreateInput) =>
+      api<{ member: TeamMemberDto }>("/team", { method: "POST", json: input }).then(
+        (r) => r.member,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useUpdateMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: TeamUpdateInput }) =>
+      api<{ member: TeamMemberDto }>(`/team/${id}`, { method: "PATCH", json: patch }).then(
+        (r) => r.member,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useDeleteMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/team/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
   });
 }

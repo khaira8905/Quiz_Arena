@@ -1,16 +1,24 @@
+import type { ImageFit, ImagePosition } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { QuestionType } from "./question-types";
 import type { ScoringMode } from "./scoring";
 
 /**
  * Game phases. The server owns every transition; clients only render the phase they
- * are told about. COUNTDOWN is the short "3-2-1" start sequence between LOBBY and Q1.
+ * are told about.
+ *
+ *   LOBBY → COUNTDOWN (3-2-1) → per question:
+ *     QUESTION_READING (question shown, answers closed) → QUESTION_ACTIVE (timer runs)
+ *     → QUESTION_LOCKED → [ANSWER_DISTRIBUTION] → ANSWER_REVEAL → [LEADERBOARD]
+ *   → FINISHED (host-paced podium: complete → 3rd → 2nd → 1st → full board)
  */
 export const GAME_PHASES = [
   "LOBBY",
   "COUNTDOWN",
+  "QUESTION_READING",
   "QUESTION_ACTIVE",
   "QUESTION_LOCKED",
+  "ANSWER_DISTRIBUTION",
   "ANSWER_REVEAL",
   "LEADERBOARD",
   "FINISHED",
@@ -19,16 +27,32 @@ export type GamePhase = (typeof GAME_PHASES)[number];
 
 export const HOST_COMMANDS = [
   "START",
+  /** Reading period → answers open and the timer starts. */
+  "OPEN_ANSWERS",
   "PAUSE",
   "RESUME",
+  /** ± seconds on the current (or about-to-open) question's timer; uses `amount`. */
+  "ADJUST_TIMER",
   "SKIP",
   "LOCK",
+  /** Locked → how the room answered, before the correct answer is shown. */
+  "SHOW_STATS",
   "REVEAL",
   "LEADERBOARD",
   "NEXT",
+  /** Final results: next podium beat (3rd → 2nd → 1st → full leaderboard). */
+  "PODIUM_NEXT",
   "END",
 ] as const;
 export type HostCommand = (typeof HOST_COMMANDS)[number];
+
+/** Reading period before answers open: none, a timed countdown, or until the host opens it. */
+export const READING_MODES = ["OFF", "TIMED", "MANUAL"] as const;
+export type ReadingMode = (typeof READING_MODES)[number];
+
+/** Beats of the final ceremony, advanced by the host. */
+export const PODIUM_STEPS = ["COMPLETE", "THIRD", "SECOND", "FIRST", "BOARD"] as const;
+export type PodiumStep = (typeof PODIUM_STEPS)[number];
 
 /** Settings that influence a live game, frozen into the session when it is created. */
 export interface LiveSettings {
@@ -41,6 +65,10 @@ export interface LiveSettings {
   participantLimit: number;
   soundEnabled: boolean;
   nicknameFilter: boolean;
+  readingMode: ReadingMode;
+  readingTimeSec: number;
+  leaderboardEvery: number;
+  autoRevealSec: number;
   appearance: ArenaAppearance;
 }
 
@@ -57,6 +85,10 @@ export interface PublicQuestion {
   type: QuestionType;
   text: string;
   imageUrl: string | null;
+  /** How the image sits in its frame, and a tiny blurred preview while it loads. */
+  imageFit: ImageFit;
+  imagePosition: ImagePosition;
+  imagePlaceholder: string | null;
   points: number;
   durationMs: number;
   options: PublicOption[];
@@ -160,6 +192,10 @@ export interface PlayerView {
   /** Top entries for the leaderboard phase / final screen. */
   leaderboard: LeaderboardEntry[] | null;
   explanation: string | null;
+  /** When a timed reading period ends (server time); null otherwise. */
+  readingEndsAt: number | null;
+  /** Final ceremony beat, so phones keep the suspense with the big screen. */
+  podiumStep: PodiumStep | null;
   soundEnabled: boolean;
   appearance: ArenaAppearance;
 }
@@ -190,7 +226,70 @@ export interface HostView {
   distribution: AnswerDistribution;
   leaderboard: LeaderboardEntry[];
   results: FinalResults | null;
+  readingEndsAt: number | null;
+  podiumStep: PodiumStep | null;
+  /** Lobby choice: one timer for every question, or null for per-question timers. */
+  timerOverrideSec: number | null;
   availableCommands: HostCommand[];
 }
 
-export type GameView = PlayerView | HostView;
+/**
+ * The stage. Exactly what the audience may see, built by the server with the same rules for
+ * the projector window and the host's projector preview: no answer key before the reveal,
+ * no distribution before the stats step, no player management or host-only data.
+ */
+export interface ProjectorView {
+  role: "projector";
+  code: string;
+  quizTitle: string;
+  coverImageUrl: string | null;
+  phase: GamePhase;
+  paused: boolean;
+  serverTime: number;
+  settings: Pick<
+    LiveSettings,
+    | "appearance"
+    | "soundEnabled"
+    | "showAnswerStats"
+    | "showCorrectAnswers"
+    | "showLeaderboard"
+    | "leaderboardEvery"
+  >;
+  countdownEndsAt: number | null;
+  readingEndsAt: number | null;
+  questionCount: number;
+  playerCount: number;
+  connectedCount: number;
+  /** Lobby roster (names only), capped. Empty once the game starts. */
+  lobbyPlayers: { id: string; nickname: string; connected: boolean }[];
+  question: PublicQuestion | null;
+  timer: TimerState | null;
+  answeredCount: number;
+  /** From the stats step on. */
+  distribution: AnswerDistribution | null;
+  /** From the reveal on (and only if the quiz shows correct answers). */
+  correctOptionIds: string[] | null;
+  explanation: string | null;
+  /** Leaderboard phase and final results. */
+  leaderboard: LeaderboardEntry[] | null;
+  results: FinalResults | null;
+  podiumStep: PodiumStep | null;
+  /** The next question's image, so the stage can load it before it's needed. */
+  nextImageUrl: string | null;
+}
+
+export type GameView = PlayerView | HostView | ProjectorView;
+
+/**
+ * Whether the leaderboard is due after question `index` (0-based): every Nth question and
+ * always after the last one. The host can still show it any time.
+ */
+export function leaderboardDue(
+  settings: Pick<LiveSettings, "showLeaderboard" | "leaderboardEvery">,
+  index: number,
+  total: number,
+): boolean {
+  if (!settings.showLeaderboard) return false;
+  const every = Math.max(1, settings.leaderboardEvery || 1);
+  return (index + 1) % every === 0 || index + 1 >= total;
+}

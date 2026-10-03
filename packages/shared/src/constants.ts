@@ -2,6 +2,10 @@
 export const TIMER_PRESETS = [5, 10, 15, 20, 30, 45, 60, 90, 120] as const;
 export const TIMER_MIN_SECONDS = 5;
 export const TIMER_MAX_SECONDS = 300;
+
+/** Reading period before answers open (when the quiz uses one). */
+export const READING_MIN_SECONDS = 2;
+export const READING_MAX_SECONDS = 30;
 export const DEFAULT_TIMER_SECONDS = 20;
 
 /** Point presets per question. 0 = practice question, 2000 = double points. */
@@ -21,6 +25,16 @@ export const EXPLANATION_MAX = 500;
 export const QUIZ_TITLE_MAX = 120;
 export const QUIZ_DESCRIPTION_MAX = 1000;
 export const MAX_QUESTIONS_PER_QUIZ = 100;
+
+/** Question bank metadata. */
+export const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
+export const TAG_MAX = 30;
+export const TAGS_MAX = 8;
+export const CATEGORY_MAX = 40;
+
+export const LEADERBOARD_EVERY_MAX = 20;
+export const AUTO_REVEAL_MAX_SECONDS = 30;
 
 /**
  * Game PINs look like QA482193: fixed prefix + 6 digits. Short enough to read aloud from a

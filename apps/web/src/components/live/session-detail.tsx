@@ -1,8 +1,6 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useCallback } from "react";
 import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { buttonClasses } from "@/components/ui/button-classes";
@@ -10,19 +8,12 @@ import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { isApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { useSession } from "@/lib/queries";
-import { LiveControl } from "./live-control";
+import { LiveSessionCard } from "./live-control";
 import { ResultsView } from "./results-view";
 
 /** Routes a session to the right view: live control, results, or an explanation. */
 export function SessionDetail({ id }: { id: string }) {
   const { data, isPending, isError, error, refetch } = useSession(id);
-  const qc = useQueryClient();
-  // A finished game changes the session, the lists and the dashboard's live count.
-  const onFinished = useCallback(() => {
-    void refetch();
-    void qc.invalidateQueries({ queryKey: ["sessions"] });
-    void qc.invalidateQueries({ queryKey: ["dashboard"] });
-  }, [qc, refetch]);
 
   if (isPending) {
     return (
@@ -57,7 +48,7 @@ export function SessionDetail({ id }: { id: string }) {
 
   const { session, live } = data;
   if (live && (session.status === "LOBBY" || session.status === "LIVE")) {
-    return <LiveControl session={session} onFinished={onFinished} />;
+    return <LiveSessionCard session={session} live={live} />;
   }
   if (session.status === "FINISHED") return <ResultsView session={session} />;
 

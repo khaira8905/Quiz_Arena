@@ -16,8 +16,9 @@ Target URLs (replace with yours):
 
 ```
 https://quiz-arena.vercel.app/            landing + join
-https://quiz-arena.vercel.app/admin       control room
-https://quiz-arena.vercel.app/host/QA482193 projector
+https://quiz-arena.vercel.app/admin       admin portal
+https://quiz-arena.vercel.app/host/QA482193            host control room (laptop)
+https://quiz-arena.vercel.app/host/QA482193/projector  projector stage (audience screen)
 https://quiz-arena.vercel.app/play        players
 https://quizarena-server.up.railway.app   game server (API + WebSocket)
 ```
@@ -79,6 +80,20 @@ DATABASE_URL=… SEED_ADMIN_EMAIL=you@org.edu SEED_ADMIN_PASSWORD='a long passwo
 
 Check `https://<server>/health` → `{"ok":true,…}`.
 
+### Images and Google Drive (optional)
+
+Image uploads in production need an S3-compatible bucket. Cloudflare R2 has 10 GB free;
+Supabase Storage has 1 GB. Without one, uploads are switched off and organisers can still
+paste image links.
+
+The Google Drive picker needs a Google OAuth client. Both are set as environment variables
+on the game server; the step-by-step setup is in **[MEDIA.md](MEDIA.md)**:
+
+```
+S3_ENDPOINT=…  S3_REGION=auto  S3_BUCKET=…  S3_ACCESS_KEY_ID=…  S3_SECRET_ACCESS_KEY=…  S3_PUBLIC_URL=…
+GOOGLE_CLIENT_ID=…  GOOGLE_CLIENT_SECRET=…  GOOGLE_REDIRECT_URI=https://<your-vercel-domain>/api/google/callback
+```
+
 ## 3. Frontend on Vercel
 
 1. Import the repo. **Root Directory: `apps/web`**. Framework preset: Next.js. Vercel detects pnpm
@@ -95,9 +110,11 @@ Check `https://<server>/health` → `{"ok":true,…}`.
 
 ## 4. Smoke test
 
-1. `/admin` → sign in → **Go live** on the sample quiz.
-2. Open the projector view; scan the QR with a phone; join.
-3. Start, answer, reveal, leaderboard, end. Check results and CSV export in Sessions.
+1. `/admin` → sign in → **Go live** on the sample quiz. The control room opens.
+2. Click **Open projector** and drag that window to the projector (or use **Fullscreen** on a
+   mirrored screen); scan the QR with a phone; join.
+3. Start → read → start timer → answer → lock → show answers → reveal → leaderboard → end →
+   reveal 3rd / 2nd / 1st → full leaderboard. Check results and CSV export in Results.
 
 Optional load check from your machine against production:
 

@@ -9,7 +9,7 @@ import {
   TIMER_PRESETS,
 } from "@quizarena/shared/constants";
 import type { QuizDto } from "@quizarena/shared/dto";
-import type { QuizUpdateInput } from "@quizarena/shared/schemas";
+import type { QuizSettings as QuizSettingsT, QuizUpdateInput } from "@quizarena/shared/schemas";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -32,8 +32,6 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
     setDraft((d) => ({ ...d, [key]: value }));
     schedule({ [key]: value } as QuizUpdateInput, immediate);
   };
-
-  const isPreset = (TIMER_PRESETS as readonly number[]).includes(draft.defaultTimerSec);
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
@@ -79,6 +77,27 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
         </Field>
       </Panel>
 
+      <SettingsPanels draft={draft} set={(k, v) => set(k, v as QuizDto[typeof k])} />
+    </div>
+  );
+}
+
+type SettingsValues = QuizSettingsT;
+
+/**
+ * The quiz settings controls, shared by a quiz's Settings tab and the organiser's defaults
+ * for new quizzes (admin Settings).
+ */
+export function SettingsPanels({
+  draft,
+  set,
+}: {
+  draft: SettingsValues;
+  set: <K extends keyof SettingsValues>(key: K, value: SettingsValues[K]) => void;
+}) {
+  const isPreset = (TIMER_PRESETS as readonly number[]).includes(draft.defaultTimerSec);
+  return (
+    <>
       <Panel
         title="Timing & scoring"
         description="Defaults for every question. Individual questions can override the timer."
@@ -128,6 +147,47 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
           </label>
         </div>
         <div>
+          <div className="label mb-3 text-fg-2">Reading period</div>
+          <Segmented<QuizDto["readingMode"]>
+            label="Reading period"
+            value={draft.readingMode}
+            onChange={(v) => set("readingMode", v)}
+            options={[
+              { value: "TIMED", label: "Countdown" },
+              { value: "MANUAL", label: "Host starts" },
+              { value: "OFF", label: "None" },
+            ]}
+          />
+          {draft.readingMode === "TIMED" && (
+            <div className="mt-3 flex flex-wrap gap-1" role="radiogroup" aria-label="Reading time">
+              {[3, 5, 8, 10, 15].map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.readingTimeSec === sec}
+                  onClick={() => set("readingTimeSec", sec)}
+                  className={cn(
+                    "numeric h-9 min-w-12 rounded-sm border px-3 text-body-sm font-bold transition-colors",
+                    draft.readingTimeSec === sec
+                      ? "border-accent bg-accent text-accent-ink"
+                      : "border-line bg-sunken text-fg-2 hover:text-fg",
+                  )}
+                >
+                  {sec}s
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-caption text-fg-3">
+            {draft.readingMode === "TIMED"
+              ? `Each question appears ${draft.readingTimeSec} seconds before answers open, so everyone reads it first. The host can open answers early.`
+              : draft.readingMode === "MANUAL"
+                ? "Each question appears with answers closed until you start the timer."
+                : "Answers open the moment each question appears."}
+          </p>
+        </div>
+        <div>
           <div className="label mb-3 text-fg-2">Scoring</div>
           <Segmented
             label="Scoring mode"
@@ -142,6 +202,23 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
             {draft.scoringMode === "SPEED"
               ? "Correct answers earn 50–100% of the question's points, the faster the better."
               : "Every correct answer earns the full points, regardless of speed."}
+          </p>
+        </div>
+        <div>
+          <div className="label mb-3 text-fg-2">After time&apos;s up</div>
+          <ChipGroup
+            label="Auto-reveal"
+            value={draft.autoRevealSec}
+            options={[0, 3, 5, 10].map((v) => ({
+              value: v,
+              label: v ? `Auto · ${v}s` : "Host reveals",
+            }))}
+            onChange={(v) => set("autoRevealSec", v)}
+          />
+          <p className="mt-2 text-caption text-fg-3">
+            {draft.autoRevealSec
+              ? `${draft.autoRevealSec} seconds after time's up, the answers show by themselves.`
+              : "The answers wait on the projector until you show them."}
           </p>
         </div>
         <Switch
@@ -171,6 +248,22 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
           checked={draft.showLeaderboard}
           onChange={(v) => set("showLeaderboard", v)}
         />
+        {draft.showLeaderboard && (
+          <div className="-mt-2">
+            <ChipGroup
+              label="Leaderboard frequency"
+              value={draft.leaderboardEvery}
+              options={[1, 2, 3, 5].map((v) => ({
+                value: v,
+                label: v === 1 ? "Every question" : `Every ${v}`,
+              }))}
+              onChange={(v) => set("leaderboardEvery", v)}
+            />
+            <p className="mt-2 text-caption text-fg-3">
+              The leaderboard is suggested on this schedule, and always after the last question.
+            </p>
+          </div>
+        )}
         <Switch
           label="Show correct answers"
           description="Reveal the right answer and explanation after each question."
@@ -217,6 +310,41 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
           )}
         </Field>
       </Panel>
+    </>
+  );
+}
+
+/** A row of small toggle chips for a handful of numeric choices. */
+function ChipGroup<T extends number>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "h-9 rounded-sm border px-3 text-body-sm font-bold transition-colors",
+            value === o.value
+              ? "border-accent bg-accent text-accent-ink"
+              : "border-line bg-sunken text-fg-2 hover:text-fg",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
