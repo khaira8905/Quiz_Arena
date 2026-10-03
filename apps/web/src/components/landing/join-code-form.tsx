@@ -3,14 +3,17 @@
 import { GAME_CODE_PATTERN, normalizeGameCode } from "@quizarena/shared/constants";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { pokeServer } from "@/lib/server-wake";
 
 export function JoinCodeForm() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const clean = normalizeGameCode(code);
   const complete = GAME_CODE_PATTERN.test(clean);
+  // Visitors on the landing page are about to play: start waking the game server now.
+  useEffect(pokeServer, []);
 
   return (
     <form

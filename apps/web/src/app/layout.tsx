@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans, Sora, Space_Grotesk } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { uiThemeBootScript, uiThemeCss } from "@/lib/ui-theme";
 import "./globals.css";
 
 /** Display face: geometric, wide and heavy — questions, codes, countdowns, scores. */
@@ -54,8 +55,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
+      data-ui-theme="BLACK"
+      // The boot script may switch the theme attribute before React hydrates.
+      suppressHydrationWarning
       className={`${sora.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jakarta.variable}`}
     >
+      <head>
+        {/* Static strings built on the server from the shared theme tokens. */}
+        <style dangerouslySetInnerHTML={{ __html: uiThemeCss() }} />
+        <script dangerouslySetInnerHTML={{ __html: uiThemeBootScript }} />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

@@ -11,6 +11,7 @@ import { PrismaGamePersistence, type GamePersistence } from "./game/persistence"
 import type { AppContext } from "./http/context";
 import { authRoutes } from "./http/routes/auth";
 import { quizRoutes } from "./http/routes/quizzes";
+import { importRoutes } from "./http/routes/imports";
 import { sessionRoutes } from "./http/routes/sessions";
 import { TokenService } from "./lib/auth";
 import { isAppError } from "./lib/errors";
@@ -141,6 +142,7 @@ export async function buildApp(
   authRoutes(app, ctx);
   quizRoutes(app, ctx);
   sessionRoutes(app, ctx);
+  importRoutes(app, ctx);
 
   app.addHook("onClose", async () => {
     games.shutdown();

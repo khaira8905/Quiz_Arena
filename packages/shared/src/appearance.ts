@@ -105,9 +105,11 @@ export const THEME_TOKENS: Record<ArenaTheme, ThemeTokens> = {
     textSecondary: "#3d4457",
     textMuted: "#5b6377",
     accent: "#2443ff",
-    success: "#0f9d58",
-    warning: "#b86e00",
-    danger: "#d92d3f",
+    // Darker than typical "light theme" status colours: small badge text must clear 4.5:1
+    // on white and on its own tinted badge background.
+    success: "#066b3a",
+    warning: "#8a5000",
+    danger: "#b01e2b",
     answers: ["#ff5233", "#2560f0", "#ffb000", "#8a3ffc"],
     floor: "#dde1eb",
     glow: "#2443ff",

@@ -2,12 +2,14 @@ import {
   QUESTION_TYPES,
   QUESTION_TYPE_RULES,
   MAX_QUESTIONS_PER_QUIZ,
+  questionImportSchema,
   questionInputSchema,
   questionIssues,
   questionUpdateSchema,
   quizCreateSchema,
   quizUpdateSchema,
   reorderSchema,
+  type QuestionInput,
   type QuestionType,
 } from "@quizarena/shared";
 import type { FastifyInstance } from "fastify";
@@ -28,6 +30,22 @@ const withQuestions = {
   ...counts,
   questions: { include: { options: true }, orderBy: { order: "asc" } },
 } as const;
+
+function questionCreateData(q: QuestionInput, order: number) {
+  return {
+    order,
+    type: q.type,
+    text: q.text,
+    imageUrl: q.imageUrl,
+    timeLimitSec: q.timeLimitSec,
+    points: q.points,
+    explanation: q.explanation,
+    randomizeAnswers: q.randomizeAnswers,
+    options: {
+      create: q.options.map((o, i) => ({ order: i, text: o.text, isCorrect: o.isCorrect })),
+    },
+  };
+}
 
 function defaultOptions(type: QuestionType) {
   const rules = QUESTION_TYPE_RULES[type];
@@ -83,14 +101,17 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
         ownerId: userId,
         title: input.title,
         description: input.description,
+        appearance: input.theme ? { theme: input.theme } : Prisma.JsonNull,
         questions: {
-          create: {
-            order: 0,
-            type: "MULTIPLE_CHOICE",
-            options: {
-              create: defaultOptions("MULTIPLE_CHOICE").map((o, i) => ({ ...o, order: i })),
-            },
-          },
+          create: input.questions
+            ? input.questions.map((q, order) => questionCreateData(q, order))
+            : {
+                order: 0,
+                type: "MULTIPLE_CHOICE",
+                options: {
+                  create: defaultOptions("MULTIPLE_CHOICE").map((o, i) => ({ ...o, order: i })),
+                },
+              },
         },
       },
       include: withQuestions,
@@ -225,6 +246,44 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     });
     await touchQuiz(id);
     return reply.code(201).send({ question: questionDto(question) });
+  });
+
+  /**
+   * Bulk add from a spreadsheet import, in one transaction: either every question lands or
+   * none does. The untouched blank question a new quiz starts with is replaced, not kept.
+   */
+  app.post("/api/quizzes/:id/questions/import", async (req, reply) => {
+    const userId = await requireUser(ctx, req);
+    const { id } = idParams.parse(req.params);
+    const { questions } = questionImportSchema.parse(req.body);
+    const quiz = await ownedQuiz(userId, id);
+    const blank = quiz.questions.filter(
+      (q) => !q.text.trim() && q.options.every((o) => !o.text.trim()) && !q.imageUrl,
+    );
+    const kept = quiz.questions.length - blank.length;
+    if (kept + questions.length > MAX_QUESTIONS_PER_QUIZ) {
+      throw new AppError(
+        "BAD_REQUEST",
+        `A quiz can have at most ${MAX_QUESTIONS_PER_QUIZ} questions. This quiz has room for ${
+          MAX_QUESTIONS_PER_QUIZ - kept
+        } more.`,
+      );
+    }
+    await ctx.db.$transaction(async (tx) => {
+      if (blank.length)
+        await tx.question.deleteMany({ where: { id: { in: blank.map((q) => q.id) } } });
+      // Renumber what's left so imported questions follow on without gaps.
+      const remaining = quiz.questions.filter((q) => !blank.includes(q));
+      for (const [order, q] of remaining.entries()) {
+        if (q.order !== order) await tx.question.update({ where: { id: q.id }, data: { order } });
+      }
+      for (const [i, q] of questions.entries()) {
+        await tx.question.create({ data: { quizId: id, ...questionCreateData(q, kept + i) } });
+      }
+      await tx.quiz.update({ where: { id }, data: { updatedAt: new Date() } });
+    });
+    const updated = await ctx.db.quiz.findUniqueOrThrow({ where: { id }, include: withQuestions });
+    return reply.code(201).send({ quiz: quizDto(updated), imported: questions.length });
   });
 
   app.put("/api/quizzes/:id/questions/order", async (req) => {

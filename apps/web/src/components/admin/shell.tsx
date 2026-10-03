@@ -7,7 +7,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/brand/logo";
-import { Skeleton } from "@/components/ui/misc";
+import { Skeleton, Spinner } from "@/components/ui/misc";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useDashboard, useLogout, useMe } from "@/lib/queries";
@@ -31,9 +32,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const setDrawer = (open: boolean) => setDrawerPath(open ? pathname : null);
 
   const unauthorized = me.isError && isApiError(me.error) && me.error.status === 401;
+  // Keep trying in the background once the wake-up budget is spent (the copy promises it).
+  const down = me.isError && !unauthorized;
+  useEffect(() => {
+    if (!down) return;
+    const t = setInterval(() => void me.refetch(), 15_000);
+    return () => clearInterval(t);
+  }, [down, me]);
   useEffect(() => {
     if (unauthorized) router.replace(`/admin/login?next=${encodeURIComponent(pathname)}`);
   }, [unauthorized, pathname, router]);
+
+  // First request failed because the free server is asleep: say so instead of a blank skeleton.
+  if (me.isPending && me.failureCount > 0) return <WakingScreen />;
 
   if (me.isPending || unauthorized) {
     return (
@@ -60,8 +71,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div>
           <p className="label text-danger">Server unavailable</p>
           <h1 className="mt-3 font-display text-h1">Can&apos;t reach the control room</h1>
-          <p className="mt-2 text-fg-2">
-            The API isn&apos;t responding. It will retry automatically.
+          <p className="mt-2 max-w-md text-fg-2">
+            The game server didn&apos;t wake up. It retries every 15 seconds; if this persists,
+            check the server&apos;s status in your hosting dashboard.
           </p>
           <button
             className="label mt-6 text-accent underline-offset-4 hover:underline"
@@ -201,6 +213,10 @@ function Sidebar({ userName, email }: { userName: string; email: string }) {
         })}
       </ul>
       <div className="mt-auto border-t border-line p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <span className="label text-fg-3">Theme</span>
+          <ThemeSwitcher />
+        </div>
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center bg-elevated font-display text-body font-bold text-accent notch-sm">
             {userName.slice(0, 1).toUpperCase()}
@@ -212,7 +228,7 @@ function Sidebar({ userName, email }: { userName: string; email: string }) {
           <button
             aria-label="Sign out"
             title="Sign out"
-            className="rounded-sm p-2 text-fg-3 transition-colors hover:text-fg"
+            className="grid h-9 w-9 place-items-center rounded-md text-fg-3 transition-colors hover:text-fg pointer-coarse:h-11 pointer-coarse:w-11"
             onClick={() =>
               logout.mutate(undefined, { onSettled: () => router.replace("/admin/login") })
             }
@@ -222,5 +238,21 @@ function Sidebar({ userName, email }: { userName: string; email: string }) {
         </div>
       </div>
     </nav>
+  );
+}
+
+/** Shown while a sleeping free-tier server boots (usually 20-60 seconds). */
+export function WakingScreen() {
+  return (
+    <div className="grid min-h-dvh place-items-center p-6 text-center" role="status">
+      <div className="flex flex-col items-center">
+        <Spinner className="h-8 w-8" />
+        <p className="label mt-6 text-accent">Waking up the server</p>
+        <h1 className="mt-3 font-display text-h1">One moment</h1>
+        <p className="mt-2 max-w-sm text-fg-2">
+          The game server sleeps when nobody is using it. It takes up to a minute to start.
+        </p>
+      </div>
+    </div>
   );
 }

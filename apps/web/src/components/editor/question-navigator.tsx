@@ -19,7 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { questionIssues } from "@quizarena/shared/schemas";
 import type { QuestionDto } from "@quizarena/shared/dto";
-import { GripVertical, ListChecks, Plus, ToggleLeft } from "lucide-react";
+import { FileUp, GripVertical, ListChecks, Plus, ToggleLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 export function QuestionNavigator({
@@ -28,6 +28,7 @@ export function QuestionNavigator({
   onSelect,
   onReorder,
   onAdd,
+  onImport,
   adding,
   defaultTimerSec,
 }: {
@@ -36,6 +37,7 @@ export function QuestionNavigator({
   onSelect: (id: string) => void;
   onReorder: (ids: string[]) => void;
   onAdd: (type: QuestionDto["type"]) => void;
+  onImport: () => void;
   adding: boolean;
   defaultTimerSec: number;
 }) {
@@ -88,6 +90,12 @@ export function QuestionNavigator({
           className="flex h-10 items-center justify-center gap-1.5 border border-dashed border-line-strong text-body-sm font-semibold text-fg-2 transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
         >
           <Plus className="h-3.5 w-3.5" /> True/False
+        </button>
+        <button
+          onClick={onImport}
+          className="col-span-2 flex h-10 items-center justify-center gap-1.5 border border-dashed border-line-strong text-body-sm font-semibold text-fg-2 transition-colors hover:border-accent hover:text-accent"
+        >
+          <FileUp className="h-3.5 w-3.5" /> Import from file or Google Drive
         </button>
       </div>
     </nav>

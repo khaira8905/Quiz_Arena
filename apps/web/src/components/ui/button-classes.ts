@@ -8,7 +8,7 @@ export type Size = "sm" | "md" | "lg" | "xl" | "icon";
 const variants: Record<Variant, string> = {
   primary: "bg-accent text-accent-ink hover:bg-accent-strong",
   secondary:
-    "bg-elevated text-fg border border-line-strong hover:border-fg-3 hover:bg-[color-mix(in_oklab,var(--surface-elevated)_80%,white_4%)]",
+    "bg-elevated text-fg border border-line-strong hover:border-fg-3 hover:bg-[color-mix(in_oklab,var(--surface-elevated)_92%,var(--text-primary))]",
   outline: "border border-line-strong text-fg hover:border-fg-2",
   ghost: "text-fg-2 hover:text-fg hover:bg-elevated",
   danger: "bg-danger text-white hover:brightness-110",

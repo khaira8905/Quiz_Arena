@@ -16,6 +16,7 @@ import { useGoLive } from "@/components/admin/use-go-live";
 import { QuestionEditor } from "./question-editor";
 import { QuestionNavigator } from "./question-navigator";
 import { ArenaCustomizer } from "./arena-customizer";
+import { ImportQuestionsDialog } from "./import-dialog";
 import { QuizSettings } from "./quiz-settings";
 import { SaveStatus, SaveTracker, useSaveTracker } from "./save-tracker";
 
@@ -39,6 +40,7 @@ function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) 
   const { data: quiz, isPending, isError, error, refetch } = useQuiz(id);
   const [tab, setTab] = useState<EditorTab>(initialTab);
   const [selected, setSelected] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const addQuestion = useAddQuestion(id);
   const reorder = useReorderQuestions(id);
   const updateQuiz = useUpdateQuiz(id);
@@ -206,6 +208,7 @@ function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) 
               onSelect={setSelected}
               onReorder={(ids) => void track(reorder.mutateAsync(ids)).catch(() => {})}
               adding={addQuestion.isPending}
+              onImport={() => setImporting(true)}
               defaultTimerSec={quiz.defaultTimerSec}
               onAdd={(type) =>
                 void track(addQuestion.mutateAsync({ type })).then(
@@ -240,6 +243,16 @@ function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) 
           )}
         </div>
       )}
+      <ImportQuestionsDialog
+        open={importing}
+        onOpenChange={setImporting}
+        quizId={id}
+        onImported={(updated) => {
+          // Jump to the first newly imported question.
+          const known = new Set(questions.map((q) => q.id));
+          setSelected(updated.questions.find((q) => !known.has(q.id))?.id ?? null);
+        }}
+      />
     </div>
   );
 }

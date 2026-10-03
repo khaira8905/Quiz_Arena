@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { isApiError } from "@/lib/api";
 import { useCreateQuiz } from "@/lib/queries";
+import { uiThemeStore } from "@/lib/ui-theme";
 
 export function CreateQuizDialog({
   open,
@@ -33,7 +34,8 @@ export function CreateQuizDialog({
         onSubmit={(e) => {
           e.preventDefault();
           create.mutate(
-            { title, description },
+            // New quizzes start in the theme the host is using.
+            { title, description, theme: uiThemeStore.get() },
             {
               onSuccess: (quiz) => {
                 onOpenChange(false);
