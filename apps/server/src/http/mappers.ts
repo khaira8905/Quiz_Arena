@@ -14,6 +14,7 @@ export const userDto = (u: User): UserDto => ({
   id: u.id,
   email: u.email,
   name: u.name,
+  role: u.role,
   createdAt: u.createdAt.toISOString(),
 });
 

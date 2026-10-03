@@ -22,6 +22,9 @@ the moment the timer hits zero.
 **Admin portal** (`/admin`)
 
 - Sign-in, dashboard (quizzes, sessions, participants, live now), quiz library with filters
+- **Team** (admins): create sign-ins (email + password) for other people and share them, with
+  no email verification. Reset passwords, make admin / organiser, disable or delete. Each person
+  only sees their own quizzes
 - Three-pane question editor: navigator with drag-and-drop ordering (keyboard accessible),
   question workspace, and settings rail; autosave with an honest save-status line
 - Multiple choice (2–4 options) and true/false; per-question timer, points, explanation, answer

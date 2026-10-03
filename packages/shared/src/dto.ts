@@ -10,11 +10,21 @@ import type { QuizSettings } from "./schemas";
 export type QuizStatus = "DRAFT" | "PUBLISHED";
 export type SessionStatus = "LOBBY" | "LIVE" | "FINISHED" | "ABANDONED";
 
+export type UserRole = "ADMIN" | "ORGANISER";
+
 export interface UserDto {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
   createdAt: string;
+}
+
+/** A person on the team, as an admin sees them. Passwords are never returned. */
+export interface TeamMemberDto extends UserDto {
+  disabled: boolean;
+  lastLoginAt: string | null;
+  quizCount: number;
 }
 
 export interface OptionDto {

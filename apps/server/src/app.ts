@@ -12,6 +12,7 @@ import { PrismaGamePersistence, type GamePersistence } from "./game/persistence"
 import type { AppContext } from "./http/context";
 import { authRoutes } from "./http/routes/auth";
 import { bankRoutes } from "./http/routes/bank";
+import { teamRoutes } from "./http/routes/team";
 import { quizRoutes } from "./http/routes/quizzes";
 import { importRoutes } from "./http/routes/imports";
 import { googleRoutes, type GoogleContext } from "./http/routes/google";
@@ -175,6 +176,7 @@ export async function buildApp(
   mediaRoutes(app, ctx);
   googleRoutes(app, ctx);
   bankRoutes(app, ctx);
+  teamRoutes(app, ctx);
 
   app.addHook("onClose", async () => {
     games.shutdown();

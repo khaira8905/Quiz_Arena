@@ -67,6 +67,13 @@ export class GameManager {
     return undefined;
   }
 
+  /** Whether this organiser is hosting a game that hasn't finished. */
+  hasActiveGameFor(hostId: string): boolean {
+    for (const room of this.rooms.values())
+      if (room.hostId === hostId && room.currentPhase !== "FINISHED") return true;
+    return false;
+  }
+
   remove(code: string) {
     this.rooms.get(code)?.dispose();
     this.rooms.delete(code);

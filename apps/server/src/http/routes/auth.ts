@@ -24,7 +24,11 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       throttle.failed(key);
       throw new AppError("UNAUTHORIZED", "Email or password is incorrect.");
     }
+    if (user.disabled) {
+      throw new AppError("FORBIDDEN", "This account has been disabled. Ask your admin.");
+    }
     throttle.succeeded(key);
+    await ctx.db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     setSessionCookie(
       ctx,
       reply,
@@ -40,11 +44,14 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
     const input = registerSchema.parse(req.body);
     const exists = await ctx.db.user.findUnique({ where: { email: input.email } });
     if (exists) throw new AppError("CONFLICT", "An account with that email already exists.");
+    // The very first account on a server runs it; later self-registrations are organisers.
+    const first = (await ctx.db.user.count()) === 0;
     const user = await ctx.db.user.create({
       data: {
         email: input.email,
         name: input.name,
         passwordHash: await passwords.run(() => hashPassword(input.password)),
+        role: first ? "ADMIN" : "ORGANISER",
       },
     });
     setSessionCookie(

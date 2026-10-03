@@ -87,6 +87,31 @@ export const profileUpdateSchema = z
   });
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 
+/* ------------------------------------------------------------------ team (admins only) */
+
+const teamPassword = z.string().min(10, "Use at least 10 characters").max(200);
+
+/** An admin creates a sign-in for someone else. No email verification: it works at once. */
+export const teamCreateSchema = z.object({
+  email: z
+    .email("Enter a valid email address")
+    .max(254)
+    .transform((e) => e.toLowerCase()),
+  name: plainText(80).pipe(z.string().min(1, "Enter a name")),
+  password: teamPassword,
+  role: z.enum(["ADMIN", "ORGANISER"]).default("ORGANISER"),
+});
+export type TeamCreateInput = z.infer<typeof teamCreateSchema>;
+
+export const teamUpdateSchema = z.object({
+  name: plainText(80).pipe(z.string().min(1)).optional(),
+  role: z.enum(["ADMIN", "ORGANISER"]).optional(),
+  disabled: z.boolean().optional(),
+  /** Sets a new password and signs the person out everywhere. */
+  password: teamPassword.optional(),
+});
+export type TeamUpdateInput = z.infer<typeof teamUpdateSchema>;
+
 /* ------------------------------------------------------------------ quizzes */
 
 export const timerSeconds = z.number().int().min(TIMER_MIN_SECONDS).max(TIMER_MAX_SECONDS);

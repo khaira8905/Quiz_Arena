@@ -35,6 +35,11 @@ enum ReadingMode {
   MANUAL
 }
 
+enum UserRole {
+  ADMIN
+  ORGANISER
+}
+
 enum Difficulty {
   EASY
   MEDIUM
@@ -71,6 +76,11 @@ model User {
   passwordHash String
   /// Embedded in session tokens; bumping it (password change) signs out every other device.
   sessionVersion Int    @default(0)
+  /// ADMIN manages the team (creates sign-ins for other people); ORGANISER runs quizzes.
+  role         UserRole @default(ORGANISER)
+  /// Disabled accounts can't sign in, and their sessions stop working at once.
+  disabled     Boolean  @default(false)
+  lastLoginAt  DateTime?
   /// Organiser defaults for new quizzes: { appearance?, quizDefaults? } (userPreferencesSchema).
   preferences  Json     @default("{}")
   createdAt    DateTime @default(now())

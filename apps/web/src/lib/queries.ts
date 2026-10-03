@@ -12,12 +12,15 @@ import type {
   QuizSummaryDto,
   SessionResultsDto,
   SessionSummaryDto,
+  TeamMemberDto,
   UserDto,
 } from "@quizarena/shared/dto";
 import type { MediaAssetDto, MediaConfigDto } from "@quizarena/shared/media";
 import type {
   QuestionUpdateInput,
   QuizUpdateInput,
+  TeamCreateInput,
+  TeamUpdateInput,
   UserPreferences,
 } from "@quizarena/shared/schemas";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
@@ -406,5 +409,45 @@ export function useUpdatePreferences() {
         json: patch,
       }).then((r) => r.preferences),
     onSuccess: (prefs) => qc.setQueryData(keys.preferences, prefs),
+  });
+}
+
+/* ---------------------------------------------------------------- team (admins) */
+
+export function useTeam(enabled = true) {
+  return useQuery({
+    queryKey: ["team"],
+    queryFn: () => api<{ members: TeamMemberDto[] }>("/team").then((r) => r.members),
+    enabled,
+  });
+}
+
+export function useCreateMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TeamCreateInput) =>
+      api<{ member: TeamMemberDto }>("/team", { method: "POST", json: input }).then(
+        (r) => r.member,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useUpdateMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: TeamUpdateInput }) =>
+      api<{ member: TeamMemberDto }>(`/team/${id}`, { method: "PATCH", json: patch }).then(
+        (r) => r.member,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
+  });
+}
+
+export function useDeleteMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/team/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team"] }),
   });
 }

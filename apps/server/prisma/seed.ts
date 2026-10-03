@@ -82,6 +82,7 @@ async function main() {
       email,
       name: process.env.SEED_ADMIN_NAME ?? "Arena Admin",
       passwordHash: await hashPassword(password),
+      role: "ADMIN",
     },
   });
 

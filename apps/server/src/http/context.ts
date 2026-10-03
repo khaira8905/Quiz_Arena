@@ -25,10 +25,19 @@ export async function requireUser(ctx: AppContext, req: FastifyRequest): Promise
   // A password change bumps sessionVersion, which retires every session issued before it.
   const user = await ctx.db.user.findUnique({
     where: { id: session.userId },
-    select: { sessionVersion: true },
+    select: { sessionVersion: true, disabled: true },
   });
-  if (!user || user.sessionVersion !== session.version) throw new AppError("UNAUTHORIZED");
+  if (!user || user.disabled || user.sessionVersion !== session.version)
+    throw new AppError("UNAUTHORIZED");
   return session.userId;
+}
+
+/** Like requireUser, but only for admins (team management). */
+export async function requireAdmin(ctx: AppContext, req: FastifyRequest): Promise<string> {
+  const userId = await requireUser(ctx, req);
+  const user = await ctx.db.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role !== "ADMIN") throw new AppError("FORBIDDEN", "Only admins can manage the team.");
+  return userId;
 }
 
 export function setSessionCookie(
