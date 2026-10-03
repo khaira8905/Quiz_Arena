@@ -72,9 +72,11 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
           </p>
           <p className="label mt-0.5 text-fg-3">Game {view.code}</p>
         </div>
-        <div className="text-right">
+        <div className="relative text-right">
+          <ScoreGain score={view.me.score} />
           <AnimatedNumber
             value={view.me.score}
+            duration={1.1}
             className="numeric block text-xl font-extrabold leading-none"
           />
           <span className="label text-fg-3">
@@ -171,6 +173,38 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
         onConfirm={game.leave}
       />
     </div>
+  );
+}
+
+/**
+ * "+850" that pops beside the score when points land, then floats away while the score
+ * counts up underneath it.
+ */
+function ScoreGain({ score }: { score: number }) {
+  const reduced = useReducedMotion();
+  const prev = useRef(score);
+  const [gain, setGain] = useState<{ id: number; amount: number } | null>(null);
+  useEffect(() => {
+    const delta = score - prev.current;
+    prev.current = score;
+    if (delta > 0) setGain({ id: Date.now(), amount: delta });
+  }, [score]);
+  return (
+    <AnimatePresence>
+      {gain && !reduced && (
+        <motion.span
+          key={gain.id}
+          aria-hidden
+          className="numeric pointer-events-none absolute -top-1 right-full mr-2 whitespace-nowrap rounded-sm bg-success px-1.5 py-0.5 text-body-sm font-extrabold text-inverse"
+          initial={{ opacity: 0, y: 8, scale: 0.6 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, -14], scale: [0.6, 1.12, 1, 1] }}
+          transition={{ duration: 1.8, times: [0, 0.15, 0.7, 1], ease: "easeOut" }}
+          onAnimationComplete={() => setGain(null)}
+        >
+          +{gain.amount.toLocaleString()}
+        </motion.span>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -582,7 +616,8 @@ function RevealScreen({ view }: { view: PlayerView }) {
                   ? "border-success bg-success-soft"
                   : tileState(o.id) === "wrong"
                     ? "border-danger/60 bg-danger-soft"
-                    : "border-line opacity-50",
+                    : // Dimmed by colour, not opacity, so the text stays readable in every theme.
+                      "border-line text-fg-2",
               )}
             >
               <span
@@ -590,6 +625,7 @@ function RevealScreen({ view }: { view: PlayerView }) {
                   "grid h-9 w-9 shrink-0 place-items-center font-display font-extrabold",
                   answerStyle(i).bg,
                   answerStyle(i).ink,
+                  tileState(o.id) === "dimmed" && "opacity-40 saturate-50",
                 )}
               >
                 {answerStyle(i).letter}

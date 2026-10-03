@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 import { memo, useMemo } from "react";
 import { answerStyle } from "@/components/game/answer-style";
 import { QuestionImage } from "@/components/media/question-image";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Select } from "@/components/ui/field";
 import { Segmented, Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/cn";
@@ -39,7 +40,11 @@ export function StatusPanel({ view }: { view: HostView }) {
         <TimeLeft view={view} />
       </Cell>
       <Cell label="Players">
-        <span className="numeric text-h3 font-extrabold">{view.connectedCount}</span>
+        <AnimatedNumber
+          value={view.connectedCount}
+          duration={0.5}
+          className="numeric text-h3 font-extrabold"
+        />
         {view.playerCount !== view.connectedCount && (
           <span className="ml-1.5 text-body-sm text-fg-3">
             +{view.playerCount - view.connectedCount} offline
@@ -47,11 +52,15 @@ export function StatusPanel({ view }: { view: HostView }) {
         )}
       </Cell>
       <Cell label="Answered">
-        <span className="numeric text-h3 font-extrabold">
-          {answering || view.phase === "ANSWER_DISTRIBUTION" || view.phase === "ANSWER_REVEAL"
-            ? view.answeredCount
-            : "—"}
-        </span>
+        {answering || view.phase === "ANSWER_DISTRIBUTION" || view.phase === "ANSWER_REVEAL" ? (
+          <AnimatedNumber
+            value={view.answeredCount}
+            duration={0.4}
+            className="numeric text-h3 font-extrabold"
+          />
+        ) : (
+          <span className="numeric text-h3 font-extrabold">—</span>
+        )}
       </Cell>
       <Cell label="Waiting" last>
         <span
@@ -129,7 +138,14 @@ export function QuestionPanel({ view }: { view: HostView }) {
   const total = Object.values(view.distribution).reduce((a, b) => a + b, 0);
   const correct = new Set(view.correctOptionIds ?? []);
   return (
-    <section className="border border-line bg-surface" aria-label="Current question">
+    <motion.section
+      key={q.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="border border-line bg-surface"
+      aria-label="Current question"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <span className="label text-fg-3">
           Question <span className="text-accent">{pad2(q.index + 1)}</span> / {pad2(q.total)} ·{" "}
@@ -204,7 +220,7 @@ export function QuestionPanel({ view }: { view: HostView }) {
           </div>
         )}
       </div>
-    </section>
+    </motion.section>
   );
 }
 

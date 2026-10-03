@@ -112,8 +112,9 @@ export function PodiumCeremony({
                   transition={{ delay: 0.6 }}
                   className="mt-[2vh] text-[clamp(1rem,1.6vw,3.2rem)] text-fg-2"
                 >
-                  {results.participantCount} players · {results.playedQuestions} questions · the
-                  podium is next
+                  {results.participantCount} {results.participantCount === 1 ? "player" : "players"}{" "}
+                  · {results.playedQuestions}{" "}
+                  {results.playedQuestions === 1 ? "question" : "questions"} · the podium is next
                 </motion.p>
               )}
             </div>
@@ -210,9 +211,15 @@ function PodiumColumn({
         animate={{ height: visible ? height : "4vh" }}
         transition={{ type: "spring", stiffness: 90, damping: 18 }}
       >
-        <span className="numeric text-[clamp(2rem,5vw,10rem)] font-extrabold leading-none">
+        {/* The place number appears with its plinth, never clipped on an empty one. */}
+        <motion.span
+          className="numeric text-[clamp(2rem,5vw,10rem)] font-extrabold leading-none"
+          initial={false}
+          animate={{ opacity: visible ? 1 : 0 }}
+          transition={{ delay: visible && !reduced ? 0.25 : 0, duration: 0.4 }}
+        >
           {place}
-        </span>
+        </motion.span>
       </motion.div>
     </div>
   );

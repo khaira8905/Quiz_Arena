@@ -249,7 +249,18 @@ export function HostControlRoom({ code }: { code: string }) {
                   loading={busy === primary}
                   onClick={() => request(primary)}
                 >
-                  {COMMAND_LABELS[primary]} <ArrowRight className="h-5 w-5" />
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={primary}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.18 }}
+                      className="inline-flex items-center gap-3"
+                    >
+                      {COMMAND_LABELS[primary]} <ArrowRight className="h-5 w-5" />
+                    </motion.span>
+                  </AnimatePresence>
                   <Kbd onAccent>Space</Kbd>
                 </Button>
               ) : (
