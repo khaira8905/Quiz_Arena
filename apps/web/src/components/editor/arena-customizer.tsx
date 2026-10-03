@@ -95,6 +95,8 @@ export function ArenaCustomizer({ quiz }: { quiz: QuizDto }) {
       participantLimit: quiz.participantLimit,
       soundEnabled: sound,
       nicknameFilter: quiz.nicknameFilter,
+      readingMode: quiz.readingMode,
+      readingTimeSec: quiz.readingTimeSec,
     },
     question: sample
       ? {

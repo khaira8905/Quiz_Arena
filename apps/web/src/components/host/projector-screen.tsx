@@ -82,8 +82,10 @@ export function ProjectorScreen({
         <AnimatePresence mode="wait">
           <motion.div
             key={
+              view.phase === "QUESTION_READING" ||
               view.phase === "QUESTION_ACTIVE" ||
               view.phase === "QUESTION_LOCKED" ||
+              view.phase === "ANSWER_DISTRIBUTION" ||
               view.phase === "ANSWER_REVEAL"
                 ? "question"
                 : view.phase
@@ -135,8 +137,10 @@ function Stage({ view, sound }: { view: HostView; sound: boolean }) {
           sound={sound}
         />
       );
+    case "QUESTION_READING":
     case "QUESTION_ACTIVE":
     case "QUESTION_LOCKED":
+    case "ANSWER_DISTRIBUTION":
     case "ANSWER_REVEAL":
       return view.question ? (
         <StageQuestion

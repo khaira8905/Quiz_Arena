@@ -6,6 +6,7 @@ import type {
   HostView,
   JoinResult,
   PlayerView,
+  ProjectorView,
   ServerToClientEvents,
 } from "@quizarena/shared";
 import { io as connect, type Socket } from "socket.io-client";
@@ -54,12 +55,12 @@ function call<T>(
   });
 }
 
-function nextState<T extends PlayerView | HostView>(
+function nextState<T extends PlayerView | HostView | ProjectorView>(
   socket: Client,
   predicate: (v: T) => boolean,
 ): Promise<T> {
   return new Promise((resolve) => {
-    const handler = (view: PlayerView | HostView) => {
+    const handler = (view: PlayerView | HostView | ProjectorView) => {
       if (predicate(view as T)) {
         socket.off("session:state", handler);
         resolve(view as T);
@@ -134,6 +135,42 @@ describe("socket gateway", () => {
 
     const host = await client({ ticket: await tokens.signSocketTicket("host_1") });
     expect(await call(host, "host:attach", { code: "QA123456" })).toMatchObject({ ok: true });
+  });
+
+  it("serves the stage only to the host, and only audience-safe data", async () => {
+    createGame({ readingMode: "OFF" });
+    const anonymous = await client();
+    expect(await call(anonymous, "projector:attach", { code: "QA123456" })).toMatchObject({
+      ok: false,
+      error: { code: "UNAUTHORIZED" },
+    });
+    const intruder = await client({ ticket: await tokens.signSocketTicket("someone_else") });
+    expect(await call(intruder, "projector:attach", { code: "QA123456" })).toMatchObject({
+      ok: false,
+      error: { code: "FORBIDDEN" },
+    });
+
+    const host = await client({ ticket: await tokens.signSocketTicket("host_1") });
+    const stage = await client({ ticket: await tokens.signSocketTicket("host_1") });
+    await call(host, "host:attach", { code: "QA123456" });
+    const attached = await call<ProjectorView>(stage, "projector:attach", { code: "QA123456" });
+    expect(attached).toMatchObject({ ok: true, data: { role: "projector", phase: "LOBBY" } });
+
+    const p = await client();
+    const joined = nextState<ProjectorView>(
+      stage,
+      (v) => v.role === "projector" && v.phase === "QUESTION_ACTIVE",
+    );
+    await call<JoinResult>(p, "session:join", { code: "QA123456", nickname: "Ada" });
+    await call(host, "host:command", { code: "QA123456", command: "START" });
+    const live = await joined;
+    expect(live.correctOptionIds).toBeNull();
+    expect(live.question?.options).toHaveLength(4);
+    expect(live).not.toHaveProperty("players");
+    // A projector socket can't drive the game.
+    expect(
+      await call(stage, "host:settings", { code: "QA123456", patch: { theme: "WHITE" } }),
+    ).toMatchObject({ ok: false, error: { code: "COMMAND_NOT_ALLOWED" } });
   });
 
   it("plays a full round over real sockets without leaking answers", async () => {

@@ -35,8 +35,10 @@ import { play, setSoundEnabled, soundPreference, unlockAudio } from "@/lib/sound
 const PHASE_LABEL: Record<HostView["phase"], string> = {
   LOBBY: "Lobby",
   COUNTDOWN: "Starting",
+  QUESTION_READING: "Reading",
   QUESTION_ACTIVE: "Question live",
   QUESTION_LOCKED: "Answers locked",
+  ANSWER_DISTRIBUTION: "Showing answers",
   ANSWER_REVEAL: "Answer revealed",
   LEADERBOARD: "Leaderboard",
   FINISHED: "Finished",

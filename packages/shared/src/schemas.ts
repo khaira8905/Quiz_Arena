@@ -15,10 +15,12 @@ import {
   QUIZ_TITLE_MAX,
   TIMER_MAX_SECONDS,
   TIMER_MIN_SECONDS,
+  READING_MAX_SECONDS,
+  READING_MIN_SECONDS,
   normalizeGameCode,
 } from "./constants";
-import { ARENA_THEMES, arenaAppearanceSchema } from "./appearance";
-import { GAME_PHASES, HOST_COMMANDS } from "./game";
+import { ARENA_THEMES, MOTION_LEVELS, arenaAppearanceSchema } from "./appearance";
+import { GAME_PHASES, HOST_COMMANDS, READING_MODES } from "./game";
 import { QUESTION_TYPES, QUESTION_TYPE_RULES } from "./question-types";
 import { SCORING_MODES } from "./scoring";
 
@@ -94,6 +96,8 @@ export const quizSettingsSchema = z.object({
     .default(PARTICIPANT_LIMIT_DEFAULT),
   soundEnabled: z.boolean().default(true),
   nicknameFilter: z.boolean().default(true),
+  readingMode: z.enum(READING_MODES).default("TIMED"),
+  readingTimeSec: z.number().int().min(READING_MIN_SECONDS).max(READING_MAX_SECONDS).default(5),
 });
 export type QuizSettings = z.infer<typeof quizSettingsSchema>;
 
@@ -227,6 +231,34 @@ export const hostCommandSchema = z.object({
   expected: z
     .object({ phase: z.enum(GAME_PHASES), questionIndex: z.number().int().min(-1).max(1000) })
     .optional(),
+  /** ADJUST_TIMER: seconds to add (negative removes). */
+  amount: z.number().int().min(-120).max(120).optional(),
+});
+
+/**
+ * Settings the host may still change in the lobby, before anything has been played. Applied
+ * to the running session only; the quiz itself is untouched.
+ */
+export const liveSettingsPatchSchema = z
+  .object({
+    readingMode: z.enum(READING_MODES),
+    readingTimeSec: z.number().int().min(READING_MIN_SECONDS).max(READING_MAX_SECONDS),
+    /** One timer for every question, overriding the per-question timers; null restores them. */
+    timerOverrideSec: timerSeconds.nullable(),
+    showLeaderboard: z.boolean(),
+    showAnswerStats: z.boolean(),
+    showCorrectAnswers: z.boolean(),
+    soundEnabled: z.boolean(),
+    allowLateJoin: z.boolean(),
+    participantLimit: z.number().int().min(2).max(PARTICIPANT_LIMIT_MAX),
+    theme: z.enum(ARENA_THEMES),
+    motion: z.enum(MOTION_LEVELS),
+  })
+  .partial();
+export type LiveSettingsPatch = z.infer<typeof liveSettingsPatchSchema>;
+export const hostSettingsSchema = z.object({
+  code: gameCodeSchema,
+  patch: liveSettingsPatchSchema,
 });
 
 export const hostKickSchema = z.object({ code: gameCodeSchema, participantId: cuid });

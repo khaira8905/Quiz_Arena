@@ -66,6 +66,8 @@ export const quizDto = (
   participantLimit: q.participantLimit,
   soundEnabled: q.soundEnabled,
   nicknameFilter: q.nicknameFilter,
+  readingMode: q.readingMode,
+  readingTimeSec: q.readingTimeSec,
   appearance: resolveAppearance(q.appearance),
   questions: [...q.questions].sort((a, b) => a.order - b.order).map(questionDto),
 });

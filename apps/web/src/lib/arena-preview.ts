@@ -197,6 +197,9 @@ export function previewHostView(s: ArenaPreviewState, now: number): HostView {
     distribution: phase === "QUESTION_ACTIVE" ? {} : distribution,
     leaderboard: leaderboard(),
     results: null,
+    readingEndsAt: null,
+    podiumStep: null,
+    timerOverrideSec: null,
     availableCommands: [],
   };
 }
@@ -244,6 +247,8 @@ export function previewPlayerView(s: ArenaPreviewState, now: number): PlayerView
     correctOptionIds: revealed && s.settings.showCorrectAnswers ? correctIds : null,
     leaderboard: leaderboard(),
     explanation: revealed ? (s.question?.explanation ?? FALLBACK_QUESTION.explanation) : null,
+    readingEndsAt: null,
+    podiumStep: null,
     soundEnabled: false,
     appearance: s.appearance,
   };

@@ -2,6 +2,10 @@
 export const TIMER_PRESETS = [5, 10, 15, 20, 30, 45, 60, 90, 120] as const;
 export const TIMER_MIN_SECONDS = 5;
 export const TIMER_MAX_SECONDS = 300;
+
+/** Reading period before answers open (when the quiz uses one). */
+export const READING_MIN_SECONDS = 2;
+export const READING_MAX_SECONDS = 30;
 export const DEFAULT_TIMER_SECONDS = 20;
 
 /** Point presets per question. 0 = practice question, 2000 = double points. */

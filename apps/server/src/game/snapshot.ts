@@ -45,6 +45,8 @@ interface SourceQuiz {
   participantLimit: number;
   soundEnabled: boolean;
   nicknameFilter: boolean;
+  readingMode?: LiveSettings["readingMode"];
+  readingTimeSec?: number;
   appearance?: unknown;
   questions: {
     id: string;
@@ -89,6 +91,8 @@ export function buildSnapshot(quiz: SourceQuiz): QuizSnapshot {
       participantLimit: quiz.participantLimit,
       soundEnabled: quiz.soundEnabled,
       nicknameFilter: quiz.nicknameFilter,
+      readingMode: quiz.readingMode ?? "TIMED",
+      readingTimeSec: quiz.readingTimeSec ?? 5,
       appearance: resolveAppearance(quiz.appearance),
     },
     questions: ordered.map((q) => {

@@ -156,13 +156,20 @@ export function primaryCommand(view: HostView | null): HostCommand | null {
   switch (view.phase) {
     case "LOBBY":
       return has("START") ? "START" : null;
+    case "QUESTION_READING":
+      return "OPEN_ANSWERS";
     case "QUESTION_ACTIVE":
+      return "LOCK";
     case "QUESTION_LOCKED":
+      return has("SHOW_STATS") ? "SHOW_STATS" : "REVEAL";
+    case "ANSWER_DISTRIBUTION":
       return "REVEAL";
     case "ANSWER_REVEAL":
       return has("LEADERBOARD") ? "LEADERBOARD" : "NEXT";
     case "LEADERBOARD":
       return "NEXT";
+    case "FINISHED":
+      return has("PODIUM_NEXT") ? "PODIUM_NEXT" : null;
     default:
       return null;
   }
@@ -170,12 +177,29 @@ export function primaryCommand(view: HostView | null): HostCommand | null {
 
 export const COMMAND_LABELS: Record<HostCommand, string> = {
   START: "Start game",
+  OPEN_ANSWERS: "Start timer",
   PAUSE: "Pause",
   RESUME: "Resume",
+  ADJUST_TIMER: "Adjust timer",
   SKIP: "Skip question",
   LOCK: "Lock answers",
+  SHOW_STATS: "Show answers",
   REVEAL: "Reveal answer",
   LEADERBOARD: "Leaderboard",
   NEXT: "Next question",
+  PODIUM_NEXT: "Next reveal",
   END: "End game",
+};
+
+/** Human names for game phases, shared by every host surface. */
+export const PHASE_LABELS: Record<HostView["phase"], string> = {
+  LOBBY: "Lobby open",
+  COUNTDOWN: "Starting",
+  QUESTION_READING: "Reading",
+  QUESTION_ACTIVE: "Answering",
+  QUESTION_LOCKED: "Answers locked",
+  ANSWER_DISTRIBUTION: "Showing answers",
+  ANSWER_REVEAL: "Answer revealed",
+  LEADERBOARD: "Leaderboard",
+  FINISHED: "Final results",
 };

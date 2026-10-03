@@ -128,6 +128,47 @@ export function QuizSettings({ quiz }: { quiz: QuizDto }) {
           </label>
         </div>
         <div>
+          <div className="label mb-3 text-fg-2">Reading period</div>
+          <Segmented<QuizDto["readingMode"]>
+            label="Reading period"
+            value={draft.readingMode}
+            onChange={(v) => set("readingMode", v)}
+            options={[
+              { value: "TIMED", label: "Countdown" },
+              { value: "MANUAL", label: "Host starts" },
+              { value: "OFF", label: "None" },
+            ]}
+          />
+          {draft.readingMode === "TIMED" && (
+            <div className="mt-3 flex flex-wrap gap-1" role="radiogroup" aria-label="Reading time">
+              {[3, 5, 8, 10, 15].map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.readingTimeSec === sec}
+                  onClick={() => set("readingTimeSec", sec)}
+                  className={cn(
+                    "numeric h-9 min-w-12 rounded-sm border px-3 text-body-sm font-bold transition-colors",
+                    draft.readingTimeSec === sec
+                      ? "border-accent bg-accent text-accent-ink"
+                      : "border-line bg-sunken text-fg-2 hover:text-fg",
+                  )}
+                >
+                  {sec}s
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-caption text-fg-3">
+            {draft.readingMode === "TIMED"
+              ? `Each question appears ${draft.readingTimeSec} seconds before answers open, so everyone reads it first. The host can open answers early.`
+              : draft.readingMode === "MANUAL"
+                ? "Each question appears with answers closed until you start the timer."
+                : "Answers open the moment each question appears."}
+          </p>
+        </div>
+        <div>
           <div className="label mb-3 text-fg-2">Scoring</div>
           <Segmented
             label="Scoring mode"

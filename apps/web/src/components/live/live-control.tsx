@@ -24,8 +24,10 @@ const PHASES: Record<
 > = {
   LOBBY: { label: "Lobby open", tone: "accent" },
   COUNTDOWN: { label: "Starting", tone: "accent" },
+  QUESTION_READING: { label: "Reading", tone: "accent" },
   QUESTION_ACTIVE: { label: "Question live", tone: "accent" },
   QUESTION_LOCKED: { label: "Answers locked", tone: "warning" },
+  ANSWER_DISTRIBUTION: { label: "Showing answers", tone: "warning" },
   ANSWER_REVEAL: { label: "Answer revealed", tone: "success" },
   LEADERBOARD: { label: "Leaderboard", tone: "neutral" },
   FINISHED: { label: "Finished", tone: "neutral" },

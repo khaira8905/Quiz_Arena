@@ -20,6 +20,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { Confetti } from "@/components/game/confetti";
 import { CountdownBar } from "@/components/game/countdown";
+import { useCountdown } from "@/lib/use-countdown";
 import { Leaderboard } from "@/components/game/leaderboard";
 import { PhoneAnswerButton, type TileState } from "@/components/game/answer-tile";
 import { answerStyle } from "@/components/game/answer-style";
@@ -60,7 +61,6 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
     if (!sound) return;
     if (view.phase === "ANSWER_REVEAL" && view.result)
       play(view.result.correct ? "correct" : "wrong");
-    if (view.phase === "FINISHED") play(view.me.rank === 1 ? "winner" : "leaderboard");
   }, [view.phase, view.result, view.me.rank, sound]);
 
   return (
@@ -148,12 +148,16 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
                 sound={sound}
               />
             )}
+            {view.phase === "QUESTION_READING" && <ReadingScreen view={view} />}
             {(view.phase === "QUESTION_ACTIVE" || view.phase === "QUESTION_LOCKED") && (
               <QuestionScreen game={game} view={view} sound={sound} />
             )}
+            {view.phase === "ANSWER_DISTRIBUTION" && <AnswersInScreen view={view} />}
             {view.phase === "ANSWER_REVEAL" && <RevealScreen view={view} />}
             {view.phase === "LEADERBOARD" && <RankScreen view={view} />}
-            {view.phase === "FINISHED" && <FinalScreen view={view} onDone={game.leave} />}
+            {view.phase === "FINISHED" && (
+              <FinalScreen view={view} onDone={game.leave} sound={sound} />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -196,6 +200,114 @@ const screenKey = (v: PlayerView) =>
   v.phase === "QUESTION_ACTIVE" || v.phase === "QUESTION_LOCKED"
     ? `q-${v.question?.id}`
     : `${v.phase}-${v.question?.id ?? ""}`;
+
+/* ============================================================================ reading */
+
+/** Question on screen, answers closed: read it now, tap fast in a moment. */
+function ReadingScreen({ view }: { view: PlayerView }) {
+  const q = view.question!;
+  const endsAt = view.readingEndsAt;
+  const timer = endsAt
+    ? {
+        startedAt: view.serverTime,
+        deadline: endsAt,
+        durationMs: Math.max(1, endsAt - view.serverTime),
+        paused: false,
+        remainingMs: Math.max(0, endsAt - view.serverTime),
+      }
+    : null;
+  const { seconds } = useCountdown(timer, !!timer);
+  const reduced = useReducedMotion();
+  return (
+    <div className="flex flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6">
+      <p className="numeric text-body-lg font-extrabold text-accent">
+        Q{pad2(q.index + 1)}
+        <span className="text-fg-3">/{pad2(q.total)}</span>
+      </p>
+      <motion.h1
+        initial={reduced ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-4 font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] break-words"
+      >
+        {q.text}
+      </motion.h1>
+      <div className="mt-auto flex flex-col items-center gap-3 pt-8 text-center" role="status">
+        {timer ? (
+          <>
+            <span className="label text-fg-3">Answers open in</span>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={seconds}
+                className="numeric text-[4.5rem] font-extrabold leading-none text-accent"
+                initial={reduced ? false : { y: -16, opacity: 0, scale: 1.15 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={reduced ? undefined : { y: 16, opacity: 0 }}
+                transition={{ duration: 0.22 }}
+              >
+                {Math.max(0, seconds)}
+              </motion.span>
+            </AnimatePresence>
+          </>
+        ) : (
+          <>
+            <span className="relative flex h-3 w-3">
+              {!reduced && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+              )}
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-accent" />
+            </span>
+            <span className="text-body-lg font-semibold">Read the question</span>
+            <span className="text-body-sm text-fg-3">
+              Answers open when the host starts the clock.
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================ answers in */
+
+/** Between the lock and the reveal: the room's answers are on the big screen. */
+function AnswersInScreen({ view }: { view: PlayerView }) {
+  const q = view.question;
+  const mine = q?.options.findIndex((o) => o.id === view.myAnswerId) ?? -1;
+  const reduced = useReducedMotion();
+  return (
+    <div className="arena-floor flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+      <p className="label text-accent">Answers are in</p>
+      {mine >= 0 ? (
+        <motion.div
+          initial={reduced ? false : { scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 380, damping: 22 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <span
+            className={cn(
+              "notch grid h-24 w-24 place-items-center font-display text-5xl font-extrabold",
+              answerStyle(mine).bg,
+              answerStyle(mine).ink,
+            )}
+          >
+            {answerStyle(mine).letter}
+          </span>
+          <span className="max-w-xs text-body-lg font-semibold break-words">
+            {q!.options[mine]!.text}
+          </span>
+          <span className="text-body-sm text-fg-3">Your answer</span>
+        </motion.div>
+      ) : (
+        <p className="text-body-lg text-fg-2">You didn&apos;t answer this one.</p>
+      )}
+      <p className="max-w-xs text-body text-fg-2">
+        See how everyone answered on the big screen. The correct answer is next.
+      </p>
+    </div>
+  );
+}
 
 /* ============================================================================ lobby */
 
@@ -542,9 +654,55 @@ function RankScreen({ view }: { view: PlayerView }) {
 
 /* ============================================================================ final */
 
-function FinalScreen({ view, onDone }: { view: PlayerView; onDone: () => void }) {
+/** Which podium places the big screen has revealed so far. */
+function revealedThrough(step: PlayerView["podiumStep"]): number {
+  switch (step) {
+    case "THIRD":
+      return 3;
+    case "SECOND":
+      return 2;
+    case "FIRST":
+      return 1;
+    case "BOARD":
+      return 0;
+    default:
+      return Infinity;
+  }
+}
+
+function FinalScreen({
+  view,
+  onDone,
+  sound,
+}: {
+  view: PlayerView;
+  onDone: () => void;
+  sound: boolean;
+}) {
   const rank = view.me.rank;
   const podium = rank !== null && rank <= 3;
+  // Keep the suspense with the big screen: a podium finisher's phone reveals their place
+  // when the host reveals it; everyone else sees theirs once the podium is complete.
+  const through = revealedThrough(view.podiumStep);
+  const revealed = view.podiumStep === "BOARD" || (podium && rank !== null && rank >= through);
+  const lastRevealed = useRef(false);
+  useEffect(() => {
+    if (revealed && !lastRevealed.current && sound) play(rank === 1 ? "winner" : "leaderboard");
+    lastRevealed.current = revealed;
+  }, [revealed, rank, sound]);
+
+  if (!revealed) {
+    return (
+      <div className="arena-floor flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="label text-accent">Quiz complete</p>
+        <h1 className="font-display text-h1">Eyes on the big screen</h1>
+        <p className="max-w-xs text-body-lg text-fg-2">
+          The podium is being revealed. Your result appears here when it&apos;s your turn.
+        </p>
+      </div>
+    );
+  }
+
   const title = rank === 1 ? "Champion" : podium ? "On the podium" : "Game over";
 
   return (

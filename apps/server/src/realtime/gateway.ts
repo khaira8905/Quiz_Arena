@@ -4,6 +4,7 @@ import {
   answerPayloadSchema,
   hostAttachSchema,
   hostCommandSchema,
+  hostSettingsSchema,
   hostKickSchema,
   joinPayloadSchema,
   reconnectPayloadSchema,
@@ -38,6 +39,8 @@ export const rooms = {
   player: (participantId: string) => `p:${participantId}`,
   players: (code: string) => `g:${code}`,
   hosts: (code: string) => `h:${code}`,
+  /** The stage: projector windows and host previews. Never receives host-only data. */
+  projectors: (code: string) => `pr:${code}`,
 };
 
 export function createRoomOutput(io: IoServer, code: string): RoomOutput {
@@ -46,6 +49,8 @@ export function createRoomOutput(io: IoServer, code: string): RoomOutput {
       io.to(rooms.player(participantId)).emit("session:state", view),
     toHosts: (event, ...args) => io.to(rooms.hosts(code)).emit(event, ...args),
     toPlayers: (event, ...args) => io.to(rooms.players(code)).emit(event, ...args),
+    toProjectors: (view) => io.to(rooms.projectors(code)).emit("session:state", view),
+    toAudience: (event, ...args) => io.to(rooms.projectors(code)).emit(event, ...args),
     closePlayer: (participantId, errorCode, message) => {
       const target = io.in(rooms.player(participantId));
       target.emit("session:closed", { code: errorCode, message });
@@ -148,6 +153,7 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
         socket.leave(rooms.players(gameCode));
       }
       if (gameCode && role === "host") socket.leave(rooms.hosts(gameCode));
+      if (gameCode && role === "projector") socket.leave(rooms.projectors(gameCode));
       socket.data.role = "anonymous";
       socket.data.gameCode = null;
       socket.data.participantId = null;
@@ -254,12 +260,37 @@ export function attachGateway({ io, games, tokens, log }: GatewayDeps) {
       }),
     );
 
+    // The stage is opened from the host's own browser (projector window or preview), so it
+    // authenticates as the host, but it only ever receives the audience-safe ProjectorView.
+    socket.on(
+      "projector:attach",
+      handle((raw) => {
+        const { code } = hostAttachSchema.parse(raw);
+        const room = requireHost(code);
+        unbind();
+        socket.join(rooms.projectors(room.code));
+        socket.data.role = "projector";
+        socket.data.gameCode = room.code;
+        return room.projectorView();
+      }),
+    );
+
+    socket.on(
+      "host:settings",
+      handle((raw) => {
+        const { code, patch } = hostSettingsSchema.parse(raw);
+        const room = requireHost(code);
+        room.updateSettings(patch);
+        return room.hostView();
+      }),
+    );
+
     socket.on(
       "host:command",
       handle((raw) => {
-        const { code, command, expected } = hostCommandSchema.parse(raw);
+        const { code, command, expected, amount } = hostCommandSchema.parse(raw);
         const room = requireHost(code);
-        room.command(command, expected);
+        room.command(command, expected, amount);
         return room.hostView();
       }),
     );

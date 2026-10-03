@@ -14,10 +14,15 @@ import {
   type HostView,
   type LeaderboardEntry,
   type PlayerSummary,
+  type LiveSettingsPatch,
   type PlayerView,
+  type PodiumStep,
+  type ProjectorView,
   type PublicQuestion,
   type ServerToClientEvents,
   type TimerState,
+  TIMER_MAX_SECONDS,
+  TIMER_MIN_SECONDS,
 } from "@quizarena/shared";
 import { createPlayerToken, hashToken } from "../lib/auth";
 import { AppError } from "../lib/errors";
@@ -41,6 +46,13 @@ export interface RoomOutput {
     ...args: Parameters<ServerToClientEvents[E]>
   ): void;
   toPlayers<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+  ): void;
+  /** The stage (projector windows and host previews): snapshots… */
+  toProjectors(view: ProjectorView): void;
+  /** …and audience-safe deltas. */
+  toAudience<E extends keyof ServerToClientEvents>(
     event: E,
     ...args: Parameters<ServerToClientEvents[E]>
   ): void;
@@ -81,6 +93,9 @@ interface PendingAnswer {
 
 const HOST_LEADERBOARD_SIZE = 10;
 const PLAYER_LEADERBOARD_SIZE = 5;
+/** Names the stage shows in the lobby; beyond this it shows "+N more". */
+const STAGE_ROSTER_SIZE = 140;
+const MIN_REMAINING_MS = 1_000;
 
 export class GameRoom {
   readonly sessionId: string;
@@ -98,6 +113,12 @@ export class GameRoom {
   private openedAt = 0;
   private deadline = 0;
   private remainingAtPause = 0;
+  /** The current question's answer time, after any host adjustment (also used for scoring). */
+  private durationMs = 0;
+  private readingEndsAt: number | null = null;
+  /** Host's lobby choice: one timer for every question (null = per-question timers). */
+  private timerOverrideMs: number | null = null;
+  private podiumStep: PodiumStep | null = null;
 
   private readonly participants = new Map<string, Participant>();
   private readonly byKey = new Map<string, string>();
@@ -260,6 +281,8 @@ export class GameRoom {
     this.byToken.set(hash, id);
 
     this.output.toHosts("session:player_joined", this.summarize(participant));
+    if (this.phase === "LOBBY")
+      this.output.toAudience("session:player_joined", this.summarize(participant));
     this.emitCounts();
     // START becomes available with the first player: hosts need the new command set.
     if (this.phase === "LOBBY" && this.participants.size === 1)
@@ -296,6 +319,8 @@ export class GameRoom {
     }
 
     this.output.toHosts("session:player_status", { participantId, connected });
+    if (this.phase === "LOBBY")
+      this.output.toAudience("session:player_status", { participantId, connected });
     this.emitCounts();
     if (!connected) this.maybeAutoLock();
   }
@@ -322,6 +347,7 @@ export class GameRoom {
 
     if (closeReason) this.output.closePlayer(participantId, "SESSION_EXPIRED", closeReason);
     this.output.toHosts("session:player_left", { participantId });
+    this.output.toAudience("session:player_left", { participantId });
     this.emitCounts();
     if (this.phase === "LOBBY" && this.participants.size === 0)
       this.output.toHosts("session:state", this.hostView());
@@ -351,8 +377,8 @@ export class GameRoom {
 
     // Elapsed time measured against the (pause-adjusted) deadline, never against client clocks.
     const responseMs = Math.min(
-      q.durationMs,
-      Math.max(0, q.durationMs - (this.deadline - receivedAt)),
+      this.durationMs,
+      Math.max(0, this.durationMs - (this.deadline - receivedAt)),
     );
     this.answers.set(participantId, { optionId, receivedAt, responseMs });
 
@@ -364,15 +390,28 @@ export class GameRoom {
   /* ======================================================================== host commands */
 
   availableCommands(): HostCommand[] {
+    const stats = this.snapshot.settings.showAnswerStats ? (["SHOW_STATS"] as const) : [];
     switch (this.phase) {
       case "LOBBY":
         return this.participants.size > 0 ? ["START", "END"] : ["END"];
       case "COUNTDOWN":
         return ["END"];
+      case "QUESTION_READING":
+        return ["OPEN_ANSWERS", "ADJUST_TIMER", "SKIP", "END"];
       case "QUESTION_ACTIVE":
-        return [this.paused ? "RESUME" : "PAUSE", "LOCK", "REVEAL", "SKIP", "END"];
+        return [
+          this.paused ? "RESUME" : "PAUSE",
+          "ADJUST_TIMER",
+          "LOCK",
+          ...stats,
+          "REVEAL",
+          "SKIP",
+          "END",
+        ];
       case "QUESTION_LOCKED":
-        return ["REVEAL", "SKIP", "END"];
+        return [...stats, "REVEAL", "SKIP", "END"];
+      case "ANSWER_DISTRIBUTION":
+        return ["REVEAL", "END"];
       case "ANSWER_REVEAL":
         return [
           ...(this.snapshot.settings.showLeaderboard ? (["LEADERBOARD"] as const) : []),
@@ -382,11 +421,15 @@ export class GameRoom {
       case "LEADERBOARD":
         return ["NEXT", "END"];
       case "FINISHED":
-        return [];
+        return this.podiumStep !== "BOARD" ? ["PODIUM_NEXT"] : [];
     }
   }
 
-  command(command: HostCommand, expected?: { phase: GamePhase; questionIndex: number }): void {
+  command(
+    command: HostCommand,
+    expected?: { phase: GamePhase; questionIndex: number },
+    amount?: number,
+  ): void {
     if (
       expected &&
       (expected.phase !== this.phase || expected.questionIndex !== this.questionIndex)
@@ -397,6 +440,17 @@ export class GameRoom {
     switch (command) {
       case "START":
         return this.start();
+      case "OPEN_ANSWERS":
+        return this.openAnswers();
+      case "ADJUST_TIMER":
+        if (!amount) throw new AppError("BAD_REQUEST", "Say how many seconds to add or remove.");
+        return this.adjustTimer(amount);
+      case "SHOW_STATS":
+        if (this.phase === "QUESTION_ACTIVE") this.lock(false);
+        this.setPhase("ANSWER_DISTRIBUTION");
+        return this.broadcast();
+      case "PODIUM_NEXT":
+        return this.podiumNext();
       case "PAUSE":
         return this.pause();
       case "RESUME":
@@ -440,11 +494,98 @@ export class GameRoom {
     this.answers = new Map();
     for (const p of this.participants.values()) p.lastResult = null;
 
+    this.durationMs = this.timerOverrideMs ?? q.durationMs;
+
+    const { readingMode, readingTimeSec } = this.snapshot.settings;
+    if (readingMode === "OFF") return this.openAnswers();
+    // Reading period: the question is on screen, answers are closed.
+    this.setPhase("QUESTION_READING");
+    if (readingMode === "TIMED") {
+      this.readingEndsAt = Date.now() + readingTimeSec * 1000;
+      this.schedule(readingTimeSec * 1000, () => this.openAnswers());
+    } else {
+      this.readingEndsAt = null;
+      this.clearPhaseTimer();
+    }
+    this.broadcast();
+  }
+
+  /** Answers open and the clock starts (end of reading, or straight away without one). */
+  private openAnswers() {
+    if (!this.question) return;
+    this.readingEndsAt = null;
     this.openedAt = Date.now();
-    this.deadline = this.openedAt + q.durationMs;
+    this.deadline = this.openedAt + this.durationMs;
     this.setPhase("QUESTION_ACTIVE");
     // The timeout only drives the UI transition; acceptance is decided by timestamps.
-    this.schedule(q.durationMs + ANSWER_GRACE_MS, () => this.lock());
+    this.schedule(this.durationMs + ANSWER_GRACE_MS, () => this.lock());
+    this.broadcast();
+  }
+
+  /**
+   * ± seconds. While reading, it changes how long answering will last; while answering, it
+   * moves the deadline (never below a second left). Scoring uses the adjusted duration, so
+   * speed points stay fair to everyone.
+   */
+  private adjustTimer(seconds: number) {
+    const delta = seconds * 1000;
+    if (this.phase === "QUESTION_READING") {
+      this.durationMs = Math.min(
+        TIMER_MAX_SECONDS * 1000,
+        Math.max(TIMER_MIN_SECONDS * 1000, this.durationMs + delta),
+      );
+      return this.broadcast();
+    }
+    const now = Date.now();
+    const remaining = this.paused ? this.remainingAtPause : this.deadline - now;
+    const next = Math.min(TIMER_MAX_SECONDS * 1000, Math.max(MIN_REMAINING_MS, remaining + delta));
+    const applied = next - remaining;
+    this.durationMs = Math.max(MIN_REMAINING_MS, this.durationMs + applied);
+    if (this.paused) {
+      this.remainingAtPause = next;
+    } else {
+      this.deadline = now + next;
+      this.schedule(next + ANSWER_GRACE_MS, () => this.lock());
+    }
+    this.broadcastTimer();
+    this.broadcast();
+  }
+
+  /** Lobby-only: the host tunes the session before starting (the quiz is unchanged). */
+  updateSettings(patch: LiveSettingsPatch) {
+    if (this.phase !== "LOBBY") throw new AppError("COMMAND_NOT_ALLOWED");
+    this.lastActivityAt = Date.now();
+    const s = this.snapshot.settings;
+    const { theme, motion, timerOverrideSec, ...rest } = patch;
+    Object.assign(s, rest);
+    if (theme || motion) {
+      s.appearance = {
+        ...s.appearance,
+        ...(theme ? { theme, accent: null, answerColors: null } : {}),
+        ...(motion ? { motion } : {}),
+      };
+    }
+    if (timerOverrideSec !== undefined)
+      this.timerOverrideMs = timerOverrideSec === null ? null : timerOverrideSec * 1000;
+    this.broadcast();
+  }
+
+  get timerOverrideSec() {
+    return this.timerOverrideMs === null ? null : this.timerOverrideMs / 1000;
+  }
+
+  /** Final ceremony, one beat per host press; places that don't exist are skipped. */
+  private podiumNext() {
+    const n = this.participants.size;
+    const order: PodiumStep[] = [
+      "COMPLETE",
+      ...(n >= 3 ? (["THIRD"] as const) : []),
+      ...(n >= 2 ? (["SECOND"] as const) : []),
+      ...(n >= 1 ? (["FIRST"] as const) : []),
+      "BOARD",
+    ];
+    const i = order.indexOf(this.podiumStep ?? "COMPLETE");
+    this.podiumStep = order[Math.min(order.length - 1, i + 1)]!;
     this.broadcast();
   }
 
@@ -497,7 +638,7 @@ export class GameRoom {
         {
           correct,
           responseMs: a.responseMs,
-          durationMs: q.durationMs,
+          durationMs: this.durationMs,
           basePoints: q.points,
           streak,
         },
@@ -569,6 +710,8 @@ export class GameRoom {
     this.countdownEndsAt = null;
     this.paused = false;
     this.rank();
+    this.readingEndsAt = null;
+    this.podiumStep = "COMPLETE";
     this.setPhase("FINISHED");
     this.finishedAt = Date.now();
     this.results = this.buildResults();
@@ -720,9 +863,14 @@ export class GameRoom {
     };
   }
 
-  private publicQuestion(): PublicQuestion | null {
+  /**
+   * The question as players and the stage may see it. During the reading period the options
+   * are withheld from everyone but the host, so nobody can answer (or read ahead) early.
+   */
+  private publicQuestion(forHost = false): PublicQuestion | null {
     const q = this.question;
     if (!q) return null;
+    const hideOptions = !forHost && this.phase === "QUESTION_READING";
     return {
       id: q.id,
       index: this.questionIndex,
@@ -731,8 +879,8 @@ export class GameRoom {
       text: q.text,
       imageUrl: q.imageUrl,
       points: q.points,
-      durationMs: q.durationMs,
-      options: q.options.map((o) => ({ id: o.id, text: o.text })),
+      durationMs: this.durationMs,
+      options: hideOptions ? [] : q.options.map((o) => ({ id: o.id, text: o.text })),
     };
   }
 
@@ -740,11 +888,21 @@ export class GameRoom {
     const q = this.question;
     if (!q || this.phase === "LOBBY" || this.phase === "COUNTDOWN" || this.phase === "FINISHED")
       return null;
+    if (this.phase === "QUESTION_READING") {
+      // Not running yet: a full clock showing how long answering will last.
+      return {
+        startedAt: 0,
+        deadline: 0,
+        durationMs: this.durationMs,
+        paused: false,
+        remainingMs: this.durationMs,
+      };
+    }
     const active = this.phase === "QUESTION_ACTIVE";
     return {
       startedAt: this.openedAt,
       deadline: this.deadline,
-      durationMs: q.durationMs,
+      durationMs: this.durationMs,
       paused: this.paused,
       remainingMs: !active
         ? 0
@@ -767,10 +925,72 @@ export class GameRoom {
     return this.phase === "ANSWER_REVEAL" || this.phase === "LEADERBOARD";
   }
 
+  private get inQuestion() {
+    return (
+      this.phase === "QUESTION_READING" ||
+      this.phase === "QUESTION_ACTIVE" ||
+      this.phase === "QUESTION_LOCKED" ||
+      this.phase === "ANSWER_DISTRIBUTION" ||
+      this.phase === "ANSWER_REVEAL" ||
+      this.phase === "LEADERBOARD"
+    );
+  }
+
+  projectorView(): ProjectorView {
+    const q = this.question;
+    const s = this.snapshot.settings;
+    const revealed = this.isRevealed();
+    const statsVisible = this.phase === "ANSWER_DISTRIBUTION" || (revealed && s.showAnswerStats);
+    const lobby = this.phase === "LOBBY";
+    const roster: ProjectorView["lobbyPlayers"] = [];
+    if (lobby) {
+      for (const p of this.participants.values()) {
+        if (roster.length >= STAGE_ROSTER_SIZE) break;
+        roster.push({ id: p.id, nickname: p.nickname, connected: p.connected });
+      }
+    }
+    return {
+      role: "projector",
+      code: this.code,
+      quizTitle: this.snapshot.title,
+      coverImageUrl: this.snapshot.coverImageUrl,
+      phase: this.phase,
+      paused: this.paused,
+      serverTime: Date.now(),
+      settings: {
+        appearance: s.appearance,
+        soundEnabled: s.soundEnabled,
+        showAnswerStats: s.showAnswerStats,
+        showCorrectAnswers: s.showCorrectAnswers,
+        showLeaderboard: s.showLeaderboard,
+      },
+      countdownEndsAt: this.countdownEndsAt,
+      readingEndsAt: this.readingEndsAt,
+      questionCount: this.snapshot.questions.length,
+      playerCount: this.participants.size,
+      connectedCount: this.connectedCount,
+      lobbyPlayers: roster,
+      question: this.inQuestion ? this.publicQuestion() : null,
+      timer: this.inQuestion ? this.timerState() : null,
+      answeredCount: this.answers.size,
+      distribution: statsVisible ? this.distribution() : null,
+      correctOptionIds:
+        revealed && s.showCorrectAnswers && q
+          ? q.options.filter((o) => o.isCorrect).map((o) => o.id)
+          : null,
+      explanation: revealed && s.showCorrectAnswers && q?.explanation ? q.explanation : null,
+      leaderboard:
+        this.phase === "LEADERBOARD" || this.phase === "FINISHED"
+          ? this.leaderboard.slice(0, HOST_LEADERBOARD_SIZE).map((p) => this.entry(p))
+          : null,
+      results: this.phase === "FINISHED" ? this.results : null,
+      podiumStep: this.podiumStep,
+    };
+  }
+
   hostView(): HostView {
     const q = this.question;
-    const showQuestion =
-      this.phase !== "LOBBY" && this.phase !== "COUNTDOWN" && this.phase !== "FINISHED";
+    const showQuestion = this.inQuestion;
     return {
       role: "host",
       sessionId: this.sessionId,
@@ -787,7 +1007,7 @@ export class GameRoom {
       players: [...this.participants.values()].map((p) => this.summarize(p)),
       playerCount: this.participants.size,
       connectedCount: this.connectedCount,
-      question: showQuestion ? this.publicQuestion() : null,
+      question: showQuestion ? this.publicQuestion(true) : null,
       correctOptionIds:
         showQuestion && q ? q.options.filter((o) => o.isCorrect).map((o) => o.id) : null,
       explanation: showQuestion && q?.explanation ? q.explanation : null,
@@ -796,6 +1016,9 @@ export class GameRoom {
       distribution: this.distribution(),
       leaderboard: this.leaderboard.slice(0, HOST_LEADERBOARD_SIZE).map((p) => this.entry(p)),
       results: this.results,
+      readingEndsAt: this.readingEndsAt,
+      podiumStep: this.podiumStep,
+      timerOverrideSec: this.timerOverrideSec,
       availableCommands: this.availableCommands(),
     };
   }
@@ -805,8 +1028,7 @@ export class GameRoom {
     if (!p) throw new AppError("SESSION_EXPIRED");
     const q = this.question;
     const revealed = this.isRevealed();
-    const showQuestion =
-      this.phase !== "LOBBY" && this.phase !== "COUNTDOWN" && this.phase !== "FINISHED";
+    const showQuestion = this.inQuestion;
     const { showCorrectAnswers, showLeaderboard } = this.snapshot.settings;
     const showBoard =
       (this.phase === "LEADERBOARD" && showLeaderboard) || this.phase === "FINISHED";
@@ -840,6 +1062,8 @@ export class GameRoom {
         ? this.leaderboard.slice(0, PLAYER_LEADERBOARD_SIZE).map((x) => this.entry(x))
         : null,
       explanation: revealed && showCorrectAnswers && q?.explanation ? q.explanation : null,
+      readingEndsAt: this.readingEndsAt,
+      podiumStep: this.podiumStep,
       soundEnabled: this.snapshot.settings.soundEnabled,
       appearance: this.snapshot.settings.appearance,
     };
@@ -848,6 +1072,7 @@ export class GameRoom {
   /** One snapshot to the hosts room, one personalised snapshot per player. */
   private broadcast() {
     this.output.toHosts("session:state", this.hostView());
+    this.output.toProjectors(this.projectorView());
     for (const id of this.participants.keys()) this.output.toPlayer(id, this.playerView(id));
   }
 
@@ -857,9 +1082,11 @@ export class GameRoom {
       deadline: this.deadline,
       paused: this.paused,
       remainingMs: this.paused ? this.remainingAtPause : Math.max(0, this.deadline - Date.now()),
+      durationMs: this.durationMs,
     };
     this.output.toHosts("timer:sync", payload);
     this.output.toPlayers("timer:sync", payload);
+    this.output.toAudience("timer:sync", payload);
   }
 
   private sendProgress() {
@@ -870,11 +1097,13 @@ export class GameRoom {
       answered: this.answers.size,
       distribution: this.distribution(),
     });
+    this.output.toAudience("question:answered", { questionId: q.id, answered: this.answers.size });
   }
 
   private sendCounts() {
     const payload = { count: this.participants.size, connected: this.connectedCount };
     this.output.toHosts("session:player_count", payload);
     this.output.toPlayers("session:player_count", payload);
+    this.output.toAudience("session:player_count", payload);
   }
 }
