@@ -99,7 +99,7 @@ export function EmptyState({
       )}
     >
       {icon && (
-        <div className="mb-5 grid h-14 w-14 place-items-center border border-line-strong bg-elevated text-accent notch-sm">
+        <div className="mb-5 grid h-14 w-14 place-items-center rounded-lg border border-line-strong bg-elevated text-accent">
           {icon}
         </div>
       )}

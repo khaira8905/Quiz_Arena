@@ -47,11 +47,6 @@ export function useSaveTracker() {
 
 export function SaveStatus() {
   const { status } = useSaveTracker();
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 10_000);
-    return () => clearInterval(t);
-  }, []);
 
   if (status.pending > 0)
     return (
@@ -71,7 +66,7 @@ export function SaveStatus() {
         <Check className="h-3 w-3" /> Saved
       </span>
     );
-  return <span className="label text-fg-3">All changes saved</span>;
+  return <span className="label text-fg-3">Autosave on</span>;
 }
 
 /**

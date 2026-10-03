@@ -24,51 +24,61 @@ export function ProjectorScreen({
   connection: string;
   sound: boolean;
 }) {
-  const { eventName, logoUrl } = view.settings.appearance;
+  const { eventName, logoUrl, projectorLayout } = view.settings.appearance;
+  const inQuestion =
+    view.phase === "QUESTION_ACTIVE" ||
+    view.phase === "QUESTION_LOCKED" ||
+    view.phase === "ANSWER_REVEAL";
+  // MINIMAL drops the top strip while a question is on screen: nothing but the question.
+  const showStrip = !(projectorLayout === "MINIMAL" && inQuestion);
   return (
     <>
       {/* ------------------------------------------------------------ top strip */}
-      <header className="flex h-[7vh] min-h-12 shrink-0 items-center justify-between gap-[2vw] border-b border-line px-[3vw]">
-        <div className="flex min-w-0 items-center gap-[1.5vw]">
-          <Logo
-            size="sm"
-            className="[&_svg]:h-[3vh] [&_svg]:w-[3vh] [&_span]:text-[clamp(0.9rem,1.4vw,2.5rem)]"
-          />
-          <span className="h-[2.5vh] w-px bg-line-strong" />
-          {logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element -- organiser-supplied logo URL
-            <img
-              src={logoUrl}
-              alt=""
-              className="h-[3.6vh] max-h-14 w-auto max-w-[12vw] shrink-0 object-contain"
+      {showStrip && (
+        <header className="flex h-[7vh] min-h-12 shrink-0 items-center justify-between gap-[2vw] border-b border-line px-[3vw]">
+          <div className="flex min-w-0 items-center gap-[1.5vw]">
+            <Logo
+              size="sm"
+              className="[&_svg]:h-[3vh] [&_svg]:w-[3vh] [&_span]:text-[clamp(0.9rem,1.4vw,2.5rem)]"
             />
-          )}
-          <span className="truncate text-[clamp(0.85rem,1.2vw,2.25rem)] font-medium text-fg-2">
-            {eventName && <span className="font-semibold text-fg">{eventName} · </span>}
-            {view.quizTitle}
-          </span>
-        </div>
-        <div className="flex items-center gap-[2vw]">
-          {view.phase !== "LOBBY" && (
-            <span className="flex items-baseline gap-[0.6vw]">
-              <span className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">Join</span>
-              <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold text-accent">
-                {view.code}
+            <span className="h-[2.5vh] w-px bg-line-strong" />
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- organiser-supplied logo URL
+              <img
+                src={logoUrl}
+                alt=""
+                className="h-[3.6vh] max-h-14 w-auto max-w-[12vw] shrink-0 object-contain"
+              />
+            )}
+            <span className="truncate text-[clamp(0.85rem,1.2vw,2.25rem)] font-medium text-fg-2">
+              {eventName && <span className="font-semibold text-fg">{eventName} · </span>}
+              {view.quizTitle}
+            </span>
+          </div>
+          <div className="flex items-center gap-[2vw]">
+            {view.phase !== "LOBBY" && (
+              <span className="flex items-baseline gap-[0.6vw]">
+                <span className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">Join</span>
+                <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold text-accent">
+                  {view.code}
+                </span>
               </span>
+            )}
+            <span className="flex items-baseline gap-[0.6vw]">
+              <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold">
+                {view.connectedCount}
+              </span>
+              <span className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">Online</span>
             </span>
-          )}
-          <span className="flex items-baseline gap-[0.6vw]">
-            <span className="numeric text-[clamp(1rem,1.6vw,3rem)] font-extrabold">
-              {view.connectedCount}
-            </span>
-            <span className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">Online</span>
-          </span>
-          <ConnectionDot state={connection} />
-        </div>
-      </header>
+            <ConnectionDot state={connection} />
+          </div>
+        </header>
+      )}
 
       {/* ------------------------------------------------------------ stage */}
-      <main className="relative min-h-0 flex-1 px-[3vw] py-[3.5vh]">
+      <main
+        className={cn("relative min-h-0 flex-1 px-[3vw]", showStrip ? "py-[3.5vh]" : "py-[4.5vh]")}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={
@@ -97,12 +107,15 @@ function Stage({ view, sound }: { view: HostView; sound: boolean }) {
     case "LOBBY":
       return (
         <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
-          <JoinPanel code={view.code} />
+          <h1 className="sr-only">
+            {view.quizTitle}: join with game PIN {view.code}
+          </h1>
+          <JoinPanel code={view.code} coverImageUrl={view.coverImageUrl} />
           <div className="flex min-h-0 flex-col gap-[3vh] border-l border-line pl-[4vw]">
             <div className="flex items-end justify-between">
               <PlayerCounter count={view.playerCount} />
               {view.playerCount === 0 && (
-                <span className="label animate-pulse text-[clamp(0.7rem,1vw,2rem)] text-fg-3">
+                <span className="label animate-pulse text-[clamp(0.75rem,1vw,2rem)] text-fg-3">
                   Waiting for players
                 </span>
               )}
@@ -184,9 +197,7 @@ function ConnectionDot({ state }: { state: string }) {
               : "bg-danger",
         )}
       />
-      <span className="label hidden text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3 xl:inline">
-        {label}
-      </span>
+      <span className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">{label}</span>
     </span>
   );
 }

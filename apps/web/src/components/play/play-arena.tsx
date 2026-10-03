@@ -55,7 +55,7 @@ function PlayArenaScreens({ game }: { game: ReturnType<typeof usePlayerGame> }) 
           {step.kind === "resuming"
             ? `Rejoining ${step.code}`
             : step.kind === "checking"
-              ? `Finding arena ${step.code}`
+              ? `Finding game ${step.code}`
               : "Entering the arena"}
         </p>
       </div>
@@ -131,10 +131,12 @@ function CodeStep({
       className="flex flex-col"
     >
       <p className="label text-accent">Step 1 of 2</p>
-      <h1 className="mt-3 font-display text-h1">Enter the game code</h1>
-      <p className="mt-2 text-body text-fg-2">It&apos;s on the big screen.</p>
+      <h1 className="mt-3 font-display text-h1">Enter the game PIN</h1>
+      <p className="mt-2 text-body text-fg-2">
+        It&apos;s on the big screen. The six digits are enough.
+      </p>
       <label htmlFor="game-code" className="sr-only">
-        Game code
+        Game PIN
       </label>
       <motion.input
         id="game-code"
@@ -196,7 +198,7 @@ function NameStep({
       }}
       className="flex flex-col"
     >
-      <p className="label text-accent">Step 2 of 2 · Arena {code}</p>
+      <p className="label text-accent">Step 2 of 2 · Game {code}</p>
       <h1 className="mt-3 font-display text-h1">Pick your name</h1>
       <p className="mt-2 text-body text-fg-2">
         You&apos;re joining <span className="font-semibold text-fg">{title}</span>.
@@ -244,9 +246,9 @@ function NameStep({
       <button
         type="button"
         onClick={onBack}
-        className="label mt-5 self-center text-fg-3 hover:text-fg"
+        className="label mt-3 min-h-11 self-center px-4 text-fg-3 hover:text-fg"
       >
-        Use a different code
+        Use a different PIN
       </button>
     </motion.form>
   );

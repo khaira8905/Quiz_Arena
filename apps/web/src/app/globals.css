@@ -163,7 +163,7 @@
   --text-stage-answer--letter-spacing: -0.015em;
   --text-stage-answer--font-weight: 650;
 
-  --text-stage-code: clamp(4rem, 10.5vw, 22rem);
+  --text-stage-code: clamp(3.5rem, 8.2vw, 17rem);
   --text-stage-code--line-height: 0.85;
   --text-stage-code--letter-spacing: -0.02em;
   --text-stage-code--font-weight: 800;

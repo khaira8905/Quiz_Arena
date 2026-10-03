@@ -2,10 +2,12 @@
 
 import type { GamePhase, PublicQuestion, TimerState } from "@quizarena/shared/game";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { screenTransition, useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { formatNumber, pad2 } from "@/lib/format";
+import { answerScale, questionScale } from "@/lib/text-fit";
 import { StageAnswerTile, type TileState } from "./answer-tile";
-import { Countdown } from "./countdown";
+import { Countdown, StageTimerBar } from "./countdown";
 
 /**
  * The projector question screen. Built for distance: the question is the largest text on
@@ -37,6 +39,12 @@ export function StageQuestion({
   sound: boolean;
 }) {
   const reduced = useReducedMotion();
+  const { appearance, motion: arenaMotion } = useArena();
+  const enter = screenTransition(appearance.transition, arenaMotion, "stage", reduced);
+  const layout = appearance.projectorLayout;
+  const minimal = layout === "MINIMAL";
+  const qScale = questionScale(question.text);
+  const aScale = answerScale(question.options.map((o) => o.text)) * (layout === "WIDE" ? 0.86 : 1);
   const revealed = phase === "ANSWER_REVEAL" || phase === "LEADERBOARD";
   const active = phase === "QUESTION_ACTIVE";
   const total = Object.values(distribution).reduce((a, b) => a + b, 0);
@@ -52,10 +60,10 @@ export function StageQuestion({
       <motion.div
         key={question.id}
         className="flex h-full flex-col gap-[2.6vh]"
-        initial={reduced ? false : { opacity: 0, x: "6vw" }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={reduced ? undefined : { opacity: 0, x: "-6vw" }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        initial={enter.initial}
+        animate={enter.animate}
+        exit={enter.exit}
+        transition={enter.transition}
       >
         {/* ------------------------------------------------ header row */}
         <div className="flex items-start justify-between gap-[2vw]">
@@ -72,9 +80,9 @@ export function StageQuestion({
               <span className="numeric text-[clamp(1rem,1.5vw,3rem)] font-bold text-fg-3">
                 / {pad2(question.total)}
               </span>
-              <ProgressTicks index={question.index} total={question.total} />
+              {!minimal && <ProgressTicks index={question.index} total={question.total} />}
               {question.points !== 1000 && (
-                <span className="label border border-line-strong px-[0.8vw] py-[0.6vh] text-[clamp(0.7rem,0.9vw,1.75rem)] text-fg-2">
+                <span className="label border border-line-strong px-[0.8vw] py-[0.6vh] text-[clamp(0.75rem,0.9vw,1.75rem)] text-fg-2">
                   {question.points === 0
                     ? "No points"
                     : question.points === 2000
@@ -88,7 +96,12 @@ export function StageQuestion({
                 initial={reduced ? false : { opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="min-w-0 flex-1 text-stage-question font-display text-balance"
+                className="min-w-0 flex-1 text-stage-question font-display text-balance break-words"
+                style={
+                  qScale < 1
+                    ? { fontSize: `calc(var(--text-stage-question) * ${qScale})` }
+                    : undefined
+                }
               >
                 {question.text}
               </motion.h1>
@@ -97,7 +110,7 @@ export function StageQuestion({
                   initial={reduced ? false : { opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
-                  className="notch shrink-0 overflow-hidden border border-line-strong bg-sunken"
+                  className="shrink-0 overflow-hidden rounded-lg border border-line-strong bg-sunken"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- organiser-supplied image URL */}
                   <img
@@ -111,15 +124,25 @@ export function StageQuestion({
           </div>
           <div className="flex shrink-0 flex-col items-center gap-[1.5vh]">
             <Countdown timer={timer} active={active} sound={sound} />
-            <AnsweredMeter answered={revealed ? total : answeredCount} players={playerCount} />
+            {!minimal && (
+              <AnsweredMeter answered={revealed ? total : answeredCount} players={playerCount} />
+            )}
           </div>
         </div>
+
+        {appearance.timerStyle === "PROGRESS" && <StageTimerBar timer={timer} active={active} />}
 
         {/* ------------------------------------------------ answers */}
         <div
           className={cn(
-            "grid min-h-0 flex-1 gap-[1.2vw]",
-            question.options.length > 2 ? "grid-cols-2 grid-rows-2" : "grid-cols-2 grid-rows-1",
+            "grid min-h-[38vh] flex-1 gap-[1.2vw]",
+            layout === "WIDE"
+              ? question.options.length > 2
+                ? "grid-cols-4 grid-rows-1"
+                : "grid-cols-2 grid-rows-1"
+              : question.options.length > 2
+                ? "grid-cols-2 grid-rows-2"
+                : "grid-cols-2 grid-rows-1",
           )}
         >
           {question.options.map((o, i) => {
@@ -134,40 +157,48 @@ export function StageQuestion({
                 share={total ? count / total : 0}
                 showStats={revealed && showStats}
                 delay={reduced ? 0 : 0.18 + i * 0.07}
+                textScale={aScale}
+                vertical={layout === "WIDE" && question.options.length > 2}
               />
             );
           })}
         </div>
 
         {/* ------------------------------------------------ status ribbons */}
-        <AnimatePresence>
-          {phase === "QUESTION_LOCKED" && (
-            <motion.div
-              key="locked"
-              initial={reduced ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center justify-center gap-[1vw] border-y border-danger/50 bg-danger-soft py-[1.2vh]"
-            >
-              <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-extrabold uppercase tracking-[-0.02em] text-danger">
-                Time&apos;s up
-              </span>
-              <span className="label text-[clamp(0.7rem,1vw,2rem)] text-fg-2">Answers locked</span>
-            </motion.div>
-          )}
-          {revealed && explanation && (
-            <motion.p
-              key="explain"
-              initial={reduced ? false : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="border-l-[0.3vw] border-accent bg-surface px-[1.4vw] py-[1.4vh] text-[clamp(1rem,1.4vw,3rem)] leading-snug text-fg-2"
-            >
-              <span className="label mr-[0.8vw] text-accent">Why</span>
-              {explanation}
-            </motion.p>
-          )}
-        </AnimatePresence>
+        {/* The slot is reserved while a question is open, so "Time's up" appearing never
+            reflows the answer grid. */}
+        <div className={cn("shrink-0", !revealed && "min-h-[6.5vh]")}>
+          <AnimatePresence mode="wait">
+            {phase === "QUESTION_LOCKED" && (
+              <motion.div
+                key="locked"
+                initial={reduced ? false : { opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-center gap-[1vw] border-y border-danger/50 bg-danger-soft py-[1.2vh]"
+              >
+                <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-extrabold uppercase tracking-[-0.02em] text-danger">
+                  Time&apos;s up
+                </span>
+                <span className="label text-[clamp(0.75rem,1vw,2rem)] text-fg-2">
+                  Answers locked
+                </span>
+              </motion.div>
+            )}
+            {revealed && explanation && (
+              <motion.p
+                key="explain"
+                initial={reduced ? false : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="border-l-[0.3vw] border-accent bg-surface px-[1.4vw] py-[1.4vh] text-[clamp(1rem,1.4vw,3rem)] leading-snug text-fg-2"
+              >
+                <span className="label mr-[0.8vw] text-accent">Why</span>
+                {explanation}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
@@ -198,11 +229,12 @@ function AnsweredMeter({ answered, players }: { answered: number; players: numbe
         {answered}
         <span className="text-fg-3">/{players}</span>
       </div>
-      <div className="label mt-[0.6vh] text-[clamp(0.6rem,0.8vw,1.5rem)] text-fg-3">Answered</div>
+      <div className="label mt-[0.6vh] text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">Answered</div>
       <div className="mt-[0.8vh] h-[0.6vh] bg-line">
         <motion.div
-          className="h-full bg-accent"
-          animate={{ width: `${share * 100}%` }}
+          className="h-full origin-left bg-accent"
+          initial={false}
+          animate={{ scaleX: share }}
           transition={{ duration: 0.3 }}
         />
       </div>

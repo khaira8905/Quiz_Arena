@@ -27,7 +27,9 @@ import { StartSequence } from "@/components/game/start-sequence";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
+import { screenTransition, useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
+import { PHONE_ROWS_THRESHOLD } from "@/lib/text-fit";
 import { ordinal, pad2 } from "@/lib/format";
 import type { usePlayerGame } from "@/lib/game/use-player-game";
 import { play, setSoundEnabled, soundPreference, unlockAudio } from "@/lib/sound";
@@ -46,6 +48,9 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
   );
   const [leaving, setLeaving] = useState(false);
   const sound = soundOn && view.soundEnabled;
+  const reduced = useReducedMotion();
+  const { appearance, motion: arenaMotion } = useArena();
+  const enter = screenTransition(appearance.transition, arenaMotion, "phone", reduced);
 
   // Reveal / finish cues.
   const lastPhase = useRef(view.phase);
@@ -65,7 +70,7 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
           <p className="truncate font-display text-body-lg font-bold leading-tight">
             {view.me.nickname}
           </p>
-          <p className="label mt-0.5 text-fg-3">Arena {view.code}</p>
+          <p className="label mt-0.5 text-fg-3">Game {view.code}</p>
         </div>
         <div className="text-right">
           <AnimatedNumber
@@ -76,16 +81,20 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
             {view.me.rank ? `${ordinal(view.me.rank)} of ${view.playerCount}` : "Score"}
           </span>
         </div>
-        <button
-          aria-label={soundOn ? "Mute sounds" : "Unmute sounds"}
-          onClick={() => {
-            unlockAudio();
-            setSoundEnabled(!soundOn);
-          }}
-          className="grid h-9 w-9 place-items-center text-fg-3 hover:text-fg"
-        >
-          {sound ? <Volume2 className="h-4.5 w-4.5" /> : <VolumeX className="h-4.5 w-4.5" />}
-        </button>
+        {/* Only offered when the quiz has sound at all; otherwise it would do nothing. */}
+        {view.soundEnabled && (
+          <button
+            aria-label={soundOn ? "Mute sounds" : "Unmute sounds"}
+            aria-pressed={!soundOn}
+            onClick={() => {
+              unlockAudio();
+              setSoundEnabled(!soundOn);
+            }}
+            className="-mr-2 grid h-11 w-11 place-items-center text-fg-3 hover:text-fg"
+          >
+            {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+          </button>
+        )}
       </header>
 
       <AnimatePresence>
@@ -114,15 +123,21 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
         )}
       </AnimatePresence>
 
+      {/* One persistent live region: screens remount per phase, so announcements made by
+          freshly mounted content are often skipped by screen readers. */}
+      <p className="sr-only" aria-live="polite" role="status">
+        {announcement(view)}
+      </p>
+
       <main className="relative min-h-0 flex-1">
         <AnimatePresence mode="wait">
           <motion.div
             key={screenKey(view)}
             className="absolute inset-0 flex flex-col"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            initial={enter.initial}
+            animate={enter.animate}
+            exit={enter.exit}
+            transition={enter.transition}
           >
             {view.phase === "LOBBY" && <LobbyScreen view={view} onLeave={() => setLeaving(true)} />}
             {view.phase === "COUNTDOWN" && view.countdownEndsAt && (
@@ -153,6 +168,28 @@ export function PlayerGame({ game, view }: { game: Game; view: PlayerView }) {
       />
     </div>
   );
+}
+
+function announcement(v: PlayerView): string {
+  switch (v.phase) {
+    case "LOBBY":
+      return `You're in as ${v.me.nickname}. Waiting for the host to start.`;
+    case "QUESTION_ACTIVE":
+      return v.question ? `Question ${v.question.index + 1} of ${v.question.total}.` : "";
+    case "QUESTION_LOCKED":
+      return "Time's up. Answers are locked.";
+    case "ANSWER_REVEAL": {
+      const r = v.result;
+      if (!r?.answered) return "You didn't answer this one.";
+      return r.correct ? `Correct! Plus ${r.points} points.` : "Not this time.";
+    }
+    case "LEADERBOARD":
+      return v.me.rank ? `You're ${ordinal(v.me.rank)} of ${v.playerCount}.` : "";
+    case "FINISHED":
+      return v.me.rank ? `Game over. You finished ${ordinal(v.me.rank)}.` : "Game over.";
+    default:
+      return "";
+  }
 }
 
 const screenKey = (v: PlayerView) =>
@@ -186,7 +223,7 @@ function LobbyScreen({ view, onLeave }: { view: PlayerView; onLeave: () => void 
         {view.me.nickname}
       </h1>
       <p className="mt-4 max-w-xs text-body-lg text-fg-2">
-        Find your name on the big screen. The host will start soon.
+        Your name is on the big screen. The host will start soon.
       </p>
       <p className="mt-8 flex items-baseline gap-2">
         <AnimatedNumber value={view.playerCount} className="numeric text-3xl font-extrabold" />
@@ -196,9 +233,9 @@ function LobbyScreen({ view, onLeave }: { view: PlayerView; onLeave: () => void 
       </p>
       <button
         onClick={onLeave}
-        className="label mt-10 flex items-center gap-1.5 text-fg-3 hover:text-fg"
+        className="label mt-8 flex min-h-11 items-center gap-1.5 px-4 text-fg-3 hover:text-fg"
       >
-        <LogOut className="h-3.5 w-3.5" /> Leave
+        <LogOut className="h-4 w-4" /> Leave game
       </button>
     </div>
   );
@@ -211,6 +248,9 @@ function QuestionScreen({ game, view, sound }: { game: Game; view: PlayerView; s
   const locked = view.phase === "QUESTION_LOCKED" || view.paused;
   const chosen = view.myAnswerId ?? game.pendingAnswer;
   const [expanded, setExpanded] = useState(false);
+  const compact = view.appearance.participantLayout === "COMPACT";
+  // Long answers read better as full-width rows than squeezed into a 2×2 grid.
+  const rows = q.options.some((o) => o.text.length > PHONE_ROWS_THRESHOLD);
 
   const submit = async (optionId: string) => {
     if (chosen || locked) return;
@@ -239,7 +279,13 @@ function QuestionScreen({ game, view, sound }: { game: Game; view: PlayerView; s
     chosen ? (id === chosen ? "selected" : "dimmed") : locked ? "dimmed" : "idle";
 
   return (
-    <div className="flex flex-1 flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+    <div
+      className={cn(
+        "flex flex-1 flex-col gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3",
+        // Long answers as rows can be taller than a small phone: let the screen scroll.
+        rows && "overflow-y-auto overscroll-contain",
+      )}
+    >
       <div className="flex items-center gap-3 px-1">
         <span className="numeric shrink-0 text-body-lg font-extrabold text-accent">
           Q{pad2(q.index + 1)}
@@ -263,8 +309,16 @@ function QuestionScreen({ game, view, sound }: { game: Game; view: PlayerView; s
 
       <div
         className={cn(
-          "grid min-h-0 flex-1 gap-2.5",
-          q.options.length > 2 ? "grid-cols-2 grid-rows-2" : "grid-cols-1 grid-rows-2",
+          "grid min-h-0 flex-1",
+          compact ? "gap-2" : "gap-2.5",
+          rows
+            ? "flex-none auto-rows-[minmax(4.5rem,auto)] grid-cols-1"
+            : q.options.length > 2
+              ? "grid-cols-2 grid-rows-2"
+              : "grid-cols-1 grid-rows-2",
+          // Landscape phones: one row of answers instead of a squashed grid.
+          !rows &&
+            "[@media(orientation:landscape)_and_(max-height:520px)]:grid-flow-col [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-none [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-1",
         )}
       >
         {q.options.map((o, i) => (
@@ -275,6 +329,8 @@ function QuestionScreen({ game, view, sound }: { game: Game; view: PlayerView; s
             state={state(o.id)}
             disabled={!!chosen || locked}
             onPress={() => void submit(o.id)}
+            compact={compact}
+            rows={rows}
           />
         ))}
       </div>
@@ -343,7 +399,6 @@ function RevealScreen({ view }: { view: PlayerView }) {
             : { scale: 1, opacity: 1 }
         }
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        aria-live="assertive"
       >
         <span className="grid h-14 w-14 place-items-center rounded-full bg-black/15">
           {outcome === "correct" ? (

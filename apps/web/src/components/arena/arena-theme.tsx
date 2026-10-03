@@ -3,6 +3,7 @@
 import {
   type ArenaAppearance,
   type MotionLevel,
+  type TransitionPreset,
   type TypographyPreset,
   DEFAULT_APPEARANCE,
   arenaCssVariables,
@@ -72,6 +73,57 @@ function buildContext(appearance: ArenaAppearance): ArenaContextValue {
 
 const DEFAULT_CONTEXT = buildContext(DEFAULT_APPEARANCE);
 
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * Enter/exit motion for a screen change (question to question, phase to phase), following
+ * the organiser's transition preset and scaled by animation intensity. `stage` distances are
+ * viewport-relative for the projector; `phone` uses small fixed distances.
+ */
+export function screenTransition(
+  preset: TransitionPreset,
+  motion: ArenaMotion,
+  surface: "stage" | "phone",
+  reduced: boolean | null,
+) {
+  if (reduced) {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+      transition: { duration: 0.2 },
+    };
+  }
+  const d = motion.amplitude;
+  const far = (stage: number, phone: number) =>
+    surface === "stage" ? `${stage * d}vw` : phone * d;
+  const transition = { duration: surface === "stage" ? 0.45 : 0.24, ease: EASE };
+  switch (preset) {
+    case "RISE":
+      return {
+        initial: { opacity: 0, y: far(4, 18) },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: far(-2, -10) },
+        transition,
+      };
+    case "FADE":
+      return {
+        initial: { opacity: 0, scale: 1 - 0.015 * d },
+        animate: { opacity: 1, scale: 1 },
+        exit: { opacity: 0 },
+        transition,
+      };
+    case "SLIDE":
+    default:
+      return {
+        initial: { opacity: 0, x: far(6, 28) },
+        animate: { opacity: 1, x: 0 },
+        exit: { opacity: 0, x: far(-6, -28) },
+        transition,
+      };
+  }
+}
+
 /** The active arena (or the default arena outside any provider, e.g. admin screens). */
 export function useArena(): ArenaContextValue {
   return useContext(ArenaContext) ?? DEFAULT_CONTEXT;
@@ -104,7 +156,10 @@ export function ArenaThemeProvider({
    */
   page?: boolean;
 }) {
-  const a = appearance ?? DEFAULT_APPEARANCE;
+  // Every game snapshot carries a fresh appearance object; key on content so the context,
+  // the inline style and the <html> tokens only change when the look actually changes.
+  const key = JSON.stringify(appearance ?? DEFAULT_APPEARANCE);
+  const a = useMemo(() => JSON.parse(key) as ArenaAppearance, [key]);
   const value = useMemo(() => buildContext(a), [a]);
   const style = useMemo(() => arenaStyle(a), [a]);
   const bg = value.colors.bg;
@@ -113,16 +168,21 @@ export function ArenaThemeProvider({
     if (!page) return;
     const html = document.documentElement;
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    const prev = { bg: html.style.backgroundColor, meta: meta?.content };
+    const prevMeta = meta?.content;
+    // The tokens also go on <html> so portalled UI (dialogs, toasts) and the page behind
+    // the arena (overscroll, safe areas) are themed too, not just this subtree.
+    const vars = Object.entries(style as Record<string, string>);
+    for (const [k, v] of vars) html.style.setProperty(k, v);
     html.style.backgroundColor = bg;
     document.body.style.backgroundColor = bg;
     if (meta) meta.content = bg;
     return () => {
-      html.style.backgroundColor = prev.bg;
+      for (const [k] of vars) html.style.removeProperty(k);
+      html.style.backgroundColor = "";
       document.body.style.backgroundColor = "";
-      if (meta && prev.meta) meta.content = prev.meta;
+      if (meta && prevMeta) meta.content = prevMeta;
     };
-  }, [page, bg]);
+  }, [page, bg, style]);
 
   return (
     <ArenaContext.Provider value={value}>

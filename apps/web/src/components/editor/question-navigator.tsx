@@ -51,7 +51,7 @@ export function QuestionNavigator({
   };
 
   return (
-    <nav aria-label="Questions" className="flex min-h-0 flex-col">
+    <nav aria-label="Questions" className="flex min-h-0 flex-col lg:max-h-full">
       <div className="flex items-center justify-between px-1 pb-3">
         <h2 className="label text-fg-2">Questions</h2>
         <span className="numeric text-body-sm font-bold text-fg-3">
@@ -60,7 +60,7 @@ export function QuestionNavigator({
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
-          <ol className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-2 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto">
+          <ol className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto">
             {questions.map((q, i) => (
               <NavItem
                 key={q.id}
@@ -152,10 +152,13 @@ function NavItem({
             <span className="label ml-auto text-fg-3">{q.timeLimitSec ?? defaultTimerSec}s</span>
             {issues.length > 0 && (
               <span
-                className="h-1.5 w-1.5 rounded-full bg-warning"
+                role="img"
+                className="grid h-4 w-4 place-items-center rounded-full bg-warning text-[10px] font-extrabold leading-none text-black"
                 title={issues.join(" · ")}
-                aria-label="Needs attention"
-              />
+                aria-label={`Needs attention: ${issues.join(", ")}`}
+              >
+                !
+              </span>
             )}
           </div>
           <p

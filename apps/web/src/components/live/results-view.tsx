@@ -25,7 +25,7 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
   return (
     <>
       <PageHeader
-        eyebrow={`Arena ${session.code} · ${session.endedAt ? formatDateTime(session.endedAt) : ""}`}
+        eyebrow={`Game ${session.code} · ${session.endedAt ? formatDateTime(session.endedAt) : ""}`}
         title={session.quizTitle}
         description="Final results"
         actions={
@@ -91,9 +91,11 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
                   {i + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 truncate font-display text-h3 font-bold">
-                    {i === 0 && <Crown className="h-4 w-4 text-accent" aria-label="Winner" />}
-                    {s.nickname}
+                  <p className="flex items-center gap-1.5 font-display text-h3 font-bold">
+                    {i === 0 && (
+                      <Crown className="h-4 w-4 shrink-0 text-accent" aria-label="Winner" />
+                    )}
+                    <span className="min-w-0 truncate">{s.nickname}</span>
                   </p>
                   <p className="numeric text-h2 font-extrabold">{formatNumber(s.score)}</p>
                 </div>
@@ -121,7 +123,9 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
             <StatTile
               label="Avg answer time"
               value={Math.round(data.results.averageResponseMs ?? 0)}
-              format={(ms) => `${(ms / 1000).toFixed(1)}s`}
+              format={(ms) =>
+                data.results.averageResponseMs === null ? "—" : `${(ms / 1000).toFixed(1)}s`
+              }
               index={3}
             />
           </section>

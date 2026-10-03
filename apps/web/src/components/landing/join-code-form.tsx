@@ -21,7 +21,7 @@ export function JoinCodeForm() {
       }}
     >
       <label htmlFor="landing-code" className="sr-only">
-        Game code
+        Game PIN
       </label>
       <input
         id="landing-code"

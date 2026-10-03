@@ -1,7 +1,8 @@
 "use client";
 
 import { LayoutGrid, Layers, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import * as RD from "@radix-ui/react-dialog";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -89,7 +90,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           aria-label="Open navigation"
           aria-expanded={drawer}
           onClick={() => setDrawer(true)}
-          className="rounded-sm p-2 text-fg-2 hover:text-fg"
+          className="-mr-2 grid h-11 w-11 place-items-center rounded-md text-fg-2 hover:text-fg"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -99,35 +100,45 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <Sidebar userName={me.data.name} email={me.data.email} />
       </aside>
 
-      <AnimatePresence>
-        {drawer && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDrawer(false)}
-            />
-            <motion.aside
-              className="fixed inset-y-0 left-0 z-50 w-72 lg:hidden"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 420, damping: 40 }}
-            >
-              <button
-                aria-label="Close navigation"
-                onClick={() => setDrawer(false)}
-                className="absolute right-3 top-4 z-10 rounded-sm p-2 text-fg-2"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <Sidebar userName={me.data.name} email={me.data.email} />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      {/* A real modal: focus is trapped inside, Escape closes, the page behind is inert. */}
+      <RD.Root open={drawer} onOpenChange={setDrawer}>
+        <AnimatePresence>
+          {drawer && (
+            <RD.Portal forceMount>
+              <RD.Overlay asChild forceMount>
+                <motion.div
+                  className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                />
+              </RD.Overlay>
+              <RD.Content asChild forceMount aria-describedby={undefined}>
+                <motion.aside
+                  className="fixed inset-y-0 left-0 z-50 w-72 focus:outline-none lg:hidden"
+                  initial={{ x: "-100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "-100%" }}
+                  transition={{ type: "spring", stiffness: 420, damping: 40 }}
+                >
+                  <RD.Title className="sr-only">Navigation</RD.Title>
+                  <RD.Close
+                    aria-label="Close navigation"
+                    className="absolute right-2 top-3 z-10 grid h-11 w-11 place-items-center rounded-md text-fg-2 hover:text-fg"
+                  >
+                    <X className="h-5 w-5" />
+                  </RD.Close>
+                  {/* Its own layout group, so the active-item highlight doesn't fly in from
+                      the (hidden) desktop sidebar. */}
+                  <LayoutGroup id="drawer">
+                    <Sidebar userName={me.data.name} email={me.data.email} />
+                  </LayoutGroup>
+                </motion.aside>
+              </RD.Content>
+            </RD.Portal>
+          )}
+        </AnimatePresence>
+      </RD.Root>
 
       <main id="main" className="min-w-0 px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
         {/* Workspaces (editor, live control) use the full width; content pages stay readable. */}

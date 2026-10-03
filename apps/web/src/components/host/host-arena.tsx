@@ -126,6 +126,11 @@ export function HostArena({ code }: { code: string }) {
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, [role=dialog]"))
         return;
       const key = e.key.toLowerCase();
+      // Space/Enter on a focused button or link activate that control, not the primary
+      // command (tabbing to "Pause" and pressing Enter must pause).
+      const onControl =
+        e.target instanceof HTMLElement && !!e.target.closest("button, a, [role=button]");
+      if ((key === " " || key === "enter") && onControl) return;
       if (key === " " || key === "enter" || key === "arrowright") {
         e.preventDefault();
         const primary = primaryCommand(view);
@@ -159,7 +164,7 @@ export function HostArena({ code }: { code: string }) {
         cta: "Go to dashboard",
       },
       INVALID_GAME_CODE: {
-        title: "Arena not found",
+        title: "Game not found",
         description: `No live game uses ${code}. It may have ended or the server restarted.`,
         href: "/admin/sessions",
         cta: "View sessions",
@@ -172,7 +177,7 @@ export function HostArena({ code }: { code: string }) {
     };
     return (
       <StatusScreen
-        eyebrow={`Arena ${code}`}
+        eyebrow={`Game ${code}`}
         title={copy.title}
         description={copy.description}
         tone="danger"
@@ -190,7 +195,7 @@ export function HostArena({ code }: { code: string }) {
       <div className="arena-floor grid h-dvh place-items-center">
         <div className="flex flex-col items-center gap-4">
           <Spinner className="h-8 w-8" />
-          <p className="label text-fg-3">Opening arena {code}</p>
+          <p className="label text-fg-3">Opening game {code}</p>
         </div>
       </div>
     );
@@ -213,6 +218,12 @@ export function HostArena({ code }: { code: string }) {
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="shrink-0 overflow-hidden border-t border-line-strong bg-surface"
               aria-label="Host controls"
+              // A mouse click shouldn't leave focus on a dock button, or the projector's
+              // Space key would press it again instead of continuing the game.
+              onPointerUp={(e) => {
+                if (e.pointerType === "mouse" && document.activeElement instanceof HTMLElement)
+                  document.activeElement.blur();
+              }}
             >
               <div className="flex flex-wrap items-center gap-3 px-5 py-3">
                 <div className="mr-2 min-w-36">

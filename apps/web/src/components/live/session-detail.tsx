@@ -64,7 +64,7 @@ export function SessionDetail({ id }: { id: string }) {
   return (
     <>
       <PageHeader
-        eyebrow={`Arena ${session.code}`}
+        eyebrow={`Game ${session.code}`}
         title={session.quizTitle}
         description={`Opened ${formatDateTime(session.createdAt)}`}
       />

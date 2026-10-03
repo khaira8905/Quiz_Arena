@@ -39,7 +39,7 @@ export function Dialog({
             <RD.Content asChild forceMount>
               <motion.div
                 className={cn(
-                  "notch fixed left-1/2 top-1/2 z-50 w-[min(92vw,460px)] border border-line-strong bg-elevated p-6 focus:outline-none",
+                  "fixed left-1/2 top-1/2 z-50 w-[min(92vw,460px)] rounded-lg border border-line-strong bg-elevated p-6 text-fg shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] focus:outline-none",
                   className,
                 )}
                 initial={{ opacity: 0, x: "-50%", y: "-46%", scale: 0.97 }}
@@ -57,7 +57,7 @@ export function Dialog({
                 )}
                 <div className="mt-5">{children}</div>
                 <RD.Close
-                  className="absolute right-4 top-4 rounded-sm p-1 text-fg-3 hover:text-fg"
+                  className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-md text-fg-3 hover:bg-sunken hover:text-fg"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
@@ -98,13 +98,20 @@ export function ConfirmDialog({
       description={description}
     >
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+        {/* Destructive dialogs focus Cancel: a stray Space or Enter (the projector's "next"
+            keys) must never end or skip a game. */}
+        <Button
+          variant="ghost"
+          onClick={() => onOpenChange(false)}
+          disabled={busy}
+          autoFocus={tone === "danger"}
+        >
           Cancel
         </Button>
         <Button
           variant={tone === "danger" ? "danger" : "primary"}
           loading={busy}
-          autoFocus
+          autoFocus={tone !== "danger"}
           onClick={async () => {
             setBusy(true);
             try {

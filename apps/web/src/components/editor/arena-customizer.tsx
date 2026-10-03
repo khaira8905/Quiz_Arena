@@ -174,7 +174,7 @@ export function ArenaCustomizer({ quiz }: { quiz: QuizDto }) {
         >
           <ColorControl
             label="Accent"
-            hint="Game code, timer, highlights."
+            hint="Game PIN, timer, highlights."
             value={colors.accent}
             custom={draft.accent !== null}
             onChange={(v) => change({ accent: v })}

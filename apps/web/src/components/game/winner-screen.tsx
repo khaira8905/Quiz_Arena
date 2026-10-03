@@ -109,7 +109,19 @@ export function WinnerScreen({
               <p className="label flex items-center gap-[0.6vw] text-[clamp(0.8rem,1.2vw,2.4rem)] text-accent">
                 <Crown className="h-[1.2em] w-[1.2em]" /> Champion
               </p>
-              <h1 className="mt-[2vh] break-words font-display text-[clamp(3rem,7vw,14rem)] font-extrabold leading-[0.9] tracking-[-0.045em]">
+              <h1
+                className="mt-[2vh] break-words font-display font-extrabold leading-[0.9] tracking-[-0.045em]"
+                // Long names step down so a 20-character nickname stays on one or two lines
+                // instead of breaking mid-word at champion size.
+                style={{
+                  fontSize:
+                    first.nickname.length <= 9
+                      ? "clamp(3rem,7vw,14rem)"
+                      : first.nickname.length <= 14
+                        ? "clamp(2.5rem,5.2vw,10.5rem)"
+                        : "clamp(2rem,3.9vw,8rem)",
+                }}
+              >
                 {first.nickname}
               </h1>
               <p className="numeric mt-[2vh] text-[clamp(2rem,4vw,8rem)] font-extrabold text-accent">
@@ -215,7 +227,7 @@ function PodiumColumn({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="label text-[clamp(0.6rem,0.85vw,1.6rem)] text-fg-3">{label}</dt>
+      <dt className="label text-[clamp(0.75rem,0.85vw,1.6rem)] text-fg-3">{label}</dt>
       <dd className="numeric mt-[1vh] text-[clamp(1.25rem,2.2vw,4.5rem)] font-extrabold">
         {value}
       </dd>

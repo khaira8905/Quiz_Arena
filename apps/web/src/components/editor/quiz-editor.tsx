@@ -162,7 +162,11 @@ function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) 
             onClick={togglePublish}
             loading={updateQuiz.isPending}
             disabled={!published && problems > 0}
-            title={!published && problems ? `${problems} question(s) need attention` : undefined}
+            title={
+              !published && problems
+                ? `${problems} question${problems > 1 ? "s need" : " needs"} attention`
+                : undefined
+            }
           >
             {published ? "Unpublish" : "Publish"}
           </Button>
@@ -181,7 +185,7 @@ function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) 
       {problems > 0 && (
         <p className="mt-4 border-l-2 border-warning bg-warning-soft px-4 py-2.5 text-body-sm text-fg">
           {problems} question{problems > 1 ? "s need" : " needs"} attention before this quiz can be
-          published or played. Look for the amber dot.
+          published or played. Look for the ! marker in the question list.
         </p>
       )}
 
@@ -195,7 +199,7 @@ function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) 
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] wide:grid-cols-[14rem_minmax(0,1fr)_18rem] 2xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">
-          <div className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-hidden">
+          <div className="lg:sticky lg:top-6 lg:flex lg:h-[calc(100dvh-3rem)] lg:flex-col">
             <QuestionNavigator
               questions={questions}
               selectedId={current?.id ?? null}

@@ -15,11 +15,12 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-body-sm gap-1.5",
-  md: "h-10 px-4 text-button gap-2",
+  // Touch screens get 44px targets; mouse users keep the denser sizes.
+  sm: "h-8 pointer-coarse:h-11 px-3 text-body-sm gap-1.5",
+  md: "h-10 pointer-coarse:h-11 px-4 text-button gap-2",
   lg: "h-12 px-6 text-[0.9375rem] font-semibold gap-2.5",
   xl: "h-16 px-8 text-lg font-bold gap-3",
-  icon: "h-9 w-9 justify-center",
+  icon: "h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 justify-center",
 };
 
 /**
