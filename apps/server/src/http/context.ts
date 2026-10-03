@@ -15,9 +15,15 @@ export interface AppContext {
 /** Resolves the signed-in admin from the session cookie, or throws 401. */
 export async function requireUser(ctx: AppContext, req: FastifyRequest): Promise<string> {
   const token = req.cookies[SESSION_COOKIE];
-  const userId = token ? await ctx.tokens.verify(token, "session") : null;
-  if (!userId) throw new AppError("UNAUTHORIZED");
-  return userId;
+  const session = token ? await ctx.tokens.verifySession(token) : null;
+  if (!session) throw new AppError("UNAUTHORIZED");
+  // A password change bumps sessionVersion, which retires every session issued before it.
+  const user = await ctx.db.user.findUnique({
+    where: { id: session.userId },
+    select: { sessionVersion: true },
+  });
+  if (!user || user.sessionVersion !== session.version) throw new AppError("UNAUTHORIZED");
+  return session.userId;
 }
 
 export function setSessionCookie(

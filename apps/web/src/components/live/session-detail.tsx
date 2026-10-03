@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback } from "react";
 import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { isApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -43,8 +44,8 @@ export function SessionDetail({ id }: { id: string }) {
         }
         action={
           notFound ? (
-            <Link href="/admin/sessions">
-              <Button>All sessions</Button>
+            <Link href="/admin/sessions" className={buttonClasses()}>
+              All sessions
             </Link>
           ) : (
             <Button onClick={() => refetch()}>Retry</Button>
@@ -63,7 +64,7 @@ export function SessionDetail({ id }: { id: string }) {
   return (
     <>
       <PageHeader
-        eyebrow={`Arena ${session.code}`}
+        eyebrow={`Game ${session.code}`}
         title={session.quizTitle}
         description={`Opened ${formatDateTime(session.createdAt)}`}
       />
@@ -81,8 +82,11 @@ export function SessionDetail({ id }: { id: string }) {
         }
         action={
           session.quizId ? (
-            <Link href={`/admin/quizzes/${session.quizId}`}>
-              <Button variant="secondary">Open quiz</Button>
+            <Link
+              href={`/admin/quizzes/${session.quizId}`}
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              Open quiz
             </Link>
           ) : undefined
         }

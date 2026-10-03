@@ -1,6 +1,7 @@
 /**
  * Answer identity. Each option has three redundant signals — colour, letter and keyboard
- * key — so nobody depends on colour alone. Class names are spelled out in full so
+ * key — so nobody depends on colour alone. `ink` is the readable text colour on that fill
+ * (black or white, chosen per arena theme). Class names are spelled out in full so
  * Tailwind's scanner picks them up.
  */
 export const ANSWER_STYLES = [
@@ -12,6 +13,9 @@ export const ANSWER_STYLES = [
     text: "text-a1",
     border: "border-a1",
     ring: "ring-a1",
+    ink: "text-ink1",
+    inkBg: "bg-ink1",
+    meter: "bg-ink1/22",
     fill: "var(--answer-1)",
   },
   {
@@ -22,6 +26,9 @@ export const ANSWER_STYLES = [
     text: "text-a2",
     border: "border-a2",
     ring: "ring-a2",
+    ink: "text-ink2",
+    inkBg: "bg-ink2",
+    meter: "bg-ink2/22",
     fill: "var(--answer-2)",
   },
   {
@@ -32,6 +39,9 @@ export const ANSWER_STYLES = [
     text: "text-a3",
     border: "border-a3",
     ring: "ring-a3",
+    ink: "text-ink3",
+    inkBg: "bg-ink3",
+    meter: "bg-ink3/22",
     fill: "var(--answer-3)",
   },
   {
@@ -42,6 +52,9 @@ export const ANSWER_STYLES = [
     text: "text-a4",
     border: "border-a4",
     ring: "ring-a4",
+    ink: "text-ink4",
+    inkBg: "bg-ink4",
+    meter: "bg-ink4/22",
     fill: "var(--answer-4)",
   },
 ] as const;

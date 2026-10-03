@@ -2,6 +2,7 @@
  * Load simulation: N players join a real game and play every question while a host drives it.
  *
  *   pnpm loadtest -- --players 100 --api http://localhost:4000
+ *   pnpm loadtest -- --players 500 --burst      (everyone answers in the same tick)
  *
  * Requires a running server and an admin account (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD).
  * Reports join time, answer ack latency percentiles and broadcast fan-out time.
@@ -23,10 +24,14 @@ import { io, type Socket } from "socket.io-client";
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 const { values } = parseArgs({
+  // `pnpm loadtest -- --players 100` forwards the literal "--"; drop it.
+  args: process.argv.slice(2).filter((a) => a !== "--"),
   options: {
     players: { type: "string", default: "100" },
     api: { type: "string", default: "http://localhost:4000" },
     questions: { type: "string", default: "4" },
+    // Every player answers in the same tick: the worst case for the answer path.
+    burst: { type: "boolean", default: false },
   },
 });
 const PLAYERS = Number(values.players);
@@ -181,7 +186,7 @@ async function main() {
       players.map(async (p) => {
         const question = p.latest?.question;
         if (!question || p.latest?.phase !== "QUESTION_ACTIVE") return bump("not-active");
-        await sleep(300 + Math.random() * 2500);
+        await sleep(values.burst ? 300 : 300 + Math.random() * 2500);
         const option = question.options[Math.floor(Math.random() * question.options.length)]!;
         const t0 = Date.now();
         const res = await call(p.socket, "question:answer", {

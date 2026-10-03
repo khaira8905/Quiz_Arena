@@ -16,7 +16,7 @@
 
   --text-primary: #f2f4f8;
   --text-secondary: #a2a9ba;
-  --text-muted: #6a7184;
+  --text-muted: #80879a; /* ≥ 4.8:1 on every surface (WCAG AA) */
   --text-inverse: #0a0b0f;
 
   /* Volt: the single brand accent. Used for primary actions, focus and live state. */
@@ -38,7 +38,20 @@
   --answer-2: #2bb3ff;
   --answer-3: #ffc93c;
   --answer-4: #c25bff;
-  --answer-ink: #0a0b0f;
+  /* Per-answer text colour: arena themes set these to black or white per fill. */
+  --answer-ink-1: #0a0b0f;
+  --answer-ink-2: #0a0b0f;
+  --answer-ink-3: #0a0b0f;
+  --answer-ink-4: #0a0b0f;
+
+  /* Font families are variables so an arena can switch typography preset in place. */
+  --display-family: var(--font-sora);
+  --body-family: var(--font-geist);
+  --mono-family: var(--font-geist-mono);
+
+  /* Arena stage treatment (themes override). */
+  --arena-floor: var(--line);
+  --arena-glow: var(--accent);
 
   --focus-ring: var(--accent);
   --radius-sm: 4px;
@@ -75,14 +88,17 @@
   --color-a2: var(--answer-2);
   --color-a3: var(--answer-3);
   --color-a4: var(--answer-4);
-  --color-answer-ink: var(--answer-ink);
+  --color-ink1: var(--answer-ink-1);
+  --color-ink2: var(--answer-ink-2);
+  --color-ink3: var(--answer-ink-3);
+  --color-ink4: var(--answer-ink-4);
 
   /* Workspace breakpoint (1360px): wide enough for the editor's three panes. */
   --breakpoint-wide: 85rem;
 
-  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--display-family), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--body-family), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--mono-family), ui-monospace, monospace;
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius);
@@ -147,7 +163,7 @@
   --text-stage-answer--letter-spacing: -0.015em;
   --text-stage-answer--font-weight: 650;
 
-  --text-stage-code: clamp(4rem, 10.5vw, 22rem);
+  --text-stage-code: clamp(3.5rem, 8.2vw, 17rem);
   --text-stage-code--line-height: 0.85;
   --text-stage-code--letter-spacing: -0.02em;
   --text-stage-code--font-weight: 800;
@@ -177,7 +193,7 @@
   body {
     background: var(--background);
     color: var(--text-primary);
-    font-family: var(--font-sans);
+    font-family: var(--body-family), ui-sans-serif, system-ui, sans-serif;
     font-size: var(--text-body);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
@@ -186,7 +202,7 @@
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
+    font-family: var(--display-family), ui-sans-serif, system-ui, sans-serif;
     text-wrap: balance;
   }
   p {
@@ -211,7 +227,7 @@
 @layer components {
   /* Eyebrow labels: mono, uppercase, tracked — the "broadcast graphics" voice. */
   .label {
-    font-family: var(--font-mono);
+    font-family: var(--mono-family), ui-monospace, monospace;
     font-size: var(--text-label);
     line-height: 1;
     letter-spacing: 0.14em;
@@ -221,7 +237,7 @@
 
   /* Numbers are a first-class element: display face, tabular, tight. */
   .numeric {
-    font-family: var(--font-display);
+    font-family: var(--display-family), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums lining-nums;
     font-feature-settings:
       "tnum" 1,
@@ -247,17 +263,17 @@
     background-image:
       radial-gradient(
         ellipse 70% 55% at 50% -8%,
-        color-mix(in oklab, var(--accent) 9%, transparent),
+        color-mix(in oklab, var(--arena-glow) 9%, transparent),
         transparent 70%
       ),
       linear-gradient(
         to right,
-        color-mix(in oklab, var(--line) 55%, transparent) 1px,
+        color-mix(in oklab, var(--arena-floor) 55%, transparent) 1px,
         transparent 1px
       ),
       linear-gradient(
         to bottom,
-        color-mix(in oklab, var(--line) 55%, transparent) 1px,
+        color-mix(in oklab, var(--arena-floor) 55%, transparent) 1px,
         transparent 1px
       );
     background-size:
@@ -268,6 +284,67 @@
       0 0,
       -1px -1px,
       -1px -1px;
+  }
+
+  /*
+   * Arena surface. <ArenaThemeProvider> re-declares the colour and font variables on this
+   * element; colour/background/font are re-applied here because inherited values from
+   * <body> were resolved against the root theme.
+   */
+  .arena-scope {
+    color: var(--text-primary);
+    background-color: var(--background);
+    font-family: var(--body-family), ui-sans-serif, system-ui, sans-serif;
+    color-scheme: var(--arena-scheme, dark);
+  }
+
+  /* Background styles. GRID is the default .arena-floor above. */
+  [data-arena-bg="PLAIN"] .arena-floor,
+  .arena-floor[data-arena-bg="PLAIN"] {
+    background-image: radial-gradient(
+      ellipse 80% 60% at 50% -10%,
+      color-mix(in oklab, var(--arena-glow) 6%, transparent),
+      transparent 70%
+    );
+    background-size: 100% 100%;
+  }
+  [data-arena-bg="BEAMS"] .arena-floor,
+  .arena-floor[data-arena-bg="BEAMS"] {
+    background-image:
+      conic-gradient(
+        from 180deg at 50% -20%,
+        transparent 0deg 152deg,
+        color-mix(in oklab, var(--arena-glow) 11%, transparent) 160deg,
+        transparent 168deg 176deg,
+        color-mix(in oklab, var(--arena-glow) 8%, transparent) 180deg,
+        transparent 184deg 192deg,
+        color-mix(in oklab, var(--arena-glow) 11%, transparent) 200deg,
+        transparent 208deg 360deg
+      ),
+      linear-gradient(
+        to top,
+        color-mix(in oklab, var(--arena-floor) 70%, transparent),
+        transparent 22%
+      ),
+      repeating-linear-gradient(
+        to right,
+        color-mix(in oklab, var(--arena-floor) 45%, transparent) 0 1px,
+        transparent 1px 96px
+      );
+    background-size: 100% 100%;
+    background-position: 0 0;
+  }
+  [data-arena-bg="IMAGE"] .arena-floor,
+  .arena-floor[data-arena-bg="IMAGE"] {
+    /* Readability scrim: the image never fights the question text. */
+    background-image:
+      linear-gradient(
+        color-mix(in oklab, var(--background) 78%, transparent),
+        color-mix(in oklab, var(--background) 88%, transparent)
+      ),
+      var(--arena-image, none);
+    background-size: cover;
+    background-position: center;
   }
 
   /* Hairline rule with tick marks, used as a section divider on stage screens. */

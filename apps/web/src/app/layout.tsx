@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Sora } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans, Sora, Space_Grotesk } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -20,6 +20,22 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+/** Arena typography presets (TECHNICAL / CLEAN). Not preloaded: only arenas that pick them load them. */
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  weight: ["500", "600", "700"],
+  display: "swap",
+  preload: false,
+});
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: { default: "QuizArena — 100 Players. One Arena.", template: "%s · QuizArena" },
   description:
@@ -36,7 +52,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sora.variable} ${geist.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      className={`${sora.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jakarta.variable}`}
+    >
       <body>
         <Providers>{children}</Providers>
       </body>

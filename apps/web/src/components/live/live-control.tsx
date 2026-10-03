@@ -5,7 +5,7 @@ import { ERROR_COPY } from "@quizarena/shared/errors";
 import { HOST_COMMANDS, type HostCommand, type HostView } from "@quizarena/shared/game";
 import { Check, Copy, ExternalLink, UserX } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { answerStyle } from "@/components/game/answer-style";
 import { Countdown } from "@/components/game/countdown";
@@ -16,6 +16,7 @@ import { Badge, Skeleton } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
 import { joinUrl, pad2 } from "@/lib/format";
 import { COMMAND_LABELS, primaryCommand, useHostGame } from "@/lib/game/use-host-game";
+import { useKeepServerAwake } from "@/lib/use-keep-server-awake";
 
 const PHASES: Record<
   HostView["phase"],
@@ -44,8 +45,10 @@ export function LiveControl({
   onFinished: () => void;
 }) {
   const { view, connection, error, command, kick } = useHostGame(session.code);
+  useKeepServerAwake();
   const [confirm, setConfirm] = useState<HostCommand | null>(null);
   const [kickTarget, setKickTarget] = useState<{ id: string; nickname: string } | null>(null);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const [busy, setBusy] = useState<HostCommand | null>(null);
 
   useEffect(() => {
@@ -99,7 +102,7 @@ export function LiveControl({
           <h1 className="mt-3 font-display text-h1">{view.quizTitle}</h1>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2">
             <span className="flex items-baseline gap-2">
-              <span className="label text-fg-3">Code</span>
+              <span className="label text-fg-3">Game PIN</span>
               <span className="numeric text-[2rem] font-extrabold leading-none text-accent">
                 {view.code}
               </span>
@@ -145,7 +148,7 @@ export function LiveControl({
                   {pad2(q.total)} · {q.points} pts
                 </span>
                 <span className="numeric text-body font-bold">
-                  {view.answeredCount}/{view.connectedCount}{" "}
+                  {view.answeredCount}/{view.playerCount}{" "}
                   <span className="label text-fg-3">answered</span>
                 </span>
               </div>
@@ -173,8 +176,9 @@ export function LiveControl({
                           />
                           <span
                             className={cn(
-                              "relative grid h-8 w-8 shrink-0 place-items-center font-display font-extrabold text-answer-ink",
+                              "relative grid h-8 w-8 shrink-0 place-items-center font-display font-extrabold",
                               s.bg,
+                              s.ink,
                             )}
                           >
                             {s.letter}
@@ -208,7 +212,9 @@ export function LiveControl({
             <div className="p-8 text-center">
               <p className="label text-fg-3">Game finished</p>
               <h2 className="mt-3 font-display text-h1">
-                {view.results?.standings[0]?.nickname ?? "No winner"} wins
+                {view.results?.standings[0]
+                  ? `${view.results.standings[0].nickname} wins`
+                  : "No one played"}
               </h2>
               <p className="mt-2 text-fg-2">Loading the full results…</p>
             </div>
@@ -222,7 +228,7 @@ export function LiveControl({
               </div>
               {view.players.length === 0 ? (
                 <p className="mt-6 border border-dashed border-line-strong p-8 text-center text-fg-3">
-                  Waiting for players. Share the code{" "}
+                  Waiting for players. Share the PIN{" "}
                   <span className="numeric font-bold text-accent">{view.code}</span> or open the
                   projector view.
                 </p>
@@ -261,12 +267,9 @@ export function LiveControl({
                     disabled={!enabled || busy !== null}
                     loading={busy === cmd}
                     onClick={() => request(cmd)}
-                    className={cn(
-                      "h-10 uppercase tracking-[0.06em]",
-                      cmd === "END" && "text-danger hover:border-danger",
-                    )}
+                    className={cn("h-10", cmd === "END" && "text-danger hover:border-danger")}
                   >
-                    {cmd === "LEADERBOARD" ? "Board" : cmd.toLowerCase()}
+                    {COMMAND_LABELS[cmd]}
                   </Button>
                 );
               })}
@@ -285,13 +288,20 @@ export function LiveControl({
           )}
 
           {view.phase !== "LOBBY" && view.players.length > 0 && (
-            <details className="border border-line bg-surface">
+            <details
+              className="border border-line bg-surface"
+              onToggle={(e) => setRosterOpen(e.currentTarget.open)}
+            >
               <summary className="label cursor-pointer px-5 py-4 text-fg-2">
                 Players ({view.players.length})
               </summary>
-              <div className="px-5 pb-5">
-                <PlayerTable players={view.players} onKick={(p) => setKickTarget(p)} />
-              </div>
+              {/* Only mounted while open: hundreds of rows shouldn't re-render on every
+                  answer-progress update while nobody is looking at them. */}
+              {rosterOpen && (
+                <div className="px-5 pb-5">
+                  <PlayerTable players={view.players} onKick={setKickTarget} />
+                </div>
+              )}
             </details>
           )}
         </aside>
@@ -325,7 +335,7 @@ export function LiveControl({
   );
 }
 
-function PlayerTable({
+const PlayerTable = memo(function PlayerTable({
   players,
   onKick,
 }: {
@@ -348,7 +358,7 @@ function PlayerTable({
           <button
             aria-label={`Remove ${p.nickname}`}
             onClick={() => onKick(p)}
-            className="text-fg-3 opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
+            className="-my-1 grid h-8 w-8 place-items-center text-fg-3 opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:h-11 pointer-coarse:w-11 pointer-coarse:opacity-100"
           >
             <UserX className="h-4 w-4" />
           </button>
@@ -356,4 +366,4 @@ function PlayerTable({
       ))}
     </ul>
   );
-}
+});

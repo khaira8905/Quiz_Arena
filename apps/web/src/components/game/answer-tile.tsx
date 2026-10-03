@@ -1,11 +1,18 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, Lock, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import { useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { answerStyle } from "./answer-style";
 
 export type TileState = "idle" | "selected" | "dimmed" | "correct" | "wrong" | "neutral";
+
+/**
+ * Tiles are notched (clip-path), which would cut a border or outline off at the corner.
+ * Highlighted tiles are instead drawn as two notched layers: a frame-coloured outer layer
+ * with padding and the answer colour inside it, so the frame follows the notch.
+ */
 
 /**
  * Stage (projector) answer tile. On reveal it doubles as a meter: an ink layer fills to the
@@ -19,6 +26,8 @@ export function StageAnswerTile({
   share,
   showStats,
   delay = 0,
+  textScale = 1,
+  vertical = false,
 }: {
   index: number;
   text: string;
@@ -27,65 +36,96 @@ export function StageAnswerTile({
   share?: number;
   showStats?: boolean;
   delay?: number;
+  /** From answerScale(): long answers step down instead of being clipped. */
+  textScale?: number;
+  /** Narrow columns (WIDE layout): letter above the text so the text gets the full width. */
+  vertical?: boolean;
 }) {
   const style = answerStyle(index);
   const reduced = useReducedMotion();
+  const { motion: arenaMotion } = useArena();
   const dim = state === "dimmed" || state === "wrong";
+  const framed = state === "correct";
+  const lift = 24 * arenaMotion.amplitude;
 
   return (
     <motion.div
-      layout
-      initial={reduced ? false : { opacity: 0, y: 24, scale: 0.97 }}
+      initial={reduced ? false : { opacity: 0, y: lift, scale: 0.97 }}
       animate={{
         opacity: dim ? 0.32 : 1,
         y: 0,
-        scale: state === "correct" ? 1.025 : 1,
+        scale: framed && arenaMotion.emphasis ? 1.02 : 1,
         filter: dim ? "saturate(0.35)" : "saturate(1)",
       }}
       transition={{ delay, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-      className={cn(
-        "notch relative flex min-h-0 items-center gap-[1.4vw] overflow-hidden px-[1.6vw] py-[1.8vh] text-answer-ink",
-        style.bg,
-        state === "correct" && "z-10 outline outline-[0.35vw] -outline-offset-[0.35vw] outline-fg",
-      )}
+      className={cn("notch relative min-h-0", framed ? "z-10 bg-fg p-[0.35vw]" : style.bg)}
     >
-      {showStats && share !== undefined && (
-        <motion.div
-          className="absolute inset-y-0 left-0 bg-answer-ink/22"
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.round(share * 100)}%` }}
-          transition={{ delay: delay + 0.15, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          aria-hidden
-        />
-      )}
-      <span
-        className="relative grid aspect-square w-[clamp(2.75rem,4.4vw,9rem)] shrink-0 place-items-center bg-answer-ink font-display text-[clamp(1.5rem,2.4vw,5rem)] font-extrabold"
-        style={{ color: style.fill }}
-      >
-        {state === "correct" ? (
-          <Check className="h-[55%] w-[55%]" strokeWidth={3.5} />
-        ) : (
-          style.letter
+      <div
+        className={cn(
+          "relative flex h-full overflow-hidden px-[1.6vw] py-[1.8vh]",
+          vertical ? "flex-col items-start gap-[1.6vh]" : "items-center gap-[1.4vw]",
+          framed && "notch",
+          style.bg,
+          style.ink,
         )}
-      </span>
-      <span className="relative min-w-0 flex-1 text-stage-answer">{text}</span>
-      {showStats && count !== undefined && (
-        <span className="relative shrink-0 text-right">
-          <span className="numeric block text-[clamp(1.5rem,2.6vw,5.5rem)] font-extrabold leading-none">
-            {count}
-          </span>
-          <span className="numeric mt-[0.6vh] block text-[clamp(0.9rem,1.2vw,2.6rem)] font-bold opacity-75">
-            {Math.round((share ?? 0) * 100)}%
-          </span>
+      >
+        {showStats && share !== undefined && (
+          <motion.div
+            className={cn("absolute inset-y-0 left-0 origin-left", style.meter)}
+            style={{ width: "100%" }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: share }}
+            transition={{ delay: delay + 0.15, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            aria-hidden
+          />
+        )}
+        <span
+          className={cn(
+            "relative grid aspect-square w-[clamp(2.75rem,4.4vw,9rem)] shrink-0 place-items-center font-display text-[clamp(1.5rem,2.4vw,5rem)] font-extrabold",
+            style.inkBg,
+          )}
+          style={{ color: style.fill }}
+        >
+          {state === "correct" ? (
+            <Check className="h-[55%] w-[55%]" strokeWidth={3.5} aria-label="Correct" />
+          ) : (
+            style.letter
+          )}
         </span>
-      )}
+        <span
+          className="relative min-w-0 flex-1 text-stage-answer break-words"
+          style={
+            textScale < 1
+              ? { fontSize: `calc(var(--text-stage-answer) * ${textScale})` }
+              : undefined
+          }
+        >
+          {text}
+        </span>
+        {showStats && count !== undefined && (
+          <span
+            className={cn(
+              "relative shrink-0",
+              vertical ? "flex w-full items-baseline justify-between" : "text-right",
+            )}
+          >
+            <span className="numeric block text-[clamp(1.5rem,2.6vw,5.5rem)] font-extrabold leading-none">
+              {count}
+            </span>
+            <span className="numeric mt-[0.6vh] block text-[clamp(1rem,1.2vw,2.6rem)] font-bold opacity-80">
+              {Math.round((share ?? 0) * 100)}%
+            </span>
+          </span>
+        )}
+      </div>
     </motion.div>
   );
 }
 
 /**
  * Phone answer button. Big, thumb-reachable, instant: press compresses, selection confirms,
- * reveal shows correct (pop) or wrong (shake).
+ * reveal shows correct (pop) or wrong (shake). `rows` lays the button out horizontally for
+ * long answers, so the full text stays readable instead of being truncated.
  */
 export function PhoneAnswerButton({
   index,
@@ -94,6 +134,7 @@ export function PhoneAnswerButton({
   disabled,
   onPress,
   compact,
+  rows,
 }: {
   index: number;
   text: string;
@@ -101,17 +142,49 @@ export function PhoneAnswerButton({
   disabled?: boolean;
   onPress?: () => void;
   compact?: boolean;
+  rows?: boolean;
 }) {
   const style = answerStyle(index);
   const reduced = useReducedMotion();
+  const { motion: arenaMotion } = useArena();
   const dim = state === "dimmed";
+  const framed = state === "selected" || state === "correct";
+  const lively = !reduced && arenaMotion.emphasis;
 
   const animate =
-    state === "wrong" && !reduced
+    state === "wrong" && lively
       ? { x: [0, -10, 9, -6, 4, 0], opacity: 1 }
-      : state === "correct" && !reduced
+      : state === "correct" && lively
         ? { scale: [1, 1.06, 1], opacity: 1 }
         : { scale: state === "selected" ? 1.02 : 1, opacity: dim ? 0.3 : 1, x: 0 };
+
+  const letter = (
+    <span
+      className={cn(
+        "grid aspect-square shrink-0 place-items-center font-display font-extrabold",
+        compact || rows ? "w-10 text-xl" : "w-12 text-2xl",
+        style.inkBg,
+      )}
+      style={{ color: style.fill }}
+    >
+      {style.letter}
+    </span>
+  );
+  const badge =
+    state === "correct" ? (
+      <Check className="h-7 w-7 shrink-0" strokeWidth={3.5} aria-hidden />
+    ) : state === "wrong" ? (
+      <X className="h-7 w-7 shrink-0" strokeWidth={3.5} aria-hidden />
+    ) : state === "selected" ? (
+      // Icon, not text: a "Locked in" label doesn't fit a 360px phone's half-width tile,
+      // and the status line under the grid already says it in words.
+      <span
+        className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full", style.inkBg)}
+        style={{ color: style.fill }}
+      >
+        <Lock className="h-4 w-4" strokeWidth={3} aria-hidden />
+      </span>
+    ) : null;
 
   return (
     <motion.button
@@ -125,38 +198,45 @@ export function PhoneAnswerButton({
       animate={animate}
       transition={{ duration: state === "wrong" ? 0.42 : 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "notch relative flex min-h-0 flex-col justify-between overflow-hidden p-4 text-left text-answer-ink transition-[filter] disabled:cursor-default",
-        style.bg,
-        compact ? "gap-2" : "gap-3",
-        state === "selected" && "outline outline-4 -outline-offset-4 outline-fg",
-        state === "correct" && "outline outline-4 -outline-offset-4 outline-fg",
-        state === "wrong" && "saturate-50",
+        "notch relative flex min-h-0 text-left disabled:cursor-default",
+        framed ? "bg-fg p-1" : style.bg,
       )}
     >
-      <span className="flex items-start justify-between">
-        <span
-          className={cn(
-            "grid aspect-square place-items-center bg-answer-ink font-display font-extrabold",
-            compact ? "w-10 text-xl" : "w-12 text-2xl",
-          )}
-          style={{ color: style.fill }}
-        >
-          {style.letter}
-        </span>
-        {state === "correct" && <Check className="h-8 w-8" strokeWidth={3.5} aria-hidden />}
-        {state === "wrong" && <X className="h-8 w-8" strokeWidth={3.5} aria-hidden />}
-        {state === "selected" && (
-          <span className="label rounded-sm bg-answer-ink px-2 py-1 text-fg">Locked in</span>
-        )}
-      </span>
       <span
         className={cn(
-          "font-display font-bold leading-tight tracking-[-0.015em]",
-          compact ? "text-base" : "text-lg sm:text-xl",
-          "line-clamp-4",
+          "relative flex min-h-0 w-full overflow-hidden",
+          rows ? "items-center gap-3 px-3 py-2" : "flex-col justify-between p-4",
+          !rows && (compact ? "gap-2" : "gap-3"),
+          framed && "notch",
+          state === "wrong" && "saturate-50",
+          style.bg,
+          style.ink,
         )}
       >
-        {text}
+        {rows ? (
+          <>
+            {letter}
+            <span className="min-w-0 flex-1 font-display text-base font-bold leading-snug tracking-[-0.01em] break-words">
+              {text}
+            </span>
+            {badge}
+          </>
+        ) : (
+          <>
+            <span className="flex items-start justify-between gap-2">
+              {letter}
+              {badge}
+            </span>
+            <span
+              className={cn(
+                "font-display font-bold leading-tight tracking-[-0.015em] break-words",
+                compact ? "text-base" : "text-lg sm:text-xl",
+              )}
+            >
+              {text}
+            </span>
+          </>
+        )}
       </span>
     </motion.button>
   );

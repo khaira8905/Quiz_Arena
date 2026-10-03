@@ -1,10 +1,12 @@
 "use client";
 
+import { GAME_CODE_PATTERN, normalizeGameCode } from "@quizarena/shared/constants";
 import { ERROR_COPY } from "@quizarena/shared/errors";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
+import { ArenaThemeProvider } from "@/components/arena/arena-theme";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Spinner, StatusScreen } from "@/components/ui/misc";
@@ -15,6 +17,19 @@ import { PlayerGame } from "./player-game";
 /** Player entry flow: code → nickname → game. Everything else is in <PlayerGame>. */
 export function PlayArena({ initialCode }: { initialCode: string | null }) {
   const game = usePlayerGame(initialCode);
+  const { step } = game;
+  // The arena's look applies from the moment the code is recognised, not only once inside.
+  const appearance =
+    game.view?.appearance ??
+    (step.kind === "name" || step.kind === "joining" ? step.game.appearance : null);
+  return (
+    <ArenaThemeProvider appearance={appearance} page>
+      <PlayArenaScreens game={game} />
+    </ArenaThemeProvider>
+  );
+}
+
+function PlayArenaScreens({ game }: { game: ReturnType<typeof usePlayerGame> }) {
   const { step } = game;
 
   if (step.kind === "playing" && game.view) return <PlayerGame game={game} view={game.view} />;
@@ -40,7 +55,7 @@ export function PlayArena({ initialCode }: { initialCode: string | null }) {
           {step.kind === "resuming"
             ? `Rejoining ${step.code}`
             : step.kind === "checking"
-              ? `Finding arena ${step.code}`
+              ? `Finding game ${step.code}`
               : "Entering the arena"}
         </p>
       </div>
@@ -100,7 +115,8 @@ function CodeStep({
   onSubmit: (code: string) => void;
 }) {
   const [code, setCode] = useState(initial);
-  const clean = code.replace(/\s+/g, "").toUpperCase();
+  const clean = normalizeGameCode(code);
+  const complete = GAME_CODE_PATTERN.test(clean);
   const title = error
     ? (ERROR_COPY[error.code as keyof typeof ERROR_COPY]?.title ?? "Something's off")
     : null;
@@ -110,15 +126,17 @@ function CodeStep({
       {...stepMotion}
       onSubmit={(e) => {
         e.preventDefault();
-        if (clean.length >= 4) onSubmit(clean);
+        if (complete) onSubmit(clean);
       }}
       className="flex flex-col"
     >
       <p className="label text-accent">Step 1 of 2</p>
-      <h1 className="mt-3 font-display text-h1">Enter the game code</h1>
-      <p className="mt-2 text-body text-fg-2">It&apos;s on the big screen.</p>
+      <h1 className="mt-3 font-display text-h1">Enter the game PIN</h1>
+      <p className="mt-2 text-body text-fg-2">
+        It&apos;s on the big screen. The six digits are enough.
+      </p>
       <label htmlFor="game-code" className="sr-only">
-        Game code
+        Game PIN
       </label>
       <motion.input
         id="game-code"
@@ -128,14 +146,14 @@ function CodeStep({
         autoCapitalize="characters"
         spellCheck={false}
         maxLength={8}
-        placeholder="QA0000"
+        placeholder="QA000000"
         value={code}
         onChange={(e) => setCode(e.target.value.toUpperCase())}
         aria-invalid={!!error}
         aria-describedby={error ? "code-error" : undefined}
         animate={error ? { x: [0, -10, 8, -5, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
-        className="numeric mt-8 h-20 w-full rounded-md border-2 border-line-strong bg-sunken text-center text-[2.75rem] font-extrabold tracking-[0.1em] text-fg placeholder:text-fg-3/40 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger"
+        className="numeric mt-8 h-20 w-full rounded-md border-2 border-line-strong bg-sunken text-center text-[clamp(1.75rem,9vw,2.75rem)] font-extrabold tracking-[0.1em] text-fg placeholder:text-fg-3/40 focus:border-accent focus:outline-none aria-[invalid=true]:border-danger"
       />
       {error && (
         <div
@@ -147,7 +165,7 @@ function CodeStep({
           <p className="text-body-sm text-fg-2">{error.message}</p>
         </div>
       )}
-      <Button type="submit" size="xl" className="mt-6 w-full" disabled={clean.length < 4} notch>
+      <Button type="submit" size="xl" className="mt-6 w-full" disabled={!complete} notch>
         Continue <ArrowRight className="h-5 w-5" />
       </Button>
     </motion.form>
@@ -180,7 +198,7 @@ function NameStep({
       }}
       className="flex flex-col"
     >
-      <p className="label text-accent">Step 2 of 2 · Arena {code}</p>
+      <p className="label text-accent">Step 2 of 2 · Game {code}</p>
       <h1 className="mt-3 font-display text-h1">Pick your name</h1>
       <p className="mt-2 text-body text-fg-2">
         You&apos;re joining <span className="font-semibold text-fg">{title}</span>.
@@ -228,9 +246,9 @@ function NameStep({
       <button
         type="button"
         onClick={onBack}
-        className="label mt-5 self-center text-fg-3 hover:text-fg"
+        className="label mt-3 min-h-11 self-center px-4 text-fg-3 hover:text-fg"
       >
-        Use a different code
+        Use a different PIN
       </button>
     </motion.form>
   );

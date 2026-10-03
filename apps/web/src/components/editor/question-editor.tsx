@@ -119,7 +119,7 @@ export function QuestionEditor({
     <>
       {/* ------------------------------------------------------------ workspace */}
       <section aria-label={`Question ${index + 1}`} className="@container min-w-0">
-        <div className="notch relative border border-line bg-surface">
+        <div className="relative rounded-lg border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
             <span className="label text-fg-3">
               Question <span className="text-accent">{String(index + 1).padStart(2, "0")}</span> /{" "}
@@ -150,27 +150,28 @@ export function QuestionEditor({
 
             <ImageSlot url={draft.imageUrl} onChange={(v) => set("imageUrl", v, true)} />
 
-            <div className="mt-6 grid gap-3 @xl:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-3 @xl:grid-cols-2">
               <AnimatePresence initial={false}>
                 {draft.options.map((o, i) => {
                   const style = answerStyle(i);
                   return (
                     <motion.div
-                      key={o.id || `new-${i}`}
+                      key={o.id}
                       layout
                       initial={{ opacity: 0, scale: 0.96 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.96 }}
                       transition={{ duration: 0.18 }}
                       className={cn(
-                        "group relative flex items-stretch border-2 bg-sunken transition-colors",
+                        "group relative flex min-w-0 items-stretch border-2 bg-sunken transition-colors",
                         o.isCorrect ? style.border : "border-line",
                       )}
                     >
                       <span
                         className={cn(
-                          "flex w-12 shrink-0 items-center justify-center font-display text-xl font-extrabold text-answer-ink",
+                          "flex w-12 shrink-0 items-center justify-center font-display text-xl font-extrabold",
                           style.bg,
+                          style.ink,
                         )}
                         aria-hidden
                       >
@@ -242,7 +243,14 @@ export function QuestionEditor({
                   setOptions(
                     [
                       ...draft.options,
-                      { id: "", order: draft.options.length, text: "", isCorrect: false },
+                      // A client-side id keeps React keys stable when an earlier option is removed;
+                      // only text and correctness are sent to the server.
+                      {
+                        id: `new-${crypto.randomUUID()}`,
+                        order: draft.options.length,
+                        text: "",
+                        isCorrect: false,
+                      },
                     ],
                     true,
                   )
@@ -504,7 +512,7 @@ function ImageSlot({
 
   if (url && !editing) {
     return (
-      <div className="group relative mt-5 overflow-hidden border border-line bg-sunken">
+      <div className="group relative mt-5 overflow-hidden rounded-md border border-line bg-sunken">
         {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-supplied URLs */}
         <img
           src={url}
@@ -518,7 +526,7 @@ function ImageSlot({
             This image couldn&apos;t be loaded. Check the URL.
           </p>
         )}
-        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100">
           <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
             Change
           </Button>

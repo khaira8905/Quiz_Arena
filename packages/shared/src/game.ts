@@ -1,3 +1,4 @@
+import type { ArenaAppearance } from "./appearance";
 import type { QuestionType } from "./question-types";
 import type { ScoringMode } from "./scoring";
 
@@ -40,6 +41,7 @@ export interface LiveSettings {
   participantLimit: number;
   soundEnabled: boolean;
   nicknameFilter: boolean;
+  appearance: ArenaAppearance;
 }
 
 export interface PublicOption {
@@ -159,6 +161,7 @@ export interface PlayerView {
   leaderboard: LeaderboardEntry[] | null;
   explanation: string | null;
   soundEnabled: boolean;
+  appearance: ArenaAppearance;
 }
 
 export interface HostView {
@@ -173,6 +176,8 @@ export interface HostView {
   settings: LiveSettings;
   countdownEndsAt: number | null;
   questionCount: number;
+  /** Index of the current (or last played) question; -1 before the first one opens. */
+  questionIndex: number;
   players: PlayerSummary[];
   playerCount: number;
   connectedCount: number;

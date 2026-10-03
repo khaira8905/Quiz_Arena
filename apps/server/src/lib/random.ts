@@ -1,8 +1,10 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { GAME_CODE_PREFIX } from "@quizarena/shared";
+import { GAME_CODE_DIGITS, GAME_CODE_PREFIX } from "@quizarena/shared";
 
 export function generateGameCode(): string {
-  return `${GAME_CODE_PREFIX}${randomInt(0, 10_000).toString().padStart(4, "0")}`;
+  return `${GAME_CODE_PREFIX}${randomInt(0, 10 ** GAME_CODE_DIGITS)
+    .toString()
+    .padStart(GAME_CODE_DIGITS, "0")}`;
 }
 
 /** Collision-resistant id for in-memory entities that are later persisted. */

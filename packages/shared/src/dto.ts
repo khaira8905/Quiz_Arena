@@ -1,3 +1,4 @@
+import type { ArenaAppearance } from "./appearance";
 import type { FinalResults } from "./game";
 import type { QuestionType } from "./question-types";
 import type { QuizSettings } from "./schemas";
@@ -48,6 +49,7 @@ export interface QuizSummaryDto {
 }
 
 export interface QuizDto extends QuizSummaryDto, QuizSettings {
+  appearance: ArenaAppearance;
   questions: QuestionDto[];
 }
 
@@ -87,4 +89,6 @@ export interface GameLookupDto {
   quizTitle: string;
   joinable: boolean;
   phase: string;
+  /** So the join screen can switch to the arena's look before the player is in. */
+  appearance: ArenaAppearance;
 }

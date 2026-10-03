@@ -213,9 +213,14 @@ describe.skipIf(!hasDb)("REST API", () => {
     });
     expect(session.statusCode).toBe(201);
     const { code, id: sessionId } = session.json().session;
-    expect(code).toMatch(/^QA\d{4}$/);
+    expect(code).toMatch(/^QA\d{6}$/);
     const lookup = await app.inject({ method: "GET", url: `/api/games/${code.toLowerCase()}` });
-    expect(lookup.json()).toMatchObject({ code, joinable: true, phase: "LOBBY" });
+    expect(lookup.json()).toMatchObject({
+      code,
+      joinable: true,
+      phase: "LOBBY",
+      appearance: { theme: "BLACK", motion: "NORMAL" },
+    });
     expect(
       (
         await app.inject({
@@ -254,8 +259,100 @@ describe.skipIf(!hasDb)("REST API", () => {
     expect(del.statusCode).toBe(204);
   });
 
+  it("stores a validated arena appearance and refuses unreadable colours", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/quizzes",
+      headers: { cookie: aliceCookie },
+      payload: { title: "Themed" },
+    });
+    const id = created.json().quiz.id;
+    expect(created.json().quiz.appearance.theme).toBe("BLACK");
+
+    const ok = await app.inject({
+      method: "PATCH",
+      url: `/api/quizzes/${id}`,
+      headers: { cookie: aliceCookie },
+      payload: {
+        appearance: {
+          theme: "WHITE",
+          accent: "#2443ff",
+          eventName: "ACM Night",
+          timerStyle: "DIGITAL",
+        },
+      },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().quiz.appearance).toMatchObject({
+      theme: "WHITE",
+      accent: "#2443ff",
+      eventName: "ACM Night",
+      timerStyle: "DIGITAL",
+      motion: "NORMAL",
+    });
+
+    const bad = await app.inject({
+      method: "PATCH",
+      url: `/api/quizzes/${id}`,
+      headers: { cookie: aliceCookie },
+      payload: { appearance: { theme: "WHITE", accent: "#fafafa" } },
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error.details[0].path).toBe("appearance.accent");
+
+    const copy = await app.inject({
+      method: "POST",
+      url: `/api/quizzes/${id}/duplicate`,
+      headers: { cookie: aliceCookie },
+    });
+    expect(copy.json().quiz.appearance.theme).toBe("WHITE");
+  });
+
+  it("signs out other devices when the password changes", async () => {
+    const carol = { email: `carol-${suffix}@test.dev`, password: "correct horse battery" };
+    await db.user.create({
+      data: { email: carol.email, name: "Carol", passwordHash: await hashPassword(carol.password) },
+    });
+    try {
+      const laptop = await login(carol);
+      const phone = await login(carol);
+      const changed = await app.inject({
+        method: "PATCH",
+        url: "/api/auth/me",
+        headers: { cookie: laptop },
+        payload: { currentPassword: carol.password, newPassword: "a brand new passphrase" },
+      });
+      expect(changed.statusCode).toBe(200);
+      const fresh = String(changed.headers["set-cookie"]).split(";")[0]!;
+      const me = (cookie: string) =>
+        app.inject({ method: "GET", url: "/api/auth/me", headers: { cookie } });
+      expect((await me(phone)).statusCode).toBe(401);
+      expect((await me(laptop)).statusCode).toBe(401);
+      expect((await me(fresh)).statusCode).toBe(200);
+    } finally {
+      await db.user.deleteMany({ where: { email: carol.email } });
+    }
+  });
+
+  it("rejects an unknown question type with a 400, not a crash", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/quizzes",
+      headers: { cookie: aliceCookie },
+      payload: { title: "Types" },
+    });
+    const id = created.json().quiz.id;
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/quizzes/${id}/questions`,
+      headers: { cookie: aliceCookie },
+      payload: { type: "FOO" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it("rejects unknown game codes on the public lookup", async () => {
-    expect((await app.inject({ method: "GET", url: "/api/games/QA0001" })).json()).toMatchObject({
+    expect((await app.inject({ method: "GET", url: "/api/games/QA000001" })).json()).toMatchObject({
       error: { code: "INVALID_GAME_CODE" },
     });
     expect((await app.inject({ method: "GET", url: "/api/games/hello" })).statusCode).toBe(404);
@@ -265,7 +362,7 @@ describe.skipIf(!hasDb)("REST API", () => {
     const owner = await db.user.findUniqueOrThrow({ where: { email: alice.email } });
     const session = await db.quizSession.create({
       data: {
-        code: "QA0002",
+        code: "QA000002",
         hostId: owner.id,
         status: "FINISHED",
         quizTitle: "CSV",

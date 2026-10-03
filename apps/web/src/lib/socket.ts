@@ -12,7 +12,9 @@ export const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL ?? "http://loca
 export function createGameSocket(auth?: () => Promise<Record<string, string>>): GameSocket {
   return io(REALTIME_URL, {
     // WebSocket first; long-polling fallback for venues whose proxies block upgrades.
+    // Without tryAllTransports the client never actually falls back.
     transports: ["websocket", "polling"],
+    tryAllTransports: true,
     autoConnect: false,
     reconnection: true,
     reconnectionDelay: 500,

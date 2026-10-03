@@ -9,7 +9,7 @@ const steps = [
     title: "Build",
     body: "Write questions in the editor. Timers, points, images — set per question.",
   },
-  { n: "02", title: "Project", body: "Go live. The arena shows a code and QR on the big screen." },
+  { n: "02", title: "Project", body: "Go live. The big screen shows a game PIN and a QR code." },
   {
     n: "03",
     title: "Compete",
@@ -34,7 +34,7 @@ export default function Home() {
         <div>
           <p className="label flex items-center gap-2 text-accent">
             <span className="h-1.5 w-1.5 animate-live-pulse rounded-full bg-accent" />
-            Live multiplayer quiz platform
+            No app. No accounts. Just a PIN.
           </p>
           <h1 className="mt-6 font-display text-display uppercase">
             100 players.
@@ -47,11 +47,11 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="notch relative border border-line-strong bg-surface/90 p-6 sm:p-8">
-          <div className="label text-fg-3">Have a code?</div>
+        <div className="relative rounded-lg border border-line-strong bg-surface/90 p-6 sm:p-8">
+          <div className="label text-fg-3">Have a game PIN?</div>
           <h2 className="mt-3 font-display text-h1">Enter the arena</h2>
           <p className="mt-2 text-body text-fg-2">
-            It&apos;s on the big screen — looks like QA4821.
+            It&apos;s on the big screen — looks like QA482193.
           </p>
           <JoinCodeForm />
         </div>

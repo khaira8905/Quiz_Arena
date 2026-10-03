@@ -1,3 +1,4 @@
+import { resolveAppearance } from "@quizarena/shared";
 import type {
   FinalResults,
   QuestionDto,
@@ -65,6 +66,7 @@ export const quizDto = (
   participantLimit: q.participantLimit,
   soundEnabled: q.soundEnabled,
   nicknameFilter: q.nicknameFilter,
+  appearance: resolveAppearance(q.appearance),
   questions: [...q.questions].sort((a, b) => a.order - b.order).map(questionDto),
 });
 

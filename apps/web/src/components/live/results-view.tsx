@@ -7,6 +7,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatTile } from "@/components/admin/stat-tile";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatNumber, formatPercent, formatSeconds } from "@/lib/format";
@@ -15,7 +16,7 @@ import { useResults } from "@/lib/queries";
 const PODIUM = [
   "bg-accent text-accent-ink",
   "bg-fg text-inverse",
-  "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-answer-ink",
+  "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-ink1",
 ];
 
 export function ResultsView({ session }: { session: SessionSummaryDto }) {
@@ -24,20 +25,25 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
   return (
     <>
       <PageHeader
-        eyebrow={`Arena ${session.code} · ${session.endedAt ? formatDateTime(session.endedAt) : ""}`}
+        eyebrow={`Game ${session.code} · ${session.endedAt ? formatDateTime(session.endedAt) : ""}`}
         title={session.quizTitle}
         description="Final results"
         actions={
           <>
             {session.quizId && (
-              <Link href={`/admin/quizzes/${session.quizId}`}>
-                <Button variant="ghost">Open quiz</Button>
+              <Link
+                href={`/admin/quizzes/${session.quizId}`}
+                className={buttonClasses({ variant: "ghost" })}
+              >
+                Open quiz
               </Link>
             )}
-            <a href={`/api/sessions/${session.id}/results.csv`} download>
-              <Button variant="secondary">
-                <Download className="h-4 w-4" /> Export CSV
-              </Button>
+            <a
+              href={`/api/sessions/${session.id}/results.csv`}
+              download
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              <Download className="h-4 w-4" /> Export CSV
             </a>
           </>
         }
@@ -85,9 +91,11 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
                   {i + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 truncate font-display text-h3 font-bold">
-                    {i === 0 && <Crown className="h-4 w-4 text-accent" aria-label="Winner" />}
-                    {s.nickname}
+                  <p className="flex items-center gap-1.5 font-display text-h3 font-bold">
+                    {i === 0 && (
+                      <Crown className="h-4 w-4 shrink-0 text-accent" aria-label="Winner" />
+                    )}
+                    <span className="min-w-0 truncate">{s.nickname}</span>
                   </p>
                   <p className="numeric text-h2 font-extrabold">{formatNumber(s.score)}</p>
                 </div>
@@ -115,7 +123,9 @@ export function ResultsView({ session }: { session: SessionSummaryDto }) {
             <StatTile
               label="Avg answer time"
               value={Math.round(data.results.averageResponseMs ?? 0)}
-              format={(ms) => `${(ms / 1000).toFixed(1)}s`}
+              format={(ms) =>
+                data.results.averageResponseMs === null ? "—" : `${(ms / 1000).toFixed(1)}s`
+              }
               index={3}
             />
           </section>

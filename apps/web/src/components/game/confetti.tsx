@@ -2,8 +2,7 @@
 
 import { useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
-
-const COLORS = ["#c6ff34", "#ff5a3c", "#2bb3ff", "#ffc93c", "#c25bff", "#f2f4f8"];
+import { useArena } from "@/components/arena/arena-theme";
 
 interface Particle {
   x: number;
@@ -33,9 +32,14 @@ export function Confetti({
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
+  const { colors, motion } = useArena();
+  // Confetti in the arena's own palette, scaled by its motion intensity (none on Subtle).
+  const amount = intensity * motion.confetti;
+  const palette = [colors.accent, ...colors.answers, colors.text].join(",");
 
   useEffect(() => {
-    if (!fire || reduced) return;
+    if (!fire || reduced || amount <= 0) return;
+    const COLORS = palette.split(",");
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
@@ -50,7 +54,7 @@ export function Confetti({
 
     const W = () => canvas.width;
     const H = () => canvas.height;
-    const count = Math.round(180 * intensity);
+    const count = Math.round(180 * amount);
     const particles: Particle[] = Array.from({ length: count }, () => {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.9;
       const speed = (8 + Math.random() * 14) * dpr;
@@ -101,7 +105,7 @@ export function Confetti({
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [fire, intensity, origin.x, origin.y, reduced]);
+  }, [fire, amount, palette, origin.x, origin.y, reduced]);
 
   return (
     <canvas

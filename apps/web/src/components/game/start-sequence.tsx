@@ -46,9 +46,11 @@ export function StartSequence({
   useEffect(() => {
     let raf = 0;
     const loop = () => {
-      const next = beatAt(START_COUNTDOWN_MS - (endsAt - serverNow()));
+      const left = endsAt - serverNow();
+      const next = beatAt(START_COUNTDOWN_MS - left);
       setBeat((b) => (b === next ? b : next));
-      raf = requestAnimationFrame(loop);
+      // The sequence is over once the question takes the screen; stop the frame loop.
+      if (left > -1000) raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
@@ -72,9 +74,9 @@ export function StartSequence({
       {!reduced && (
         <motion.div
           key={`sweep-${beat}`}
-          className="absolute inset-y-0 w-[30%] bg-gradient-to-r from-transparent via-accent/10 to-transparent"
-          initial={{ left: "-30%" }}
-          animate={{ left: "100%" }}
+          className="absolute inset-y-0 left-0 w-[30%] bg-gradient-to-r from-transparent via-accent/10 to-transparent"
+          initial={{ x: "-100%" }}
+          animate={{ x: "340%" }}
           transition={{ duration: 0.7, ease: "easeInOut" }}
         />
       )}

@@ -15,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           unstyled: true,
           classNames: {
             toast:
-              "notch-sm flex w-[min(92vw,380px)] items-start gap-3 border border-line-strong bg-elevated px-4 py-3 text-body-sm text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.6)]",
+              "flex w-[min(92vw,380px)] items-start gap-3 rounded-md border border-line-strong bg-elevated px-4 py-3 text-body-sm text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.6)]",
             title: "font-semibold",
             description: "text-fg-2",
             error: "border-l-2 border-l-danger",

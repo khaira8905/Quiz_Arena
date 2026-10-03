@@ -18,13 +18,16 @@ export default async function LoginPage({
         <Logo />
         <div>
           <p className="label text-accent">Control room</p>
-          <h1 className="mt-5 font-display text-display uppercase leading-[0.9]">
+          <p
+            className="mt-5 font-display text-display font-extrabold uppercase leading-[0.9]"
+            aria-hidden
+          >
             Build it.
             <br />
             Run it.
             <br />
             <span className="text-accent">Own the room.</span>
-          </h1>
+          </p>
         </div>
         <dl className="grid grid-cols-3 gap-6 border-t border-line pt-6">
           {[
@@ -43,7 +46,7 @@ export default async function LoginPage({
       <section className="flex flex-col justify-center px-6 py-12 sm:px-12">
         <div className="mx-auto w-full max-w-sm">
           <Logo className="mb-10 lg:hidden" />
-          <h2 className="font-display text-h1">Sign in</h2>
+          <h1 className="font-display text-h1">Sign in</h1>
           <p className="mt-2 text-body text-fg-2">
             Organisers and hosts only. Players join at the home page.
           </p>

@@ -14,8 +14,10 @@ import {
   QUIZ_TITLE_MAX,
   TIMER_MAX_SECONDS,
   TIMER_MIN_SECONDS,
+  normalizeGameCode,
 } from "./constants";
-import { HOST_COMMANDS } from "./game";
+import { arenaAppearanceSchema } from "./appearance";
+import { GAME_PHASES, HOST_COMMANDS } from "./game";
 import { QUESTION_TYPES, QUESTION_TYPE_RULES } from "./question-types";
 import { SCORING_MODES } from "./scoring";
 
@@ -27,7 +29,11 @@ const plainText = (max: number) =>
     .pipe(z.string().max(max));
 
 const imageUrl = z
-  .union([z.url({ protocol: /^https?$/ }).max(2048), z.literal(""), z.null()])
+  .union([
+    z.url({ protocol: /^https$/, error: "Use an https:// link" }).max(2048),
+    z.literal(""),
+    z.null(),
+  ])
   .transform((v) => (v ? v : null));
 
 const cuid = z.string().min(1).max(64);
@@ -101,6 +107,7 @@ export const quizUpdateSchema = quizSettingsSchema.partial().extend({
   description: plainText(QUIZ_DESCRIPTION_MAX).optional(),
   coverImageUrl: imageUrl.optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
+  appearance: arenaAppearanceSchema.optional(),
 });
 export type QuizUpdateInput = z.infer<typeof quizUpdateSchema>;
 
@@ -172,8 +179,8 @@ export const sessionCreateSchema = z.object({ quizId: cuid });
 
 export const gameCodeSchema = z
   .string()
-  .transform((s) => s.replace(/\s+/g, "").toUpperCase())
-  .pipe(z.string().regex(GAME_CODE_PATTERN, "Game codes look like QA4821"));
+  .transform(normalizeGameCode)
+  .pipe(z.string().regex(GAME_CODE_PATTERN, "Game PINs look like QA482193"));
 
 /* ------------------------------------------------------------------ socket payloads */
 
@@ -197,6 +204,14 @@ export const hostAttachSchema = z.object({ code: gameCodeSchema });
 export const hostCommandSchema = z.object({
   code: gameCodeSchema,
   command: z.enum(HOST_COMMANDS),
+  /**
+   * What the sender's screen showed. With a projector and a laptop both driving the game,
+   * a command meant for a screen that has since moved on is rejected rather than applied
+   * twice (two SKIPs must not skip two questions).
+   */
+  expected: z
+    .object({ phase: z.enum(GAME_PHASES), questionIndex: z.number().int().min(-1).max(1000) })
+    .optional(),
 });
 
 export const hostKickSchema = z.object({ code: gameCodeSchema, participantId: cuid });

@@ -7,6 +7,10 @@ import type { QuizSnapshot } from "./snapshot";
 const FINISHED_RETENTION_MS = 15 * 60_000;
 /** A lobby nobody started is abandoned after this long. */
 const LOBBY_MAX_AGE_MS = 6 * 60 * 60_000;
+/** A started game with no host command, join or answer for this long is ended and saved. */
+const IDLE_GAME_MS = 45 * 60_000;
+/** Results that could not be saved keep their room alive (and retrying) this long. */
+const UNSAVED_RETENTION_MS = 6 * 60 * 60_000;
 const SWEEP_INTERVAL_MS = 60_000;
 
 /**
@@ -73,7 +77,23 @@ export class GameManager {
     for (const [code, room] of this.rooms) {
       const finishedAt = room.finishedTime;
       if (finishedAt !== null && now - finishedAt > FINISHED_RETENTION_MS) {
+        if (!room.resultsPersisted && now - finishedAt < UNSAVED_RETENTION_MS) {
+          void room.saveResults();
+          continue;
+        }
+        if (!room.resultsPersisted)
+          this.log.error(
+            { code, sessionId: room.sessionId, results: room.unsavedResults },
+            "dropping room with unsaved results",
+          );
         this.remove(code);
+      } else if (
+        finishedAt === null &&
+        room.currentPhase !== "LOBBY" &&
+        now - room.lastActivity > IDLE_GAME_MS
+      ) {
+        this.log.warn({ code }, "ending abandoned game");
+        room.endAbandoned();
       } else if (room.currentPhase === "LOBBY" && now - room.createdAt > LOBBY_MAX_AGE_MS) {
         this.remove(code);
         this.onAbandon(room.sessionId).catch((err) =>
@@ -81,6 +101,27 @@ export class GameManager {
         );
       }
     }
+  }
+
+  /**
+   * Before the process exits (a deploy or restart): end every game in progress so players
+   * see final standings instead of a dead connection, and give the results a few seconds
+   * to reach the database.
+   */
+  async drain(timeoutMs: number) {
+    const saves: Promise<unknown>[] = [];
+    for (const room of this.rooms.values()) {
+      if (room.currentPhase === "LOBBY") {
+        saves.push(this.onAbandon(room.sessionId).catch(() => {}));
+      } else {
+        room.endAbandoned();
+        saves.push(room.saveResults());
+      }
+    }
+    await Promise.race([
+      Promise.allSettled(saves),
+      new Promise((r) => setTimeout(r, timeoutMs).unref()),
+    ]);
   }
 
   shutdown() {

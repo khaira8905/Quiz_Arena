@@ -1,5 +1,5 @@
 import type { LiveSettings, QuestionType } from "@quizarena/shared";
-import { questionIssues } from "@quizarena/shared";
+import { questionIssues, resolveAppearance } from "@quizarena/shared";
 import { AppError } from "../lib/errors";
 import { shuffle } from "../lib/random";
 
@@ -45,6 +45,7 @@ interface SourceQuiz {
   participantLimit: number;
   soundEnabled: boolean;
   nicknameFilter: boolean;
+  appearance?: unknown;
   questions: {
     id: string;
     type: QuestionType;
@@ -88,6 +89,7 @@ export function buildSnapshot(quiz: SourceQuiz): QuizSnapshot {
       participantLimit: quiz.participantLimit,
       soundEnabled: quiz.soundEnabled,
       nicknameFilter: quiz.nicknameFilter,
+      appearance: resolveAppearance(quiz.appearance),
     },
     questions: ordered.map((q) => {
       // True/False keeps its natural order; shuffling it only confuses players.

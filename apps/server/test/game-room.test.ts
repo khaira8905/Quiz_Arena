@@ -357,11 +357,66 @@ describe("connections", () => {
     expect(room.participantCount).toBe(1);
   });
 
+  it("keeps players in the final results when they leave after the game", async () => {
+    const { room, ids, persistence } = await startedRoom(["Ada", "Grace"]);
+    room.command("END");
+    room.remove(ids[0]!);
+    expect(room.participantCount).toBe(2);
+    expect(room.hostView().results?.standings).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(persistence.participants).toHaveLength(2);
+  });
+
   it("kicking closes the player's connection", async () => {
     const { room, output } = makeRoom();
     const a = await room.join("Ada");
     room.remove(a.participantId, "Removed");
     expect(output.closed).toEqual([{ participantId: a.participantId, code: "SESSION_EXPIRED" }]);
     expect(codeOf(() => room.reconnect(a.token))).toBe("SESSION_EXPIRED");
+  });
+});
+
+describe("production hardening", () => {
+  it("keeps the seat of a player who dropped in the lobby once the game starts", async () => {
+    const { room } = makeRoom();
+    const a = await room.join("Ada");
+    await room.join("Grace");
+    room.setConnected(a.participantId, false); // phone locked in a pocket
+    vi.advanceTimersByTime(60_000);
+    room.command("START");
+    vi.advanceTimersByTime(LOBBY_DISCONNECT_GRACE_MS + 1);
+    expect(room.participantCount).toBe(2);
+  });
+
+  it("refuses a command meant for a screen that has already moved on", async () => {
+    const { room } = await startedRoom();
+    const seen = { phase: "QUESTION_ACTIVE" as const, questionIndex: 0 };
+    room.command("SKIP", seen); // projector
+    expect(codeOf(() => room.command("SKIP", seen))).toBe("COMMAND_OUT_OF_DATE"); // laptop
+    expect(room.hostView().questionIndex).toBe(1);
+  });
+
+  it("retries saving final results through a database blip", async () => {
+    const ctx = await startedRoom(["Ada"]);
+    let failures = 2;
+    const save = ctx.persistence.sessionFinished.bind(ctx.persistence);
+    ctx.persistence.sessionFinished = async (...args) => {
+      if (failures-- > 0) throw new Error("database not reachable");
+      return save(...args);
+    };
+    ctx.room.command("END");
+    expect(ctx.room.resultsPersisted).toBe(false);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(ctx.room.resultsPersisted).toBe(true);
+    expect(ctx.persistence.finished?.standings).toHaveLength(1);
+  });
+
+  it("accepts an answer that arrives just after zero over a slow network", async () => {
+    const { room, ids } = await startedRoom(["Ada"]);
+    const q = room.hostView().question!;
+    const deadline = room.hostView().timer!.deadline;
+    expect(
+      codeOf(() => room.submitAnswer(ids[0]!, q.id, q.options[0]!.id, deadline + 600)),
+    ).toBeNull();
   });
 });

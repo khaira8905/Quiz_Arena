@@ -7,3 +7,5 @@ export * from "./nickname";
 export * from "./question-types";
 export * from "./schemas";
 export * from "./scoring";
+export * from "./appearance";
+export * from "./color";

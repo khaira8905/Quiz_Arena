@@ -17,7 +17,7 @@ Target URLs (replace with yours):
 ```
 https://quiz-arena.vercel.app/            landing + join
 https://quiz-arena.vercel.app/admin       control room
-https://quiz-arena.vercel.app/host/QA4821 projector
+https://quiz-arena.vercel.app/host/QA482193 projector
 https://quiz-arena.vercel.app/play        players
 https://quizarena-server.up.railway.app   game server (API + WebSocket)
 ```

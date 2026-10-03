@@ -135,11 +135,8 @@ export async function buildApp(
 
   attachGateway({ io, games, tokens, log: app.log });
 
-  app.get("/health", async () => ({
-    ok: true,
-    rooms: games.size,
-    uptime: Math.round(process.uptime()),
-  }));
+  // Public and unauthenticated (keep-awake pings, platform health checks): no live state.
+  app.get("/health", async () => ({ ok: true }));
   app.get("/api/health", async () => ({ ok: true }));
   authRoutes(app, ctx);
   quizRoutes(app, ctx);

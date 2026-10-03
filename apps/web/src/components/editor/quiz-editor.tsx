@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button-classes";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/misc";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -14,22 +15,29 @@ import { useAddQuestion, useQuiz, useReorderQuestions, useUpdateQuiz } from "@/l
 import { useGoLive } from "@/components/admin/use-go-live";
 import { QuestionEditor } from "./question-editor";
 import { QuestionNavigator } from "./question-navigator";
+import { ArenaCustomizer } from "./arena-customizer";
 import { QuizSettings } from "./quiz-settings";
 import { SaveStatus, SaveTracker, useSaveTracker } from "./save-tracker";
 
-type Tab = "questions" | "settings";
+export type EditorTab = "questions" | "settings" | "arena";
 
-export function QuizEditor({ id }: { id: string }) {
+const TAB_LABEL: Record<EditorTab, string> = {
+  questions: "Questions",
+  settings: "Settings",
+  arena: "Customize arena",
+};
+
+export function QuizEditor({ id, initialTab }: { id: string; initialTab?: EditorTab }) {
   return (
     <SaveTracker>
-      <EditorInner id={id} />
+      <EditorInner id={id} initialTab={initialTab ?? "questions"} />
     </SaveTracker>
   );
 }
 
-function EditorInner({ id }: { id: string }) {
+function EditorInner({ id, initialTab }: { id: string; initialTab: EditorTab }) {
   const { data: quiz, isPending, isError, error, refetch } = useQuiz(id);
-  const [tab, setTab] = useState<Tab>("questions");
+  const [tab, setTab] = useState<EditorTab>(initialTab);
   const [selected, setSelected] = useState<string | null>(null);
   const addQuestion = useAddQuestion(id);
   const reorder = useReorderQuestions(id);
@@ -57,8 +65,8 @@ function EditorInner({ id }: { id: string }) {
         description={notFound ? "It may have been deleted." : "The server didn't respond."}
         action={
           notFound ? (
-            <Link href="/admin/quizzes">
-              <Button>Back to quizzes</Button>
+            <Link href="/admin/quizzes" className={buttonClasses()}>
+              Back to quizzes
             </Link>
           ) : (
             <Button onClick={() => refetch()}>Retry</Button>
@@ -77,10 +85,15 @@ function EditorInner({ id }: { id: string }) {
   const problems = questions.filter((q) => questionIssues(q).length > 0).length;
   const published = quiz.status === "PUBLISHED";
 
+  // Not routed through the save tracker: a refused publish is a validation result, not a
+  // failed save — the content is already saved, and the status line must not say otherwise.
   const togglePublish = () =>
-    track(updateQuiz.mutateAsync({ status: published ? "DRAFT" : "PUBLISHED" })).then(
+    updateQuiz.mutateAsync({ status: published ? "DRAFT" : "PUBLISHED" }).then(
       () => toast.success(published ? "Moved back to drafts" : "Quiz published"),
-      () => {},
+      (err) =>
+        toast.error(published ? "Couldn't unpublish" : "Can't publish yet", {
+          description: isApiError(err) ? err.message : "Please try again.",
+        }),
     );
 
   return (
@@ -111,14 +124,14 @@ function EditorInner({ id }: { id: string }) {
             aria-label="Editor sections"
             className="mr-2 flex border border-line bg-sunken p-1"
           >
-            {(["questions", "settings"] as const).map((t) => (
+            {(["questions", "settings", "arena"] as const).map((t) => (
               <button
                 key={t}
                 role="tab"
                 aria-selected={tab === t}
                 onClick={() => setTab(t)}
                 className={cn(
-                  "relative h-8 px-4 text-body-sm font-semibold capitalize transition-colors",
+                  "relative h-8 px-4 text-body-sm font-semibold transition-colors",
                   tab === t ? "text-fg" : "text-fg-3 hover:text-fg",
                 )}
               >
@@ -130,7 +143,7 @@ function EditorInner({ id }: { id: string }) {
                   />
                 )}
                 <span className="relative">
-                  {t}
+                  {TAB_LABEL[t]}
                   {t === "questions" && (
                     <span className="numeric ml-1.5 text-fg-3">{questions.length}</span>
                   )}
@@ -138,16 +151,22 @@ function EditorInner({ id }: { id: string }) {
               </button>
             ))}
           </div>
-          <Link href={`/admin/quizzes/${id}/preview`}>
-            <Button variant="secondary" size="md">
-              <Eye className="h-4 w-4" /> Preview
-            </Button>
+          <Link
+            href={`/admin/quizzes/${id}/preview`}
+            className={buttonClasses({ variant: "secondary", size: "md" })}
+          >
+            <Eye className="h-4 w-4" /> Preview
           </Link>
           <Button
             variant="outline"
             onClick={togglePublish}
             loading={updateQuiz.isPending}
-            title={!published && problems ? `${problems} question(s) need attention` : undefined}
+            disabled={!published && problems > 0}
+            title={
+              !published && problems
+                ? `${problems} question${problems > 1 ? "s need" : " needs"} attention`
+                : undefined
+            }
           >
             {published ? "Unpublish" : "Publish"}
           </Button>
@@ -166,7 +185,7 @@ function EditorInner({ id }: { id: string }) {
       {problems > 0 && (
         <p className="mt-4 border-l-2 border-warning bg-warning-soft px-4 py-2.5 text-body-sm text-fg">
           {problems} question{problems > 1 ? "s need" : " needs"} attention before this quiz can be
-          published or played. Look for the amber dot.
+          published or played. Look for the ! marker in the question list.
         </p>
       )}
 
@@ -174,9 +193,13 @@ function EditorInner({ id }: { id: string }) {
         <div className="mt-6">
           <QuizSettings quiz={quiz} />
         </div>
+      ) : tab === "arena" ? (
+        <div className="mt-6">
+          <ArenaCustomizer quiz={quiz} />
+        </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] wide:grid-cols-[14rem_minmax(0,1fr)_18rem] 2xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">
-          <div className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-hidden">
+          <div className="lg:sticky lg:top-6 lg:flex lg:h-[calc(100dvh-3rem)] lg:flex-col">
             <QuestionNavigator
               questions={questions}
               selectedId={current?.id ?? null}

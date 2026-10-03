@@ -4,13 +4,14 @@ import type { LeaderboardEntry } from "@quizarena/shared/game";
 import { ArrowDown, ArrowUp, Flame } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
+import { useArena } from "@/components/arena/arena-theme";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn } from "@/lib/cn";
 
 const TOP_STYLES = [
   "bg-accent text-accent-ink",
   "bg-fg text-inverse",
-  "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-answer-ink",
+  "bg-[color-mix(in_oklab,var(--answer-1)_75%,var(--surface-elevated))] text-ink1",
 ];
 
 /** Animated standings: overtakes are visible, top three get podium treatment. */
@@ -25,7 +26,9 @@ export function Leaderboard({
   highlightId?: string;
   title?: string;
 }) {
-  const reduced = useReducedMotion();
+  const { appearance } = useArena();
+  // Organisers can switch overtaking animation off; reduced-motion users never get it.
+  const reduced = useReducedMotion() || !appearance.leaderboardAnimation;
   // Rows render in their previous order until this list has "settled" (650ms later), then
   // re-sort — layout animation physically moves players past each other.
   const [settled, setSettled] = useState<LeaderboardEntry[] | null>(null);

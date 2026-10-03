@@ -34,7 +34,7 @@ the moment the timer hits zero.
 - Live control panel: answer key, live answer distribution, controls, leaderboard, kick players
 - Session history with results, podium, per-player accuracy/response time/streaks, **CSV export**
 
-**Projector arena** (`/host/QA4821`)
+**Projector arena** (`/host/QA482193`)
 
 - Built for 1080p → 4K and readability at distance (viewport-relative type scale)
 - Lobby with giant game code, join URL and QR code; players animate in (batched for 100s)

@@ -10,7 +10,7 @@ packages/shared   the contract: socket events, views, Zod schemas, scoring, ques
 
 The brief suggested separate `web`, `admin` and `host` apps. A single Next.js app is the better
 fit: the three experiences share tokens, components, the socket client and the auth proxy; one
-Vercel project serves the exact URL structure (`/admin`, `/host/QA4821`, `/play`); and route-level
+Vercel project serves the exact URL structure (`/admin`, `/host/QA482193`, `/play`); and route-level
 code splitting already keeps the player bundle free of admin code (React Query, dnd-kit and the
 editor only load under `/admin`). Separate visual hierarchy is a design decision, not a
 deployment one.
@@ -139,8 +139,8 @@ One node comfortably runs hundreds of players per game and many concurrent games
 O(players) work per transition and nothing per frame. To go beyond one node:
 
 1. Set `REDIS_URL` → the Socket.IO Redis adapter makes every emit reach sockets on any node.
-2. Route each game to the node that owns its room. Rooms are in memory, so a player for `QA4821`
-   must land on the node that created `QA4821` — e.g. Fly.io `fly-replay` by game code, or a
+2. Route each game to the node that owns its room. Rooms are in memory, so a player for `QA482193`
+   must land on the node that created `QA482193` — e.g. Fly.io `fly-replay` by game code, or a
    sticky load balancer keyed on a `game` query parameter, with a small registry
    (`code → node`) in Redis.
 3. For crash tolerance, persist room state to Redis at each transition and rehydrate on boot
