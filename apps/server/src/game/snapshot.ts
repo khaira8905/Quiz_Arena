@@ -51,6 +51,8 @@ interface SourceQuiz {
   nicknameFilter: boolean;
   readingMode?: LiveSettings["readingMode"];
   readingTimeSec?: number;
+  leaderboardEvery?: number;
+  autoRevealSec?: number;
   appearance?: unknown;
   questions: {
     id: string;
@@ -100,6 +102,8 @@ export function buildSnapshot(quiz: SourceQuiz): QuizSnapshot {
       nicknameFilter: quiz.nicknameFilter,
       readingMode: quiz.readingMode ?? "TIMED",
       readingTimeSec: quiz.readingTimeSec ?? 5,
+      leaderboardEvery: quiz.leaderboardEvery ?? 1,
+      autoRevealSec: quiz.autoRevealSec ?? 0,
       appearance: resolveAppearance(quiz.appearance),
     },
     questions: ordered.map((q) => {

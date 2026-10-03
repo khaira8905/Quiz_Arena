@@ -26,6 +26,9 @@ export const questionDto = (q: Question & { options: AnswerOption[] }): Question
   imageAssetId: q.imageAssetId,
   imageFit: q.imageFit,
   imagePosition: q.imagePosition,
+  tags: q.tags,
+  category: q.category,
+  difficulty: q.difficulty,
   timeLimitSec: q.timeLimitSec,
   points: q.points,
   explanation: q.explanation,
@@ -71,6 +74,8 @@ export const quizDto = (
   nicknameFilter: q.nicknameFilter,
   readingMode: q.readingMode,
   readingTimeSec: q.readingTimeSec,
+  leaderboardEvery: q.leaderboardEvery,
+  autoRevealSec: q.autoRevealSec,
   appearance: resolveAppearance(q.appearance),
   questions: [...q.questions].sort((a, b) => a.order - b.order).map(questionDto),
 });

@@ -1,3 +1,4 @@
+import type { Difficulty } from "./constants";
 import type { ImageFit, ImagePosition } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { FinalResults } from "./game";
@@ -32,6 +33,9 @@ export interface QuestionDto {
   imageAssetId: string | null;
   imageFit: ImageFit;
   imagePosition: ImagePosition;
+  tags: string[];
+  category: string;
+  difficulty: Difficulty | null;
   timeLimitSec: number | null;
   points: number;
   explanation: string;
@@ -95,4 +99,15 @@ export interface GameLookupDto {
   phase: string;
   /** So the join screen can switch to the arena's look before the player is in. */
   appearance: ArenaAppearance;
+}
+
+/** A question as listed in the question bank: with the quiz it lives in. */
+export interface BankQuestionDto extends QuestionDto {
+  quizId: string;
+  quizTitle: string;
+}
+
+export interface BankFacetsDto {
+  tags: { tag: string; count: number }[];
+  categories: { category: string; count: number }[];
 }

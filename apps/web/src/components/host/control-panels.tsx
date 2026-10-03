@@ -295,6 +295,37 @@ export function LobbySettings({
             }
           />
         </Row>
+        <Row label="Leaderboard">
+          <Segmented
+            label="Leaderboard frequency"
+            value={s.showLeaderboard ? s.leaderboardEvery : 0}
+            options={[
+              { value: 0, label: "Off" },
+              { value: 1, label: "Every question" },
+              { value: 3, label: "Every 3" },
+              { value: 5, label: "Every 5" },
+            ]}
+            onChange={(v) =>
+              onChange(
+                v === 0
+                  ? { showLeaderboard: false }
+                  : { showLeaderboard: true, leaderboardEvery: v },
+              )
+            }
+          />
+        </Row>
+        <Row label="After time's up">
+          <Segmented
+            label="Auto-reveal"
+            value={s.autoRevealSec}
+            options={[
+              { value: 0, label: "Host reveals" },
+              { value: 3, label: "Auto 3s" },
+              { value: 5, label: "Auto 5s" },
+            ]}
+            onChange={(autoRevealSec) => onChange({ autoRevealSec })}
+          />
+        </Row>
         <Switch
           label="Show what everyone chose"
           description="Answer bars after each question"
@@ -305,11 +336,6 @@ export function LobbySettings({
           label="Reveal the correct answer"
           checked={s.showCorrectAnswers}
           onChange={(showCorrectAnswers) => onChange({ showCorrectAnswers })}
-        />
-        <Switch
-          label="Leaderboard between questions"
-          checked={s.showLeaderboard}
-          onChange={(showLeaderboard) => onChange({ showLeaderboard })}
         />
         <Switch
           label="Sound on the projector"

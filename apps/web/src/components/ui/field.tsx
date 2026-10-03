@@ -3,15 +3,22 @@
 import { forwardRef, useId } from "react";
 import { cn } from "@/lib/cn";
 
-const control =
-  "w-full rounded-md border border-line-strong bg-sunken px-3.5 text-body text-fg placeholder:text-fg-3 " +
+const controlBase =
+  "rounded-md border border-line-strong bg-sunken px-3.5 text-body text-fg placeholder:text-fg-3 " +
   "transition-[border-color,box-shadow] duration-150 hover:border-fg-3 " +
   "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft " +
   "disabled:opacity-50 aria-[invalid=true]:border-danger";
 
+/**
+ * Full width unless the caller sets a width: `cn` only joins classes, so a passed `w-56`
+ * would otherwise lose to the base `w-full`.
+ */
+const control = (className?: string) =>
+  /(^|\s)(w-|flex-\d|flex-\[)/.test(className ?? "") ? controlBase : `w-full ${controlBase}`;
+
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {
-    return <input ref={ref} className={cn(control, "h-11", className)} {...props} />;
+    return <input ref={ref} className={cn(control(className), "h-11", className)} {...props} />;
   },
 );
 
@@ -20,7 +27,11 @@ export const Textarea = forwardRef<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
 >(function Textarea({ className, ...props }, ref) {
   return (
-    <textarea ref={ref} className={cn(control, "min-h-24 resize-y py-3", className)} {...props} />
+    <textarea
+      ref={ref}
+      className={cn(control(className), "min-h-24 resize-y py-3", className)}
+      {...props}
+    />
   );
 });
 
@@ -29,7 +40,7 @@ export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<H
     return (
       <select
         ref={ref}
-        className={cn(control, "h-11 appearance-none bg-[length:12px] pr-9", className)}
+        className={cn(control(className), "h-11 appearance-none bg-[length:12px] pr-9", className)}
         {...props}
       >
         {children}

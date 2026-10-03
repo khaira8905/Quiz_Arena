@@ -4,6 +4,8 @@ import type { ArenaTheme } from "@quizarena/shared/appearance";
 import type { QuestionInput } from "@quizarena/shared/schemas";
 
 import type {
+  BankFacetsDto,
+  BankQuestionDto,
   DashboardDto,
   QuestionDto,
   QuizDto,
@@ -13,7 +15,11 @@ import type {
   UserDto,
 } from "@quizarena/shared/dto";
 import type { MediaAssetDto, MediaConfigDto } from "@quizarena/shared/media";
-import type { QuestionUpdateInput, QuizUpdateInput } from "@quizarena/shared/schemas";
+import type {
+  QuestionUpdateInput,
+  QuizUpdateInput,
+  UserPreferences,
+} from "@quizarena/shared/schemas";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { WAKE_RETRIES, WAKE_RETRY_MS, isServerWaking } from "./server-wake";
@@ -27,6 +33,8 @@ export const keys = {
   session: (id: string) => ["session", id] as const,
   results: (id: string) => ["results", id] as const,
   mediaConfig: ["media-config"] as const,
+  bank: (f: object) => ["bank", f] as const,
+  preferences: ["preferences"] as const,
   media: (q: string, sort: string, unused: boolean) => ["media", q, sort, unused] as const,
 };
 
@@ -335,5 +343,68 @@ export function useDeleteMedia() {
       // Questions that used the image lost it.
       void qc.invalidateQueries({ queryKey: ["quiz"] });
     },
+  });
+}
+
+/* ---------------------------------------------------------------- question bank */
+
+export interface BankFilters {
+  q?: string;
+  tag?: string;
+  category?: string;
+  difficulty?: string;
+  type?: string;
+  quizId?: string;
+}
+
+export function useBank(filters: BankFilters) {
+  return useQuery({
+    queryKey: keys.bank(filters),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);
+      return api<{ questions: BankQuestionDto[]; total: number; facets: BankFacetsDto }>(
+        `/bank?${params}`,
+      );
+    },
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useCopyQuestions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quizId, questionIds }: { quizId: string; questionIds: string[] }) =>
+      api<{ quiz: QuizDto }>(`/quizzes/${quizId}/questions/copy`, {
+        method: "POST",
+        json: { questionIds },
+      }).then((r) => r.quiz),
+    onSuccess: (quiz) => {
+      qc.setQueryData(keys.quiz(quiz.id), quiz);
+      void qc.invalidateQueries({ queryKey: ["quizzes"] });
+      void qc.invalidateQueries({ queryKey: ["bank"] });
+    },
+  });
+}
+
+/* ---------------------------------------------------------------- organiser defaults */
+
+export function usePreferences() {
+  return useQuery({
+    queryKey: keys.preferences,
+    queryFn: () =>
+      api<{ preferences: UserPreferences }>("/me/preferences").then((r) => r.preferences),
+  });
+}
+
+export function useUpdatePreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: UserPreferences) =>
+      api<{ preferences: UserPreferences }>("/me/preferences", {
+        method: "PATCH",
+        json: patch,
+      }).then((r) => r.preferences),
+    onSuccess: (prefs) => qc.setQueryData(keys.preferences, prefs),
   });
 }

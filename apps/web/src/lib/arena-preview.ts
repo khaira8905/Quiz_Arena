@@ -215,6 +215,7 @@ export function previewProjectorView(s: ArenaPreviewState, now: number): Project
       showAnswerStats: s.settings.showAnswerStats,
       showCorrectAnswers: s.settings.showCorrectAnswers,
       showLeaderboard: s.settings.showLeaderboard,
+      leaderboardEvery: s.settings.leaderboardEvery,
     },
     countdownEndsAt: null,
     readingEndsAt: phase === "QUESTION_READING" ? now + READING_LEFT_MS : null,

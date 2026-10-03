@@ -98,3 +98,22 @@ describe("question import", () => {
     expect(r.skipped).toHaveLength(20);
   });
 });
+
+describe("question bank columns", () => {
+  it("reads tags, category and difficulty", () => {
+    const { questions } = questionsFromRows(parseCsv(IMPORT_TEMPLATE_CSV));
+    expect(questions[0]!.question).toMatchObject({
+      tags: ["space", "planets"],
+      category: "Science",
+      difficulty: "EASY",
+    });
+    expect(questions[1]!.question.difficulty).toBe("MEDIUM");
+  });
+  it("flags an unknown difficulty instead of guessing", () => {
+    const { questions } = questionsFromRows(
+      parseCsv("Question,A,B,Correct,Difficulty\nQ?,x,y,A,brutal"),
+    );
+    expect(questions[0]!.question.difficulty).toBeNull();
+    expect(questions[0]!.issues.join(" ")).toMatch(/Difficulty/);
+  });
+});

@@ -19,6 +19,8 @@ const state = (over: Partial<ArenaPreviewState> = {}): ArenaPreviewState => ({
     nicknameFilter: true,
     readingMode: "OFF",
     readingTimeSec: 5,
+    leaderboardEvery: 1,
+    autoRevealSec: 0,
   },
   question: {
     text: "Speed of light?",

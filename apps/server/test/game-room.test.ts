@@ -1,4 +1,9 @@
-import { ANSWER_GRACE_MS, LOBBY_DISCONNECT_GRACE_MS, START_COUNTDOWN_MS } from "@quizarena/shared";
+import {
+  leaderboardDue,
+  ANSWER_GRACE_MS,
+  LOBBY_DISCONNECT_GRACE_MS,
+  START_COUNTDOWN_MS,
+} from "@quizarena/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "../src/lib/errors";
 import { makeRoom } from "./helpers";
@@ -444,6 +449,45 @@ describe("reading period, stats step, podium and timer control", () => {
     vi.advanceTimersByTime(5_000);
     expect(room.currentPhase).toBe("QUESTION_ACTIVE");
     expect(output.lastPlayerView(ids[0]!).question?.options).toHaveLength(4);
+  });
+
+  it("auto-reveals after time's up when the quiz asks for it", async () => {
+    const stats = await lobby({ readingMode: "OFF", autoRevealSec: 3 });
+    stats.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    stats.room.command("LOCK");
+    vi.advanceTimersByTime(2_900);
+    expect(stats.room.currentPhase).toBe("QUESTION_LOCKED");
+    vi.advanceTimersByTime(200);
+    // With answer stats on, the room first sees what everyone chose; the host reveals.
+    expect(stats.room.currentPhase).toBe("ANSWER_DISTRIBUTION");
+
+    const plain = await lobby({ readingMode: "OFF", autoRevealSec: 2, showAnswerStats: false });
+    plain.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS + 20_000 + 800 + 2_000);
+    expect(plain.room.currentPhase).toBe("ANSWER_REVEAL");
+
+    // A host who reveals first isn't overridden by the timer.
+    const manual = await lobby({ readingMode: "OFF", autoRevealSec: 2 });
+    manual.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    manual.room.command("REVEAL");
+    vi.advanceTimersByTime(5_000);
+    expect(manual.room.currentPhase).toBe("ANSWER_REVEAL");
+  });
+
+  it("knows when the leaderboard is due", () => {
+    const s = { showLeaderboard: true, leaderboardEvery: 3 };
+    expect([0, 1, 2, 3, 4, 5, 6].map((i) => leaderboardDue(s, i, 7))).toEqual([
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+    ]);
+    expect(leaderboardDue({ showLeaderboard: false, leaderboardEvery: 1 }, 6, 7)).toBe(false);
   });
 
   it("waits for the host in manual reading mode", async () => {

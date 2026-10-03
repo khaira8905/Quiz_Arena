@@ -35,6 +35,12 @@ enum ReadingMode {
   MANUAL
 }
 
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
 enum ImageFit {
   CONTAIN
   COVER
@@ -65,6 +71,8 @@ model User {
   passwordHash String
   /// Embedded in session tokens; bumping it (password change) signs out every other device.
   sessionVersion Int    @default(0)
+  /// Organiser defaults for new quizzes: { appearance?, quizDefaults? } (userPreferencesSchema).
+  preferences  Json     @default("{}")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -111,6 +119,10 @@ model Quiz {
   /// Reading period before answers open: none, a countdown, or until the host opens them.
   readingMode        ReadingMode @default(TIMED)
   readingTimeSec     Int         @default(5)
+  /// Leaderboard after every Nth question (and always after the last); 1 = every question.
+  leaderboardEvery   Int         @default(1)
+  /// Seconds after time's up before the answers are shown automatically; 0 = the host decides.
+  autoRevealSec      Int         @default(0)
   /// Arena appearance (theme, colours, typography, motion, layouts, branding).
   /// Validated by arenaAppearanceSchema; null means the defaults.
   appearance         Json?
@@ -142,6 +154,10 @@ model Question {
   points           Int          @default(1000)
   explanation      String       @default("")
   randomizeAnswers Boolean      @default(false)
+  /// Question bank metadata.
+  tags             String[]     @default([])
+  category         String       @default("")
+  difficulty       Difficulty?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 

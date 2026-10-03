@@ -67,6 +67,8 @@ export interface LiveSettings {
   nicknameFilter: boolean;
   readingMode: ReadingMode;
   readingTimeSec: number;
+  leaderboardEvery: number;
+  autoRevealSec: number;
   appearance: ArenaAppearance;
 }
 
@@ -246,7 +248,12 @@ export interface ProjectorView {
   serverTime: number;
   settings: Pick<
     LiveSettings,
-    "appearance" | "soundEnabled" | "showAnswerStats" | "showCorrectAnswers" | "showLeaderboard"
+    | "appearance"
+    | "soundEnabled"
+    | "showAnswerStats"
+    | "showCorrectAnswers"
+    | "showLeaderboard"
+    | "leaderboardEvery"
   >;
   countdownEndsAt: number | null;
   readingEndsAt: number | null;
@@ -272,3 +279,17 @@ export interface ProjectorView {
 }
 
 export type GameView = PlayerView | HostView | ProjectorView;
+
+/**
+ * Whether the leaderboard is due after question `index` (0-based): every Nth question and
+ * always after the last one. The host can still show it any time.
+ */
+export function leaderboardDue(
+  settings: Pick<LiveSettings, "showLeaderboard" | "leaderboardEvery">,
+  index: number,
+  total: number,
+): boolean {
+  if (!settings.showLeaderboard) return false;
+  const every = Math.max(1, settings.leaderboardEvery || 1);
+  return (index + 1) % every === 0 || index + 1 >= total;
+}

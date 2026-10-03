@@ -1,6 +1,18 @@
 "use client";
 
-import { ImageIcon, LayoutGrid, Layers, LogOut, Menu, Radio, UserRound, X } from "lucide-react";
+import {
+  BarChart3,
+  ImageIcon,
+  LayoutGrid,
+  Layers,
+  Library,
+  LogOut,
+  Menu,
+  Palette,
+  Radio,
+  Settings,
+  X,
+} from "lucide-react";
 import * as RD from "@radix-ui/react-dialog";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
@@ -13,14 +25,17 @@ import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useDashboard, useLogout, useMe } from "@/lib/queries";
 
-const WIDE_ROUTES = /^\/admin\/(quizzes|sessions)\/[^/]+/;
+const WIDE_ROUTES = /^\/admin\/((quizzes|sessions)\/[^/]+|arena)/;
 
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutGrid, exact: true },
   { href: "/admin/quizzes", label: "Quizzes", icon: Layers },
-  { href: "/admin/media", label: "Media", icon: ImageIcon },
-  { href: "/admin/sessions", label: "Sessions", icon: Radio },
-  { href: "/admin/profile", label: "Profile", icon: UserRound },
+  { href: "/admin/bank", label: "Question bank", icon: Library },
+  { href: "/admin/media", label: "Media library", icon: ImageIcon },
+  { href: "/admin/sessions", label: "Live sessions", icon: Radio },
+  { href: "/admin/results", label: "Results", icon: BarChart3 },
+  { href: "/admin/arena", label: "Customize arena", icon: Palette },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

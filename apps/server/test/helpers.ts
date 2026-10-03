@@ -33,6 +33,8 @@ export function makeSnapshot(
       nicknameFilter: true,
       readingMode: "OFF",
       readingTimeSec: 5,
+      leaderboardEvery: 1,
+      autoRevealSec: 0,
       appearance: DEFAULT_APPEARANCE,
       ...overrides,
     },

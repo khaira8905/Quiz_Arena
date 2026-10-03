@@ -614,6 +614,18 @@ export class GameRoom {
     }
     this.emitProgress.flush();
     this.setPhase("QUESTION_LOCKED");
+    // "Auto-reveal": after a pause for suspense, the answers show without the host.
+    const { autoRevealSec, showAnswerStats } = this.snapshot.settings;
+    if (autoRevealSec > 0) {
+      const index = this.questionIndex;
+      this.schedule(autoRevealSec * 1000, () => {
+        if (this.phase !== "QUESTION_LOCKED" || this.questionIndex !== index) return;
+        if (showAnswerStats) {
+          this.setPhase("ANSWER_DISTRIBUTION");
+          this.broadcast();
+        } else this.reveal();
+      });
+    }
     if (broadcast) this.broadcast();
   }
 
@@ -966,6 +978,7 @@ export class GameRoom {
         showAnswerStats: s.showAnswerStats,
         showCorrectAnswers: s.showCorrectAnswers,
         showLeaderboard: s.showLeaderboard,
+        leaderboardEvery: s.leaderboardEvery,
       },
       countdownEndsAt: this.countdownEndsAt,
       readingEndsAt: this.readingEndsAt,

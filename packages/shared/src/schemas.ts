@@ -1,5 +1,11 @@
 import { z } from "zod";
 import {
+  AUTO_REVEAL_MAX_SECONDS,
+  CATEGORY_MAX,
+  DIFFICULTIES,
+  LEADERBOARD_EVERY_MAX,
+  TAG_MAX,
+  TAGS_MAX,
   DEFAULT_POINTS,
   DEFAULT_TIMER_SECONDS,
   EXPLANATION_MAX,
@@ -41,6 +47,12 @@ const imageUrl = z
   .transform((v) => (v ? v : null));
 
 const cuid = z.string().min(1).max(64);
+
+/** Bank tags: short labels, trimmed, lower-cased, de-duplicated. */
+const tagsSchema = z
+  .array(plainText(TAG_MAX))
+  .max(TAGS_MAX)
+  .transform((tags) => [...new Set(tags.map((t) => t.toLowerCase()).filter(Boolean))]);
 
 /* ------------------------------------------------------------------ auth */
 
@@ -99,6 +111,10 @@ export const quizSettingsSchema = z.object({
   nicknameFilter: z.boolean().default(true),
   readingMode: z.enum(READING_MODES).default("TIMED"),
   readingTimeSec: z.number().int().min(READING_MIN_SECONDS).max(READING_MAX_SECONDS).default(5),
+  /** Leaderboard after every Nth question (and after the last one). */
+  leaderboardEvery: z.number().int().min(1).max(LEADERBOARD_EVERY_MAX).default(1),
+  /** Seconds after time's up before the answers show by themselves; 0 = the host decides. */
+  autoRevealSec: z.number().int().min(0).max(AUTO_REVEAL_MAX_SECONDS).default(0),
 });
 export type QuizSettings = z.infer<typeof quizSettingsSchema>;
 
@@ -159,6 +175,9 @@ const questionBase = z.object({
   points: z.number().int().min(0).max(MAX_POINTS).default(DEFAULT_POINTS),
   explanation: plainText(EXPLANATION_MAX).optional().default(""),
   randomizeAnswers: z.boolean().default(false),
+  tags: tagsSchema.default([]),
+  category: plainText(CATEGORY_MAX).default(""),
+  difficulty: z.enum(DIFFICULTIES).nullable().default(null),
   options: z.array(optionInputSchema).min(2).max(4),
 });
 
@@ -206,6 +225,9 @@ export const questionUpdateSchema = z.object({
   points: z.number().int().min(0).max(MAX_POINTS).optional(),
   explanation: plainText(EXPLANATION_MAX).optional(),
   randomizeAnswers: z.boolean().optional(),
+  tags: tagsSchema.optional(),
+  category: plainText(CATEGORY_MAX).optional(),
+  difficulty: z.enum(DIFFICULTIES).nullable().optional(),
   options: z.array(optionInputSchema).min(2).max(4).optional(),
 });
 export type QuestionUpdateInput = z.infer<typeof questionUpdateSchema>;
@@ -280,6 +302,8 @@ export const hostCommandSchema = z.object({
  */
 export const liveSettingsPatchSchema = z
   .object({
+    leaderboardEvery: z.number().int().min(1).max(LEADERBOARD_EVERY_MAX),
+    autoRevealSec: z.number().int().min(0).max(AUTO_REVEAL_MAX_SECONDS),
     readingMode: z.enum(READING_MODES),
     readingTimeSec: z.number().int().min(READING_MIN_SECONDS).max(READING_MAX_SECONDS),
     /** One timer for every question, overriding the per-question timers; null restores them. */
@@ -301,3 +325,28 @@ export const hostSettingsSchema = z.object({
 });
 
 export const hostKickSchema = z.object({ code: gameCodeSchema, participantId: cuid });
+
+/* ------------------------------------------------------------------ question bank */
+
+export const bankQuerySchema = z.object({
+  q: z.string().trim().max(120).optional(),
+  tag: z.string().trim().max(TAG_MAX).optional(),
+  category: z.string().trim().max(CATEGORY_MAX).optional(),
+  difficulty: z.enum(DIFFICULTIES).optional(),
+  type: z.enum(QUESTION_TYPES).optional(),
+  quizId: cuid.optional(),
+});
+
+/** Copy bank questions into a quiz (they're duplicated, so editing one never changes another). */
+export const copyQuestionsSchema = z.object({
+  questionIds: z.array(cuid).min(1).max(MAX_QUESTIONS_PER_QUIZ),
+});
+
+/* ------------------------------------------------------------------ organiser preferences */
+
+/** Defaults applied to every new quiz: its settings and its arena. */
+export const userPreferencesSchema = z.object({
+  quizDefaults: partialNoDefaults(quizSettingsSchema.shape).optional(),
+  appearance: arenaAppearanceSchema.optional(),
+});
+export type UserPreferences = z.infer<typeof userPreferencesSchema>;

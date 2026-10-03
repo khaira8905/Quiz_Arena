@@ -1,7 +1,12 @@
 "use client";
 
 import type { ErrorCode } from "@quizarena/shared/errors";
-import type { HostCommand, HostView, PlayerSummary } from "@quizarena/shared/game";
+import {
+  leaderboardDue,
+  type HostCommand,
+  type HostView,
+  type PlayerSummary,
+} from "@quizarena/shared/game";
 import type { LiveSettingsPatch } from "@quizarena/shared/schemas";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
@@ -194,7 +199,11 @@ export function primaryCommand(view: HostView | null): HostCommand | null {
     case "ANSWER_DISTRIBUTION":
       return "REVEAL";
     case "ANSWER_REVEAL":
-      return has("LEADERBOARD") ? "LEADERBOARD" : "NEXT";
+      // The leaderboard on its schedule (every Nth question, and after the last one).
+      return has("LEADERBOARD") &&
+        leaderboardDue(view.settings, view.questionIndex, view.questionCount)
+        ? "LEADERBOARD"
+        : "NEXT";
     case "LEADERBOARD":
       return "NEXT";
     case "FINISHED":

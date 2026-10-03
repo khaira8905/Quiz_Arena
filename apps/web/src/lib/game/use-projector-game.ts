@@ -1,7 +1,7 @@
 "use client";
 
 import type { ErrorCode } from "@quizarena/shared/errors";
-import type { HostCommand, ProjectorView } from "@quizarena/shared/game";
+import { leaderboardDue, type HostCommand, type ProjectorView } from "@quizarena/shared/game";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { seedOffset, syncClock } from "../clock";
@@ -163,7 +163,9 @@ export function stagePrimaryCommand(v: ProjectorView | null): HostCommand | null
     case "ANSWER_DISTRIBUTION":
       return "REVEAL";
     case "ANSWER_REVEAL":
-      return v.settings.showLeaderboard ? "LEADERBOARD" : "NEXT";
+      return v.question && leaderboardDue(v.settings, v.question.index, v.question.total)
+        ? "LEADERBOARD"
+        : "NEXT";
     case "LEADERBOARD":
       return "NEXT";
     case "FINISHED":

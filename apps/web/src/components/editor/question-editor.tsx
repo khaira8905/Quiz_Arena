@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  CATEGORY_MAX,
   DEFAULT_POINTS,
+  type Difficulty,
   OPTION_TEXT_MAX,
   POINT_PRESETS,
   QUESTION_TEXT_MAX,
@@ -26,6 +28,7 @@ import { cn } from "@/lib/cn";
 import { useDeleteQuestion, useDuplicateQuestion, useUpdateQuestion } from "@/lib/queries";
 import { ImageField } from "@/components/media/image-field";
 import { DriveImageButton } from "@/components/media/google-drive";
+import { TagEditor } from "./tag-editor";
 import { useAutosave, useSaveTracker } from "./save-tracker";
 
 type Draft = Omit<QuestionDto, "id" | "order" | "updatedAt">;
@@ -41,6 +44,9 @@ const toDraft = (q: QuestionDto): Draft => ({
   points: q.points,
   explanation: q.explanation,
   randomizeAnswers: q.randomizeAnswers,
+  tags: q.tags,
+  category: q.category,
+  difficulty: q.difficulty,
   options: q.options,
 });
 
@@ -415,6 +421,38 @@ export function QuestionEditor({
             />
           )}
         </Field>
+
+        <div className="border-t border-line pt-5">
+          <h3 className="label mb-3 text-fg-2">Question bank</h3>
+          <div className="flex flex-col gap-4">
+            <Field label="Category">
+              {(p) => (
+                <Input
+                  {...p}
+                  maxLength={CATEGORY_MAX}
+                  placeholder="e.g. Science"
+                  value={draft.category}
+                  onChange={(e) => set("category", e.target.value)}
+                />
+              )}
+            </Field>
+            <div>
+              <div className="mb-1.5 text-body-sm font-medium text-fg-2">Difficulty</div>
+              <Segmented<Difficulty | "NONE">
+                label="Difficulty"
+                value={draft.difficulty ?? "NONE"}
+                options={[
+                  { value: "NONE", label: "—" },
+                  { value: "EASY", label: "Easy" },
+                  { value: "MEDIUM", label: "Medium" },
+                  { value: "HARD", label: "Hard" },
+                ]}
+                onChange={(v) => set("difficulty", v === "NONE" ? null : v, true)}
+              />
+            </div>
+            <TagEditor tags={draft.tags} onChange={(tags) => set("tags", tags, true)} />
+          </div>
+        </div>
 
         <div className="mt-auto flex gap-2 border-t border-line pt-5">
           <Button

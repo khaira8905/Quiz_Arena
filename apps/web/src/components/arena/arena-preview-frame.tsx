@@ -40,12 +40,15 @@ export function ArenaPreviewFrame({ surface }: { surface: PreviewSurface }) {
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.source !== window.parent) return;
+      // From the editor that embeds this frame, or that opened it in its own window.
+      const from = window.parent !== window ? window.parent : window.opener;
+      if (e.origin !== window.location.origin || !from || e.source !== from) return;
       const data = e.data as { type?: string; state?: ArenaPreviewState } | null;
       if (data?.type === PREVIEW_MESSAGE && data.state) setState(data.state);
     };
     window.addEventListener("message", onMessage);
-    window.parent.postMessage({ type: PREVIEW_READY }, window.location.origin);
+    const host = window.parent !== window ? window.parent : window.opener;
+    host?.postMessage({ type: PREVIEW_READY }, window.location.origin);
     const loop = setInterval(() => setCycle(Date.now()), TIMER_LOOP_MS);
     return () => {
       window.removeEventListener("message", onMessage);

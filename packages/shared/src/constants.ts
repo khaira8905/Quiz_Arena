@@ -26,6 +26,16 @@ export const QUIZ_TITLE_MAX = 120;
 export const QUIZ_DESCRIPTION_MAX = 1000;
 export const MAX_QUESTIONS_PER_QUIZ = 100;
 
+/** Question bank metadata. */
+export const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
+export const TAG_MAX = 30;
+export const TAGS_MAX = 8;
+export const CATEGORY_MAX = 40;
+
+export const LEADERBOARD_EVERY_MAX = 20;
+export const AUTO_REVEAL_MAX_SECONDS = 30;
+
 /**
  * Game PINs look like QA482193: fixed prefix + 6 digits. Short enough to read aloud from a
  * stage, large enough (1M) that live games can't be found by guessing.
