@@ -23,6 +23,7 @@ import { useDeleteMedia, useMedia, useMediaConfig, useRenameMedia } from "@/lib/
 import { DriveImageButton } from "./google-drive";
 import { useImageUpload } from "./image-field";
 import { AssetThumb } from "./media-picker";
+import { Tilt } from "@/components/motion/tilt";
 import { QuestionImage } from "./question-image";
 import { useVideoUpload, VideoUploadProgress } from "./video-field";
 import { Segmented } from "@/components/ui/switch";
@@ -237,36 +238,38 @@ export function MediaLibrary() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i, 12) * 0.025 }}
               >
-                <button
-                  type="button"
-                  onClick={() => setPreview(a)}
-                  data-cursor="media"
-                  data-cursor-label={a.kind === "VIDEO" ? "Play" : "Open"}
-                  className="card-interactive group relative block w-full overflow-hidden rounded-md border border-line bg-surface text-left"
-                >
-                  <span className="relative block aspect-[4/3] overflow-hidden bg-sunken">
-                    <AssetThumb
-                      asset={a}
-                      className="transition-transform duration-[var(--motion-slow)] ease-[var(--ease-out)] group-hover:scale-[1.04]"
-                    />
-                    {a.kind === "VIDEO" && <HoverPreview src={a.url} />}
-                    <span
-                      className={cn(
-                        "label absolute left-2 top-2 rounded-sm px-1.5 py-0.5",
-                        a.usageCount ? "bg-accent text-accent-ink" : "bg-elevated/90 text-fg-3",
-                      )}
-                    >
-                      {a.usageCount ? `Used ×${a.usageCount}` : "Unused"}
+                <Tilt max={4} className="rounded-md">
+                  <button
+                    type="button"
+                    onClick={() => setPreview(a)}
+                    data-cursor="media"
+                    data-cursor-label={a.kind === "VIDEO" ? "Play" : "View"}
+                    className="card-interactive group relative block w-full overflow-hidden rounded-md border border-line bg-surface text-left"
+                  >
+                    <span className="relative block aspect-[4/3] overflow-hidden bg-sunken">
+                      <AssetThumb
+                        asset={a}
+                        className="transition-transform duration-[var(--motion-slow)] ease-[var(--ease-out)] group-hover:scale-[1.04]"
+                      />
+                      {a.kind === "VIDEO" && <HoverPreview src={a.url} />}
+                      <span
+                        className={cn(
+                          "label absolute left-2 top-2 rounded-sm px-1.5 py-0.5",
+                          a.usageCount ? "bg-accent text-accent-ink" : "bg-elevated/90 text-fg-3",
+                        )}
+                      >
+                        {a.usageCount ? `Used ×${a.usageCount}` : "Unused"}
+                      </span>
                     </span>
-                  </span>
-                  <span className="block truncate px-3 pt-2 text-body-sm font-medium">
-                    {a.name}
-                  </span>
-                  <span className="block px-3 pb-2.5 text-caption text-fg-3">
-                    {a.kind === "VIDEO" ? `${formatDuration(a.durationMs)} · ` : ""}
-                    {a.width}×{a.height} · {formatBytes(a.bytes)}
-                  </span>
-                </button>
+                    <span className="block truncate px-3 pt-2 text-body-sm font-medium">
+                      {a.name}
+                    </span>
+                    <span className="block px-3 pb-2.5 text-caption text-fg-3">
+                      {a.kind === "VIDEO" ? `${formatDuration(a.durationMs)} · ` : ""}
+                      {a.width}×{a.height} · {formatBytes(a.bytes)}
+                    </span>
+                  </button>
+                </Tilt>
               </motion.li>
             ))}
           </ul>

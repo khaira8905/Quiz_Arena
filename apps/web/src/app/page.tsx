@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { OrbitField } from "@/components/ambient/orbit-field";
 import { Parade } from "@/components/ambient/parade";
+import { Layer, ParallaxScene } from "@/components/ambient/parallax";
 import { Logo } from "@/components/brand/logo";
 import { HeroTitle } from "@/components/landing/hero-title";
 import { JoinCodeForm } from "@/components/landing/join-code-form";
@@ -43,12 +44,17 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 items-center gap-10 px-5 pb-10 pt-4 sm:px-8 lg:grid-cols-[1.15fr_1fr] lg:gap-6">
+      {/* Three depths: the orbit far back, the copy in the middle, the join card nearest. As
+          the pointer moves, a camera pans toward it and nearer layers shift more. */}
+      <ParallaxScene className="relative mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 items-center gap-10 px-5 pb-10 pt-4 sm:px-8 lg:grid-cols-[1.15fr_1fr] lg:gap-6">
         {/* String-art orbit: behind the copy on phones, beside it on wide screens. */}
-        <div className="pointer-events-none absolute inset-0 -z-0 opacity-50 lg:static lg:order-2 lg:aspect-square lg:opacity-100">
+        <Layer
+          depth={-5}
+          className="pointer-events-none absolute inset-0 -z-0 opacity-50 lg:static lg:order-2 lg:aspect-square lg:opacity-100"
+        >
           <OrbitField />
-        </div>
-        <div className="relative lg:order-1">
+        </Layer>
+        <Layer depth={-11} className="relative lg:order-1">
           <p className="eyebrow flex items-center gap-2 text-accent">
             <span className="h-1.5 w-1.5 animate-live-pulse rounded-full bg-accent" />
             Live quiz for any room
@@ -63,7 +69,11 @@ export default function Home() {
             </p>
           </Reveal>
           <Reveal delay={0.65}>
-            <div className="mt-8 max-w-xl rounded-lg border border-line-strong bg-surface/90 p-5 shadow-[var(--shadow-lg)] backdrop-blur-[2px] sm:p-6">
+            <div
+              data-depth
+              style={{ "--d": -7 } as React.CSSProperties}
+              className="mt-8 max-w-xl rounded-lg border border-line-strong bg-surface/90 p-5 shadow-[var(--shadow-lg)] backdrop-blur-[2px] sm:p-6"
+            >
               <h2 className="font-display text-h2">Have a game PIN?</h2>
               <p className="mt-1 text-body-sm text-fg-2">
                 It&apos;s on the big screen and looks like QA482193.
@@ -71,8 +81,8 @@ export default function Home() {
               <JoinCodeForm />
             </div>
           </Reveal>
-        </div>
-      </section>
+        </Layer>
+      </ParallaxScene>
 
       <section aria-labelledby="showcase-title" className="relative py-12">
         <Reveal className="mx-auto mb-6 max-w-7xl px-5 sm:px-8">
@@ -88,7 +98,7 @@ export default function Home() {
       </section>
 
       {/* The crowd arriving. */}
-      <Parade className="h-16 border-b border-line-strong sm:h-20" />
+      <Parade className="h-24 border-b border-line-strong sm:h-32" />
 
       <section aria-label="How it works" className="bg-surface/60">
         <ol className="mx-auto grid max-w-7xl gap-px px-5 sm:px-8 md:grid-cols-3">
