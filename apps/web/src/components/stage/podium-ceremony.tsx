@@ -12,6 +12,22 @@ import { play } from "@/lib/sound";
 import { EASE } from "@/lib/motion";
 
 const PAGE_SIZE = 10;
+const CAMERA: Record<
+  string,
+  {
+    x: string;
+    y: string;
+    scale: number;
+    rotateY: number;
+    rotateX: number;
+    transformPerspective: number;
+  }
+> = {
+  COMPLETE: { x: "0vw", y: "0vh", scale: 0.96, rotateY: 0, rotateX: 4, transformPerspective: 1600 },
+  THIRD: { x: "-7vw", y: "0vh", scale: 1.04, rotateY: 5, rotateX: 3, transformPerspective: 1600 },
+  SECOND: { x: "7vw", y: "0vh", scale: 1.04, rotateY: -5, rotateX: 3, transformPerspective: 1600 },
+  FIRST: { x: "0vw", y: "1.5vh", scale: 1.07, rotateY: 0, rotateX: 2, transformPerspective: 1600 },
+};
 const PAGE_MS = 7000;
 
 /**
@@ -67,7 +83,7 @@ export function PodiumCeremony({
     <div className="relative h-full">
       <Confetti
         fire={step === "FIRST" ? "champion" : null}
-        intensity={1.5}
+        intensity={1}
         origin={{ x: 0.5, y: 0.35 }}
       />
       {/* A crossfade, not "wait": the board never waits on the podium's exit animation
@@ -122,11 +138,20 @@ export function PodiumCeremony({
               )}
             </div>
 
-            <div className="mt-auto grid grid-cols-3 items-end gap-[2vw] px-[6vw]">
+            {/* The camera: wide at first, dollies toward each place as it's revealed (third
+                stands on the right, second on the left), then centres and pushes in on the
+                champion. */}
+            <motion.div
+              className="mt-auto grid grid-cols-3 items-end gap-[2vw] px-[6vw]"
+              initial={false}
+              animate={reduced ? {} : (CAMERA[step] ?? CAMERA.COMPLETE)}
+              transition={{ duration: 1.4, ease: EASE.emphasis }}
+              style={{ transformOrigin: "50% 100%" }}
+            >
               <PodiumColumn entry={second} place={2} show={shown(2)} height="38vh" />
               <PodiumColumn entry={first} place={1} show={shown(1)} height="52vh" champion />
               <PodiumColumn entry={third} place={3} show={shown(3)} height="28vh" />
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -221,9 +246,23 @@ function PodiumColumn({
           </motion.div>
         )}
       </AnimatePresence>
+      {/* The plinth's top face, seen from slightly above: it makes the block solid. */}
+      <motion.div
+        aria-hidden
+        className={cn(
+          "h-[2.6vh] w-full [clip-path:polygon(5%_0,95%_0,100%_100%,0_100%)]",
+          champion
+            ? "bg-[color-mix(in_oklab,var(--accent)_70%,white)]"
+            : place === 2
+              ? "bg-[color-mix(in_oklab,var(--text-primary)_80%,var(--background))]"
+              : "bg-[color-mix(in_oklab,var(--answer-1)_55%,white)]",
+        )}
+        initial={false}
+        animate={{ opacity: visible ? 1 : 0.35 }}
+      />
       <motion.div
         className={cn(
-          "notch flex w-full justify-center pt-[2vh]",
+          "flex w-full justify-center pt-[2vh] shadow-[inset_0_-3vh_4vh_-2vh_var(--arena-3d-shadow)]",
           champion
             ? "bg-accent text-accent-ink"
             : place === 2

@@ -51,7 +51,9 @@ export function StageDistribution({
             animate={{
               opacity: dim ? 0.38 : 1,
               x: 0,
-              scale: isCorrect && arenaMotion.emphasis && !reduced ? 1.015 : 1,
+              // The correct answer comes forward, toward the room.
+              z: isCorrect && arenaMotion.emphasis && !reduced ? 60 : 0,
+              transformPerspective: 1400,
             }}
             transition={{ delay: reduced ? 0 : i * 0.09, duration: 0.5, ease: EASE }}
           >
@@ -84,12 +86,12 @@ export function StageDistribution({
                   sits on the fill, so it reads the same in every theme. */}
               <div
                 className={cn(
-                  "relative h-[min(3.4vh,40%)] min-h-3 overflow-hidden bg-line",
+                  "bar-track relative h-[min(3.4vh,40%)] min-h-3 overflow-hidden bg-line",
                   isCorrect && "outline outline-[0.25vw] outline-offset-[0.25vw] outline-fg",
                 )}
               >
                 <motion.div
-                  className={cn("absolute inset-0 origin-left", s.bg)}
+                  className={cn("bar-3d absolute inset-0 origin-left", s.bg)}
                   initial={reduced ? false : { scaleX: 0 }}
                   animate={{ scaleX: count / top }}
                   transition={{ delay: reduced ? 0 : 0.25 + i * 0.09, duration: grow, ease: EASE }}

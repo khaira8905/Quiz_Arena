@@ -52,14 +52,30 @@ export function StageAnswerTile({
 
   return (
     <motion.div
-      initial={reduced ? false : { opacity: 0, y: lift, scale: 0.97 }}
+      // 4. Answers rise off the floor of the stage in turn, tipping up to face the room.
+      initial={
+        reduced
+          ? false
+          : arenaMotion.emphasis
+            ? { opacity: 0, y: lift, z: -240, rotateX: 32, transformPerspective: 1200 }
+            : { opacity: 0, y: lift, scale: 0.97 }
+      }
       animate={{
         opacity: dim ? 0.32 : 1,
         y: 0,
-        scale: framed && arenaMotion.emphasis ? 1.02 : 1,
+        z: 0,
+        rotateX: 0,
+        transformPerspective: 1200,
+        scale: framed && arenaMotion.emphasis ? 1.03 : 1,
         filter: dim ? "saturate(0.35)" : "saturate(1)",
       }}
-      transition={{ delay, duration: 0.42, ease: EASE.out }}
+      transition={{
+        delay,
+        y: { delay, type: "spring", stiffness: 210, damping: 22 },
+        rotateX: { delay, type: "spring", stiffness: 160, damping: 20 },
+        z: { delay, duration: 0.6, ease: EASE.emphasis },
+        default: { delay, duration: 0.42, ease: EASE.out },
+      }}
       className={cn("notch relative min-h-0", framed ? "z-10 bg-fg p-[0.35vw]" : style.bg)}
     >
       <div
@@ -164,7 +180,10 @@ export function PhoneAnswerButton({
       ? { x: [0, -10, 9, -6, 4, 0], opacity: 1 }
       : state === "correct" && lively
         ? { scale: [1, 1.06, 1], opacity: 1 }
-        : { scale: state === "selected" ? 1.02 : 1, opacity: dim ? 0.3 : 1, x: 0 };
+        : state === "selected" && lively
+          ? // Strong confirmation: a squash, then it settles slightly proud of the rest.
+            { scale: [0.94, 1.05, 1.02], opacity: 1, x: 0 }
+          : { scale: state === "selected" ? 1.02 : 1, opacity: dim ? 0.3 : 1, x: 0 };
 
   const letter = (
     <span
@@ -201,8 +220,11 @@ export function PhoneAnswerButton({
       onClick={onPress}
       aria-pressed={state === "selected" || undefined}
       aria-label={`${style.letter}: ${text}${state === "correct" ? " — correct answer" : state === "wrong" ? " — your answer, incorrect" : ""}`}
-      whileHover={disabled || reduced ? undefined : { y: -3 }}
-      whileTap={disabled || reduced ? undefined : { scale: 0.95 }}
+      // Tactile: lifts and leans back on hover (desktop players), compresses on press.
+      whileHover={
+        disabled || reduced ? undefined : { y: -4, rotateX: 7, transformPerspective: 700 }
+      }
+      whileTap={disabled || reduced ? undefined : { scale: 0.94, rotateX: 0, y: 0 }}
       animate={animate}
       transition={{ duration: state === "wrong" ? 0.42 : 0.25, ease: EASE.out }}
       className={cn(
@@ -221,6 +243,16 @@ export function PhoneAnswerButton({
           style.ink,
         )}
       >
+        {/* A flash of light as the choice locks in. */}
+        {state === "selected" && lively && (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-white"
+            initial={{ opacity: 0.45 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: EASE.out }}
+          />
+        )}
         {rows ? (
           <>
             {letter}

@@ -413,6 +413,20 @@ html.theme-crossfade *::after {
     transform: scaleX(1);
   }
 
+  /* Distribution bars: a slab, lit from above with a darker lower edge. Not glossy. */
+  .bar-track {
+    box-shadow: inset 0 -0.35vh 0 color-mix(in oklab, black 14%, transparent);
+  }
+  .bar-3d {
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklab, white 24%, transparent),
+      transparent 42%,
+      transparent 70%,
+      color-mix(in oklab, black 24%, transparent)
+    );
+  }
+
   /* Pointer parallax (components/ambient/parallax.tsx): layers pan with depth --d. */
   .parallax [data-depth] {
     translate: calc(var(--px, 0) * var(--d, 0) * 1px) calc(var(--py, 0) * var(--d, 0) * 0.6px);
