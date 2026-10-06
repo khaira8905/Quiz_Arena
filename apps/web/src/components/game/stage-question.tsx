@@ -12,6 +12,7 @@ import { useCountdown } from "@/lib/use-countdown";
 import { StageAnswerTile, type TileState } from "./answer-tile";
 import { Countdown, StageTimerBar } from "./countdown";
 import { EASE } from "@/lib/motion";
+import { SplitWords } from "@/components/motion/split-words";
 
 /**
  * The projector question screen. Built for distance: the question is the largest text on
@@ -51,6 +52,8 @@ export function StageQuestion({
   const reduced = useReducedMotion();
   const { appearance, motion: arenaMotion } = useArena();
   const enter = screenTransition(appearance.transition, arenaMotion, "stage", reduced);
+  // Word-by-word entrances are for NORMAL and HIGH motion; SUBTLE gets a plain fade.
+  const lively = !reduced && arenaMotion.amplitude >= 1;
   const layout = appearance.projectorLayout;
   const minimal = layout === "MINIMAL";
   const qScale = questionScale(question.text);
@@ -108,7 +111,7 @@ export function StageQuestion({
             </div>
             <div className={cn("flex min-h-0 gap-[2.5vw]", question.imageUrl ? "items-start" : "")}>
               <motion.h1
-                initial={reduced ? false : { opacity: 0, y: 18 }}
+                initial={reduced || lively ? false : { opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.08, duration: 0.5, ease: EASE.out }}
                 className="min-w-0 flex-1 text-stage-question font-display text-balance break-words"
@@ -118,13 +121,20 @@ export function StageQuestion({
                     : undefined
                 }
               >
-                {question.text}
+                <SplitWords text={question.text} animate={lively} delay={0.12} />
               </motion.h1>
               {question.imageUrl && (
                 <motion.div
-                  initial={reduced ? false : { opacity: 0, scale: 0.96, y: 12 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.6, ease: EASE.out }}
+                  // The picture is unveiled bottom-up while it settles from a slight zoom.
+                  initial={
+                    reduced
+                      ? false
+                      : lively
+                        ? { clipPath: "inset(100% 0% 0% 0%)", scale: 1.06 }
+                        : { opacity: 0 }
+                  }
+                  animate={{ clipPath: "inset(0% 0% 0% 0%)", scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.25, duration: 0.9, ease: EASE.emphasis }}
                   className="w-[34vw] shrink-0"
                 >
                   {/* A fixed 2:1 frame: the question and answers never move when it loads. */}

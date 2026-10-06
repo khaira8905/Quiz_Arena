@@ -11,6 +11,8 @@ import { cn } from "@/lib/cn";
 import { PodiumCeremony } from "./podium-ceremony";
 import { EASE } from "@/lib/motion";
 import { Procession } from "@/components/ambient/procession";
+import { pad2 } from "@/lib/format";
+import { Curtain } from "./curtain";
 
 const QUESTION_PHASES: ProjectorView["phase"][] = [
   "QUESTION_READING",
@@ -31,6 +33,17 @@ export function ProjectorScreen({ view, sound }: { view: ProjectorView; sound: b
   const inQuestion = QUESTION_PHASES.includes(view.phase);
   // MINIMAL drops the top strip while a question is on screen: nothing but the question.
   const showStrip = !(projectorLayout === "MINIMAL" && inQuestion);
+  // Scene changes the curtain announces: each new question, the standings, the finale.
+  const scene = inQuestion ? `q-${view.question?.id}` : view.phase;
+  const sceneTitle = inQuestion
+    ? view.question
+      ? `Question ${pad2(view.question.index + 1)}`
+      : null
+    : view.phase === "LEADERBOARD"
+      ? "Standings"
+      : view.phase === "FINISHED"
+        ? "Final results"
+        : null;
   return (
     <>
       {/* ------------------------------------------------------------ top strip */}
@@ -93,6 +106,7 @@ export function ProjectorScreen({ view, sound }: { view: ProjectorView; sound: b
           </motion.div>
         </AnimatePresence>
       </main>
+      <Curtain scene={scene} title={sceneTitle} />
     </>
   );
 }

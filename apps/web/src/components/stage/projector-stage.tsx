@@ -157,7 +157,7 @@ export function ProjectorStage({ code, preview }: { code: string; preview: boole
     <ArenaThemeProvider appearance={view.settings.appearance} page>
       <div
         className={cn(
-          "arena-floor flex h-dvh flex-col overflow-hidden",
+          "arena-floor relative flex h-dvh flex-col overflow-hidden",
           idle && !preview && "cursor-none",
         )}
         onClick={preview ? undefined : unlockAudio}

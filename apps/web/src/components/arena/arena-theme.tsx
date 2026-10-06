@@ -98,6 +98,29 @@ export function screenTransition(
   const far = (stage: number, phone: number) =>
     surface === "stage" ? `${stage * d}vw` : phone * d;
   const transition = { duration: surface === "stage" ? 0.45 : 0.24, ease: EASE };
+  const base = baseTransition(preset, far, d, transition);
+  if (surface !== "stage" || d < 1) return base;
+  // The stage adds focus: screens arrive out of a blur and leave through a closing wipe.
+  return {
+    ...base,
+    initial: { ...base.initial, filter: "blur(10px)" },
+    animate: { ...base.animate, filter: "blur(0px)", clipPath: "inset(0% 0% 0% 0%)" },
+    exit: { ...base.exit, clipPath: "inset(0% 0% 100% 0%)" },
+    transition: { ...transition, duration: 0.55 },
+  };
+}
+
+function baseTransition(
+  preset: TransitionPreset,
+  far: (stage: number, phone: number) => string | number,
+  d: number,
+  transition: { duration: number; ease: typeof EASE },
+): {
+  initial: Record<string, string | number>;
+  animate: Record<string, string | number>;
+  exit: Record<string, string | number>;
+  transition: { duration: number; ease: typeof EASE };
+} {
   switch (preset) {
     case "RISE":
       return {

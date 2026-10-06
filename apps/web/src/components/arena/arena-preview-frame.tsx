@@ -67,7 +67,7 @@ export function ArenaPreviewFrame({ surface }: { surface: PreviewSurface }) {
   }
   return (
     <ArenaThemeProvider appearance={state.appearance} page>
-      <div className="arena-floor flex h-dvh flex-col overflow-hidden">
+      <div className="arena-floor relative flex h-dvh flex-col overflow-hidden">
         <ProjectorScreen view={previewProjectorView(state, cycle)} sound={false} />
       </div>
     </ArenaThemeProvider>

@@ -151,7 +151,27 @@ function PodiumColumn({
   // A place with nobody in it (two-player game) stays a low, empty plinth.
   const visible = show && !!entry;
   return (
-    <div className="flex flex-col items-center justify-end" style={{ height: "62vh" }}>
+    <div className="relative flex flex-col items-center justify-end" style={{ height: "62vh" }}>
+      {/* A stage light falls on each place as it's revealed; the champion's is brightest. */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-1/2 w-[150%] -translate-x-1/2"
+        style={{
+          height: "88vh",
+          background: `linear-gradient(to bottom, color-mix(in oklab, var(--accent) ${champion ? 34 : 20}%, transparent), transparent 85%)`,
+          clipPath: "polygon(44% 0, 56% 0, 100% 100%, 0 100%)",
+          transformOrigin: "50% 0",
+        }}
+        initial={false}
+        animate={
+          visible
+            ? reduced
+              ? { opacity: 0.8 }
+              : { opacity: [0, 1, 0.55, 0.9, 0.8], scaleX: [0.4, 1, 1, 1, 1] }
+            : { opacity: 0, scaleX: 0.4 }
+        }
+        transition={{ duration: visible ? 1.1 : 0.4, ease: EASE.out }}
+      />
       <AnimatePresence>
         {visible && (
           <motion.div
