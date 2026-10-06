@@ -54,8 +54,10 @@ the moment the timer hits zero.
   Option A–D, Correct answer, Time limit, Points, Explanation, Image URL), Kahoot's spreadsheet
   template works as-is, and every row is previewed with its problems before anything is saved.
   A template CSV can be downloaded from the import dialog
-- **Black / Blue / White themes** for the admin portal, sign-in, landing and join screens
-  (per browser); the projector and phones follow each quiz's own arena theme
+- **Two themes, one day/night switch:** Black + Orange (night) and White + Blue (day). A
+  single sun/moon icon morphs as it switches, and the new theme spreads out from it across
+  the page. Remembered per browser; a first visit follows the system setting. The projector
+  and phones follow each quiz's own arena theme (one of the same two)
 - Draft/published states; publishing and going live are blocked until every question is complete
 - Duplicate/delete quizzes and questions, one-click **Go live**
 - Admin sections: Dashboard, Quizzes, Question bank, Media library, Live sessions, Results,

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { type ArenaPreviewState, previewProjectorView, previewPlayerView } from "./arena-preview";
 
 const state = (over: Partial<ArenaPreviewState> = {}): ArenaPreviewState => ({
-  appearance: { ...DEFAULT_APPEARANCE, theme: "BLUE" },
+  appearance: { ...DEFAULT_APPEARANCE, theme: "WHITE" },
   scene: "question",
   title: "Physics Night",
   questionCount: 12,
@@ -40,7 +40,7 @@ describe("arena preview views", () => {
     const now = 1_000_000;
     const v = previewProjectorView(state(), now);
     expect(v.phase).toBe("QUESTION_ACTIVE");
-    expect(v.settings.appearance.theme).toBe("BLUE");
+    expect(v.settings.appearance.theme).toBe("WHITE");
     expect(v.settings.soundEnabled).toBe(false);
     expect(v.question?.type).toBe("TRUE_FALSE");
     expect(v.question?.total).toBe(12);

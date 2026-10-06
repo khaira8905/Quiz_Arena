@@ -10,7 +10,13 @@ import { HEX_COLOR, colorDistance, contrastRatio, inkFor } from "./color";
  * preview renders from the same values.
  */
 
-export const ARENA_THEMES = ["BLACK", "BLUE", "WHITE"] as const;
+/**
+ * Exactly two themes, one per side of the day/night switch:
+ *   BLACK: black and orange. Dark, cinematic, competitive.
+ *   WHITE: white and blue. Bright, clean, fast.
+ * (A third "Blue" theme existed before; stored arenas that used it read as BLACK.)
+ */
+export const ARENA_THEMES = ["BLACK", "WHITE"] as const;
 export const BACKGROUND_STYLES = ["GRID", "BEAMS", "PLAIN", "IMAGE"] as const;
 export const TYPOGRAPHY_PRESETS = ["ARENA", "TECHNICAL", "CLEAN"] as const;
 export const MOTION_LEVELS = ["SUBTLE", "NORMAL", "HIGH"] as const;
@@ -49,72 +55,67 @@ export interface ThemeTokens {
   /** Colour of the arena-floor grid and stage light. */
   floor: string;
   glow: string;
+  /** 3D lighting: the rim light on raised faces, and the shadow they cast. */
+  light3d: string;
+  shadow3d: string;
+  /** Which side of the day/night switch this theme is. */
+  scheme: "dark" | "light";
 }
 
 export const THEME_TOKENS: Record<ArenaTheme, ThemeTokens> = {
   BLACK: {
-    label: "Black",
-    description: "Cinematic and high contrast. Built for dark auditoriums and projectors.",
-    bg: "#07080c",
-    surface: "#0f1118",
-    elevated: "#171a24",
-    sunken: "#050609",
-    line: "#222632",
-    lineStrong: "#353b4b",
-    text: "#f2f4f8",
-    textSecondary: "#a2a9ba",
-    textMuted: "#80879a",
-    accent: "#c6ff34",
-    success: "#2be38b",
-    warning: "#ffb224",
-    danger: "#ff4d5e",
-    answers: ["#ff5a3c", "#2bb3ff", "#ffc93c", "#c25bff"],
-    floor: "#222632",
-    glow: "#c6ff34",
-  },
-  BLUE: {
-    label: "Blue",
-    description: "Electric and competitive. A deep-navy stage with a cyan signal colour.",
-    bg: "#06102b",
-    surface: "#0c1a3f",
-    elevated: "#13245a",
-    sunken: "#040b1f",
-    line: "#1b2d63",
-    lineStrong: "#2b4386",
-    text: "#eef3ff",
-    textSecondary: "#aebddf",
-    textMuted: "#8a9ccc",
-    accent: "#45d8ff",
-    success: "#3ee39c",
-    warning: "#ffb733",
-    danger: "#ff6270",
-    answers: ["#ff6250", "#ffb733", "#3ee39c", "#b591ff"],
-    floor: "#1b2d63",
-    glow: "#45d8ff",
+    label: "Black + Orange",
+    description: "Night. Dark, cinematic and competitive. Built for auditoriums and projectors.",
+    bg: "#09090b",
+    surface: "#121215",
+    elevated: "#1b1b20",
+    sunken: "#050506",
+    line: "#26262d",
+    lineStrong: "#3b3b45",
+    text: "#f7f4ef",
+    textSecondary: "#b6b0a7",
+    textMuted: "#948e85",
+    // Orange is the signal colour: used sparingly, for what matters right now.
+    accent: "#ff7a1a",
+    success: "#2fd98a",
+    warning: "#ffd23f",
+    danger: "#ff5468",
+    answers: ["#ff5c5c", "#3db4ff", "#ffd23f", "#a879ff"],
+    floor: "#26262d",
+    glow: "#ff7a1a",
+    light3d: "rgb(255 170 100 / 0.16)",
+    shadow3d: "rgb(0 0 0 / 0.72)",
+    scheme: "dark",
   },
   WHITE: {
-    label: "White",
-    description: "Bright and clean. Reads best in lit classrooms and on daylight screens.",
-    bg: "#f4f5f9",
+    label: "White + Blue",
+    description: "Day. Bright, clean and fast. Reads best in lit rooms and on daylight screens.",
+    bg: "#f5f7fb",
     surface: "#ffffff",
     elevated: "#ffffff",
-    sunken: "#eceef4",
-    line: "#dde1eb",
-    lineStrong: "#c2c8d8",
-    text: "#0c0e16",
-    textSecondary: "#3d4457",
-    textMuted: "#5b6377",
-    accent: "#2443ff",
+    sunken: "#ecf0f7",
+    line: "#dce2ee",
+    lineStrong: "#c1cadb",
+    text: "#0a0f1f",
+    textSecondary: "#384157",
+    textMuted: "#566077",
+    accent: "#1f4dff",
     // Darker than typical "light theme" status colours: small badge text must clear 4.5:1
     // on white and on its own tinted badge background.
     success: "#066b3a",
     warning: "#8a5000",
     danger: "#b01e2b",
-    answers: ["#ff5233", "#2560f0", "#ffb000", "#8a3ffc"],
-    floor: "#dde1eb",
-    glow: "#2443ff",
+    answers: ["#ff5233", "#0a8cff", "#ffb000", "#8a3ffc"],
+    floor: "#dce2ee",
+    glow: "#1f4dff",
+    light3d: "rgb(255 255 255 / 0.95)",
+    shadow3d: "rgb(16 32 96 / 0.18)",
+    scheme: "light",
   },
 };
+
+/** The theme on the other side of the day/night switch. */
+export const otherTheme = (t: ArenaTheme): ArenaTheme => (t === "BLACK" ? "WHITE" : "BLACK");
 
 const optionalUrl = z
   .union([
@@ -210,7 +211,12 @@ export const DEFAULT_APPEARANCE: ArenaAppearance = appearanceShape.parse({});
 
 /** Tolerant read for stored values: anything missing or invalid falls back to defaults. */
 export function resolveAppearance(stored: unknown): ArenaAppearance {
-  const merged = { ...DEFAULT_APPEARANCE, ...(typeof stored === "object" && stored ? stored : {}) };
+  const merged: Record<string, unknown> = {
+    ...DEFAULT_APPEARANCE,
+    ...(typeof stored === "object" && stored ? stored : {}),
+  };
+  // The retired Blue theme was a dark one: it becomes Black + Orange.
+  if (merged.theme === "BLUE") merged.theme = "BLACK";
   const parsed = arenaAppearanceSchema.safeParse(merged);
   return parsed.success ? parsed.data : DEFAULT_APPEARANCE;
 }
@@ -266,6 +272,8 @@ export function arenaCssVariables(a: ArenaAppearance): Record<string, string> {
     "--danger-soft": `color-mix(in oklab, ${c.danger} 16%, transparent)`,
     "--arena-floor": c.floor,
     "--arena-glow": c.glow,
+    "--arena-3d-light": c.light3d,
+    "--arena-3d-shadow": c.shadow3d,
   };
   c.answers.forEach((color, i) => {
     vars[`--answer-${i + 1}`] = color;
@@ -275,10 +283,13 @@ export function arenaCssVariables(a: ArenaAppearance): Record<string, string> {
   Object.assign(vars, {
     "--arena-bg": c.bg,
     "--arena-surface": c.surface,
+    "--arena-surface-2": c.elevated,
     "--arena-border": c.line,
     "--arena-text": c.text,
     "--arena-muted": c.textMuted,
     "--arena-accent": c.accent,
+    "--arena-accent-soft": `color-mix(in oklab, ${c.accent} 14%, transparent)`,
+    "--arena-shadow": c.shadow3d,
     "--arena-success": c.success,
     "--arena-danger": c.danger,
     "--arena-answer-1": c.answers[0],

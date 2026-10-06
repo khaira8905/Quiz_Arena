@@ -84,7 +84,12 @@ describe("appearance validation", () => {
 
   it("falls back to defaults for missing or corrupt stored values", () => {
     expect(resolveAppearance(null)).toEqual(DEFAULT_APPEARANCE);
-    expect(resolveAppearance({ theme: "BLUE" }).theme).toBe("BLUE");
+    expect(resolveAppearance({ theme: "WHITE" }).theme).toBe("WHITE");
+    // The retired Blue theme reads as Black + Orange, keeping the rest of the settings.
+    expect(resolveAppearance({ theme: "BLUE", motion: "HIGH" })).toMatchObject({
+      theme: "BLACK",
+      motion: "HIGH",
+    });
     expect(resolveAppearance({ theme: "PINK" })).toEqual(DEFAULT_APPEARANCE);
   });
 });
@@ -93,6 +98,7 @@ describe("css variables", () => {
   it("emits semantic tokens, inks and public aliases", () => {
     const vars = arenaCssVariables({ ...DEFAULT_APPEARANCE, theme: "WHITE", accent: "#2443ff" });
     expect(vars["--background"]).toBe(THEME_TOKENS.WHITE.bg);
+    expect(vars["--arena-3d-shadow"]).toBe(THEME_TOKENS.WHITE.shadow3d);
     expect(vars["--accent-ink"]).toBe("#ffffff");
     expect(vars["--arena-accent"]).toBe("#2443ff");
     expect(vars["--answer-ink-3"]).toBe("#0a0b0f");

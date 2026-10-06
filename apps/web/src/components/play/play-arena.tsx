@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArenaThemeProvider } from "@/components/arena/arena-theme";
 import { Logo } from "@/components/brand/logo";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Spinner, StatusScreen } from "@/components/ui/misc";
 import { usePlayerGame } from "@/lib/game/use-player-game";
@@ -81,7 +81,7 @@ function PlayArenaScreens({ game }: { game: ReturnType<typeof usePlayerGame> }) 
           <Logo size="sm" />
         </Link>
         {/* Before a game is recognised the player picks the look; after, the quiz's theme rules. */}
-        {step.kind === "code" && <ThemeSwitcher />}
+        {step.kind === "code" && <ThemeToggle />}
       </header>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">
         <AnimatePresence mode="wait">

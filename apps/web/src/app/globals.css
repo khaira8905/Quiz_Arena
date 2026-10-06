@@ -111,20 +111,43 @@
   --haze-2: color-mix(in oklab, var(--answer-2) 12%, transparent);
 }
 
-/* The White theme is lit from above: real shadows and a pale sky haze. */
+/* Night (black + orange): a warm stage light from above, a faint ember low on the right. */
+html[data-ui-theme="BLACK"],
+.arena-scope[data-arena-theme="BLACK"] {
+  --haze-1: color-mix(in oklab, var(--accent) 13%, transparent);
+  --haze-2: color-mix(in oklab, var(--accent) 7%, transparent);
+}
+/* Day (white + blue): lit from above, with real shadows and a pale sky haze. */
 html[data-ui-theme="WHITE"],
 .arena-scope[data-arena-theme="WHITE"] {
-  --shadow-sm: 0 1px 2px rgb(16 24 64 / 0.06);
-  --shadow-md: 0 1px 2px rgb(16 24 64 / 0.06), 0 12px 32px -16px rgb(16 24 64 / 0.22);
-  --shadow-lg: 0 2px 4px rgb(16 24 64 / 0.06), 0 28px 60px -24px rgb(16 24 64 / 0.3);
-  --haze-1: color-mix(in oklab, #7cc8ff 34%, transparent);
-  --haze-2: color-mix(in oklab, var(--accent) 10%, transparent);
+  --shadow-sm: 0 1px 2px var(--arena-3d-shadow);
+  --shadow-md: 0 1px 2px rgb(16 24 64 / 0.06), 0 12px 32px -16px var(--arena-3d-shadow);
+  --shadow-lg: 0 2px 4px rgb(16 24 64 / 0.06), 0 28px 60px -24px var(--arena-3d-shadow);
+  --haze-1: color-mix(in oklab, var(--accent) 16%, white);
+  --haze-2: color-mix(in oklab, var(--accent) 8%, transparent);
 }
-/* Blue: deep water with a cyan signal haze. */
-html[data-ui-theme="BLUE"],
-.arena-scope[data-arena-theme="BLUE"] {
-  --haze-1: color-mix(in oklab, var(--accent) 20%, transparent);
-  --haze-2: color-mix(in oklab, #6e5bff 14%, transparent);
+
+/*
+ * Day/night switch. Where View Transitions exist, ui-theme.ts reveals the new theme as a
+ * circle growing from the button; the default crossfade is turned off for it. Elsewhere,
+ * every colour crossfades for 600ms.
+ */
+html.theme-reveal::view-transition-old(root),
+html.theme-reveal::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.theme-crossfade,
+html.theme-crossfade *,
+html.theme-crossfade *::before,
+html.theme-crossfade *::after {
+  transition:
+    background-color 600ms var(--ease-in-out),
+    color 600ms var(--ease-in-out),
+    border-color 600ms var(--ease-in-out),
+    fill 600ms var(--ease-in-out),
+    stroke 600ms var(--ease-in-out),
+    box-shadow 600ms var(--ease-in-out) !important;
 }
 
 @theme inline {

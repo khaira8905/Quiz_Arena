@@ -7,7 +7,7 @@ import { HeroTitle } from "@/components/landing/hero-title";
 import { JoinCodeForm } from "@/components/landing/join-code-form";
 import { Reveal } from "@/components/landing/reveal";
 import { Showcase } from "@/components/landing/showcase";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const steps = [
   {
@@ -29,7 +29,7 @@ export default function Home() {
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
         <Logo />
         <div className="flex items-center gap-5">
-          <ThemeSwitcher className="hidden sm:flex" />
+          <ThemeToggle className="max-sm:hidden" />
           <Link
             href="/admin"
             className="group inline-flex items-center gap-2 whitespace-nowrap text-body-sm font-semibold text-fg-2 transition-colors hover:text-fg"
@@ -106,7 +106,7 @@ export default function Home() {
 
       <footer className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 border-t border-line px-5 py-6 text-body-sm text-fg-3 sm:px-8">
         <span>QuizArena. Live quizzes for any room.</span>
-        <ThemeSwitcher className="sm:hidden" />
+        <ThemeToggle className="sm:hidden" />
       </footer>
     </main>
   );
