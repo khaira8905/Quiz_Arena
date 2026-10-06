@@ -38,7 +38,7 @@ export function buttonClasses({
 }: { variant?: Variant; size?: Size; notch?: boolean; className?: string } = {}) {
   return cn(
     "relative inline-flex select-none items-center justify-center whitespace-nowrap rounded-md font-semibold",
-    "transition-[background-color,border-color,color,box-shadow,transform,filter,translate] duration-[var(--motion-fast)] ease-[var(--ease-out)]",
+    "transition-[background-color,border-color,color,box-shadow,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-out)]",
     // Press: a quick dip that springs back on release.
     "not-disabled:active:scale-[0.96] not-disabled:active:duration-[var(--motion-instant)]",
     // Trailing arrow icons lean toward where the button goes.

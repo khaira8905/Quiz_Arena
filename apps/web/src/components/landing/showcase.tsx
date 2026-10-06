@@ -1,4 +1,5 @@
 import { Marquee } from "@/components/ambient/marquee";
+import { Tilt } from "@/components/motion/tilt";
 
 /* Example content for the landing page's moving strips: illustrations of what a game
    looks like, not live data. */
@@ -30,31 +31,30 @@ export function Showcase() {
     <div className="flex flex-col gap-4">
       <Marquee duration={70} label="Example questions">
         {QUESTIONS.map((q, i) => (
-          <article
-            key={i}
-            className="flex w-[19rem] shrink-0 flex-col gap-3 rounded-lg border border-line bg-surface p-4 shadow-[var(--shadow-sm)]"
-          >
-            <div className="flex items-center justify-between text-caption text-fg-3">
-              <span className="label">Question {i + 1}</span>
-              <span className="numeric font-semibold text-fg-2">{q.t}s</span>
-            </div>
-            <p className="font-display text-h3 leading-snug">{q.q}</p>
-            <ul className="grid grid-cols-2 gap-1.5">
-              {q.a.map((a, j) => (
-                <li
-                  key={a}
-                  className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-body-sm font-semibold"
-                  style={{
-                    background: `var(--answer-${j + 1})`,
-                    color: `var(--answer-ink-${j + 1})`,
-                  }}
-                >
-                  <span className="numeric text-caption opacity-70">{LETTERS[j]}</span>
-                  {a}
-                </li>
-              ))}
-            </ul>
-          </article>
+          <Tilt key={i} max={6} className="w-[19rem] shrink-0 rounded-lg">
+            <article className="flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-4 shadow-[var(--shadow-sm)]">
+              <div className="flex items-center justify-between text-caption text-fg-3">
+                <span className="label">Question {i + 1}</span>
+                <span className="numeric font-semibold text-fg-2">{q.t}s</span>
+              </div>
+              <p className="font-display text-h3 leading-snug">{q.q}</p>
+              <ul className="grid grid-cols-2 gap-1.5">
+                {q.a.map((a, j) => (
+                  <li
+                    key={a}
+                    className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-body-sm font-semibold"
+                    style={{
+                      background: `var(--answer-${j + 1})`,
+                      color: `var(--answer-ink-${j + 1})`,
+                    }}
+                  >
+                    <span className="numeric text-caption opacity-70">{LETTERS[j]}</span>
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </Tilt>
         ))}
       </Marquee>
       <Marquee duration={48} reverse gap={12}>

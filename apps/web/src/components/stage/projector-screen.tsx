@@ -196,7 +196,7 @@ function StageLobby({ view }: { view: ProjectorView }) {
   const reduced = useReducedMotion();
   return (
     <div className="flex h-full flex-col">
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
+      <div className="stage-drift grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
         <h1 className="sr-only">
           {view.quizTitle}: join with game PIN {view.code}
         </h1>
@@ -232,7 +232,7 @@ function StageLobby({ view }: { view: ProjectorView }) {
         </div>
       </div>
       {/* A competitor walks onto the floor for each player who joins. */}
-      <Procession players={view.lobbyPlayers} className="mt-[2vh] h-[8vh] shrink-0" />
+      <Procession players={view.lobbyPlayers} className="mt-[1vh] h-[12vh] shrink-0" />
     </div>
   );
 }

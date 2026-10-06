@@ -4,11 +4,12 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * String art on a dotted orbit. Points sit on a circle and each one is joined to the point
- * at (i × k) mod N; as k drifts the threads sweep through cardioids, nephroids and stars.
- * Around it, dotted rings with a few travelling particles. Drawn on a canvas in the theme's
- * colours, paused when off-screen or in a background tab, and a still frame for reduced
- * motion.
+ * String art in 3D. Pins sit on a circle in space and each pin i is threaded to pin
+ * (i × k) mod N; as k drifts the threads sweep through cardioids, nephroids and stars. The
+ * circle turns slowly and tips toward the pointer, and two dotted orbits circle it on their
+ * own tilted planes, all drawn with perspective so the near side is brighter and larger.
+ * A 2D canvas with a few lines of projection maths: no WebGL needed. Theme colours, paused
+ * off-screen and in background tabs, a still frame for reduced motion.
  */
 export function OrbitField({ className }: { className?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -44,69 +45,102 @@ export function OrbitField({ className }: { className?: string }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
+    // The pointer tips the scene; smoothed so it glides.
+    const aim = { x: 0, y: 0 };
+    const tip = { x: 0, y: 0 };
+    const onPointer = (e: PointerEvent) => {
+      aim.x = (e.clientX / innerWidth) * 2 - 1;
+      aim.y = (e.clientY / innerHeight) * 2 - 1;
+    };
+
     const N = 160;
+    const pins = Array.from({ length: N }, (_, i) => {
+      const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+      return [Math.cos(a), Math.sin(a)] as const;
+    });
+
     const draw = (t: number) => {
       ctx.clearRect(0, 0, w, h);
+      tip.x += (aim.x - tip.x) * 0.06;
+      tip.y += (aim.y - tip.y) * 0.06;
       const cx = w / 2;
       const cy = h / 2;
-      const R = Math.min(w, h) * 0.34;
-      // k breathes between 2 and 7 over about a minute and a half.
-      const k = 4.5 - 2.5 * Math.cos(t / 14000);
-      const spin = t / 60000;
-      const pt = (i: number, r = R) => {
-        const a = (i / N) * Math.PI * 2 + spin - Math.PI / 2;
-        return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as const;
+      const R = Math.min(w, h) * 0.32;
+      const F = R * 4; // focal length: lower = stronger perspective
+      const yaw = Math.sin(t / 9000) * 0.55 + tip.x * 0.45;
+      const pitch = 0.32 + Math.cos(t / 11000) * 0.12 + tip.y * 0.3;
+      const [cyw, syw, cp, sp] = [Math.cos(yaw), Math.sin(yaw), Math.cos(pitch), Math.sin(pitch)];
+
+      /** Rotate (yaw about Y, then pitch about X) and project to the screen. */
+      const project = (x: number, y: number, z: number) => {
+        const x1 = x * cyw + z * syw;
+        const z1 = -x * syw + z * cyw;
+        const y2 = y * cp - z1 * sp;
+        const z2 = y * sp + z1 * cp;
+        const s = F / (F + z2);
+        return { x: cx + x1 * s, y: cy + y2 * s, s, z: z2 };
       };
 
-      // Threads
+      // Threads, with the near half brighter than the far half.
+      const k = 4.5 - 2.5 * Math.cos(t / 14000);
+      const pts = pins.map(([px, py]) => project(px * R, py * R, 0));
       ctx.lineWidth = 0.6;
       ctx.strokeStyle = colors.accent;
-      ctx.globalAlpha = 0.22;
-      ctx.beginPath();
-      for (let i = 0; i < N; i++) {
-        const [x1, y1] = pt(i);
-        const [x2, y2] = pt((i * k) % N);
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
+      for (const near of [false, true]) {
+        ctx.globalAlpha = near ? 0.32 : 0.12;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+          const a = pts[i]!;
+          const b = pts[Math.floor((i * k) % N)]!;
+          if (a.z + b.z < 0 !== near) continue;
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+        }
+        ctx.stroke();
       }
-      ctx.stroke();
 
-      // Pins on the circle
+      // Pins
       ctx.fillStyle = colors.ink;
-      ctx.globalAlpha = 0.55;
       for (let i = 0; i < N; i += 2) {
-        const [x, y] = pt(i);
-        ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5);
+        const p = pts[i]!;
+        ctx.globalAlpha = p.z < 0 ? 0.7 : 0.3;
+        const d = 1.4 * p.s;
+        ctx.fillRect(p.x - d / 2, p.y - d / 2, d, d);
       }
 
-      // Dotted orbits, tilted, with travelling particles
+      // Dotted orbits on their own tilted planes, with travelling particles.
       const rings = [
-        { r: 1.32, tilt: 0.38, speed: 1, dots: 120, color: colors.ink },
-        { r: 1.6, tilt: -0.22, speed: -0.6, dots: 150, color: colors.alt },
+        { r: 1.35, tilt: 1.15, spin: 0.4, speed: 1, dots: 110, color: colors.ink },
+        { r: 1.62, tilt: -0.9, spin: -0.3, speed: -0.65, dots: 140, color: colors.alt },
       ];
       for (const ring of rings) {
-        const rx = R * ring.r;
-        const ry = rx * 0.42;
-        const cos = Math.cos(ring.tilt);
-        const sin = Math.sin(ring.tilt);
+        const [ct, st, cs, ss] = [
+          Math.cos(ring.tilt),
+          Math.sin(ring.tilt),
+          Math.cos(ring.spin),
+          Math.sin(ring.spin),
+        ];
         const at = (a: number) => {
-          const x = Math.cos(a) * rx;
-          const y = Math.sin(a) * ry;
-          return [cx + x * cos - y * sin, cy + x * sin + y * cos] as const;
+          // A circle in XZ, tilted about X, then turned about Y.
+          const x = Math.cos(a) * R * ring.r;
+          const z0 = Math.sin(a) * R * ring.r;
+          const y = -z0 * st;
+          const z = z0 * ct;
+          return project(x * cs - z * ss, y, x * ss + z * cs);
         };
         ctx.fillStyle = ring.color;
-        ctx.globalAlpha = 0.28;
         for (let i = 0; i < ring.dots; i++) {
-          const [x, y] = at((i / ring.dots) * Math.PI * 2);
-          ctx.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+          const p = at((i / ring.dots) * Math.PI * 2);
+          ctx.globalAlpha = p.z < 0 ? 0.42 : 0.14;
+          const d = 1.3 * p.s;
+          ctx.fillRect(p.x - d / 2, p.y - d / 2, d, d);
         }
-        ctx.globalAlpha = 0.95;
-        for (let p = 0; p < 3; p++) {
-          const a = (t / 9000) * ring.speed + (p * Math.PI * 2) / 3;
-          const [x, y] = at(a);
+        for (let q = 0; q < 3; q++) {
+          const p = at((t / 9000) * ring.speed + (q * Math.PI * 2) / 3);
+          ctx.globalAlpha = p.z < 0 ? 0.95 : 0.45;
           ctx.beginPath();
-          ctx.arc(x, y, 2.4, 0, Math.PI * 2);
-          ctx.fillStyle = p === 0 ? colors.accent : ring.color;
+          ctx.arc(p.x, p.y, 2.6 * p.s, 0, Math.PI * 2);
+          ctx.fillStyle = q === 0 ? colors.accent : ring.color;
           ctx.fill();
         }
       }
@@ -137,19 +171,21 @@ export function OrbitField({ className }: { className?: string }) {
       start();
     });
     io.observe(el);
-    // Theme switches change the colours.
+    // The day/night switch changes the colours.
     const mo = new MutationObserver(() => {
       readColors();
       if (reduced) draw(30000);
     });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-ui-theme"] });
     document.addEventListener("visibilitychange", start);
+    if (!reduced) window.addEventListener("pointermove", onPointer, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
       ro.disconnect();
       io.disconnect();
       mo.disconnect();
       document.removeEventListener("visibilitychange", start);
+      window.removeEventListener("pointermove", onPointer);
     };
   }, []);
 

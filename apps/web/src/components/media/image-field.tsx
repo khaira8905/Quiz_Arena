@@ -23,6 +23,7 @@ import { checkImageFile, prepareImage, uploadImage } from "@/lib/media-upload";
 import { invalidateMedia, useMediaConfig } from "@/lib/queries";
 import { MediaPickerDialog } from "./media-picker";
 import { QuestionImage } from "./question-image";
+import { Tilt } from "@/components/motion/tilt";
 
 export interface ImageValue {
   url: string | null;
@@ -314,14 +315,26 @@ export function ImageField({
       {input}
       <div className="grid gap-4 @xl:grid-cols-[minmax(0,1fr)_14rem]">
         <div>
-          <QuestionImage
-            src={value.url}
-            fit={value.fit}
-            position={value.position}
-            placeholder={value.placeholder}
-            alt="Question image"
-            className="aspect-[2/1] w-full"
-          />
+          {/* Clicking the picture opens the replace options. */}
+          <Tilt max={3} glare={false} className="rounded-lg">
+            <button
+              type="button"
+              onClick={() => setMenu((m) => !m)}
+              data-cursor="media"
+              data-cursor-label="Edit"
+              aria-label="Replace image"
+              className="block w-full rounded-lg"
+            >
+              <QuestionImage
+                src={value.url}
+                fit={value.fit}
+                position={value.position}
+                placeholder={value.placeholder}
+                alt="Question image"
+                className="aspect-[2/1] w-full"
+              />
+            </button>
+          </Tilt>
           <p className="mt-1.5 text-caption text-fg-3">
             Preview in the projector&apos;s image frame.
           </p>

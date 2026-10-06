@@ -47,6 +47,8 @@ export function Competitor({
         } as React.CSSProperties
       }
     >
+      {/* The shadow at their feet tightens on each step. */}
+      <ellipse className="competitor-shadow" cx="14.5" cy="43" rx="7" ry="1.6" />
       <g className="competitor-bob">
         {/* back arm and leg sit behind the body */}
         <line className="limb leg-b" x1="15" y1="29" x2="15" y2="42" />

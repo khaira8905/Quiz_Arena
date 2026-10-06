@@ -16,6 +16,11 @@ const SLOTS = (() => {
   return order;
 })();
 const SPEED = 0.11; // share of the floor walked per second
+const DEPTHS = [
+  { scale: 1, lift: 0, opacity: 1, z: 3 },
+  { scale: 0.8, lift: 14, opacity: 0.78, z: 2 },
+  { scale: 0.64, lift: 26, opacity: 0.58, z: 1 },
+];
 
 type Walker = { id: string; connected: boolean };
 
@@ -29,8 +34,8 @@ export function Procession({ players, className }: { players: Walker[]; classNam
   return (
     <div aria-hidden className={className}>
       <div className="relative h-full">
-        {/* The floor line they stand on. */}
-        <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(to_right,transparent,var(--line-strong)_15%,var(--line-strong)_85%,transparent)]" />
+        {/* The arena floor in perspective, drifting toward the room. */}
+        <div className="arena-floor-plane" />
         <AnimatePresence>
           {visible.map((p, i) => (
             <Figure key={p.id} id={p.id} slot={SLOTS[i]!} order={i} dim={!p.connected} />
@@ -67,15 +72,18 @@ function Figure({
     setFrom(prevSlot);
   }
   const walking = !reduced && (!present || reached !== slot);
+  // Three depths, so the crowd has a back row: farther figures are smaller, higher and fainter.
+  const depth = DEPTHS[order % DEPTHS.length]!;
   const heading = !present ? (fromLeft ? "left" : "right") : slot >= from ? "right" : "left";
   const duration = Math.max(0.6, Math.abs(slot - from) / SPEED);
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
   return (
     // Full-width track so translateX percentages are shares of the floor.
     <motion.div
-      className="pointer-events-none absolute inset-x-0 bottom-0 h-full"
+      className="pointer-events-none absolute inset-x-0"
+      style={{ bottom: `${depth.lift}%`, height: `${depth.scale * 100}%`, zIndex: depth.z }}
       initial={reduced ? false : { x: pct(start) }}
-      animate={{ x: pct(slot), opacity: dim ? 0.35 : 1 }}
+      animate={{ x: pct(slot), opacity: (dim ? 0.35 : 1) * depth.opacity }}
       exit={
         reduced
           ? { opacity: 0 }

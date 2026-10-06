@@ -413,6 +413,50 @@ html.theme-crossfade *::after {
     transform: scaleX(1);
   }
 
+  /* Pointer parallax (components/ambient/parallax.tsx): layers pan with depth --d. */
+  .parallax [data-depth] {
+    translate: calc(var(--px, 0) * var(--d, 0) * 1px) calc(var(--py, 0) * var(--d, 0) * 0.6px);
+  }
+
+  /* 3D lean toward the pointer (components/motion/tilt.tsx). */
+  .tilt {
+    perspective: 900px;
+  }
+  .tilt-inner {
+    position: relative;
+    height: 100%;
+    border-radius: inherit;
+    transform: rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+    transition:
+      transform 600ms var(--ease-out),
+      scale 600ms var(--ease-out),
+      box-shadow 600ms var(--ease-out);
+  }
+  .tilt[data-tilting] > .tilt-inner {
+    scale: 1.015;
+    box-shadow: var(--tilt-sx, 0) var(--tilt-sy, 14px) 34px -18px var(--arena-3d-shadow);
+    transition:
+      transform 140ms linear,
+      scale var(--motion-normal) var(--ease-out),
+      box-shadow 200ms linear;
+  }
+  .tilt-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--tilt-gx, 50%) var(--tilt-gy, 50%),
+      var(--arena-3d-light),
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity var(--motion-slow) var(--ease-out);
+  }
+  .tilt[data-tilting] .tilt-glare {
+    opacity: 1;
+  }
+
   /* Raised surface with the theme's depth. */
   .surface-raised {
     background: var(--surface);
@@ -555,6 +599,20 @@ html.theme-crossfade *::after {
 .competitor-body {
   fill: var(--body);
 }
+.competitor-shadow {
+  fill: var(--arena-3d-shadow);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.competitor[data-walking] .competitor-shadow {
+  animation: footfall var(--step, 0.5s) var(--ease-in-out) infinite alternate;
+}
+@keyframes footfall {
+  to {
+    scale: 0.82 1;
+    opacity: 0.7;
+  }
+}
 .competitor-head {
   fill: color-mix(in oklab, var(--body) 55%, var(--text-primary));
 }
@@ -578,6 +636,10 @@ html.theme-crossfade *::after {
 }
 .competitor[data-walking] :is(.leg-b, .arm-a) {
   animation: stride var(--step, 0.5s) var(--ease-in-out) infinite alternate-reverse;
+}
+.competitor .competitor-bob {
+  transform-box: view-box;
+  transform-origin: 15px 42px;
 }
 .competitor[data-walking] .competitor-bob {
   /* Two bobs per stride cycle: down on each footfall. */
@@ -603,9 +665,11 @@ html.theme-crossfade *::after {
 @keyframes bob {
   from {
     translate: 0 0;
+    rotate: -1.2deg;
   }
   to {
     translate: 0 -1.4px;
+    rotate: 1.2deg;
   }
 }
 @keyframes breathe {
@@ -622,6 +686,57 @@ html.theme-crossfade *::after {
   }
   100% {
     transform: translateY(0);
+  }
+}
+
+/* The floor the lobby crowd stands on: a grid laid back in perspective, scrolling slowly
+   toward the room. */
+.arena-floor-plane {
+  position: absolute;
+  inset: -10% -20% 0;
+  perspective: 420px;
+  perspective-origin: 50% 0%;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent, #000 40%);
+  pointer-events: none;
+}
+.arena-floor-plane::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -60%;
+  transform: rotateX(68deg);
+  transform-origin: 50% 0;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--line-strong) 80%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--line-strong) 80%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 64px 64px;
+  animation: floor-scroll 6s linear infinite;
+}
+@keyframes floor-scroll {
+  to {
+    background-position: 0 64px;
+  }
+}
+
+/* A camera that never quite holds still: under a degree of drift, so text stays crisp. */
+.stage-drift {
+  transform-origin: 50% 60%;
+  animation: camera-drift 36s var(--ease-in-out) infinite alternate;
+}
+@keyframes camera-drift {
+  from {
+    transform: perspective(1800px) rotateY(-0.7deg) rotateX(0.35deg) translateZ(0);
+  }
+  to {
+    transform: perspective(1800px) rotateY(0.7deg) rotateX(-0.25deg) translateZ(12px);
   }
 }
 
@@ -694,12 +809,25 @@ html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true
 }
 .qa-cursor-label {
   font:
-    600 0.6875rem/1 var(--body-family),
+    700 0.625rem/1 var(--body-family),
     system-ui,
     sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--accent-ink);
   opacity: 0;
   transform: scale(0.6);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-normal) var(--ease-snap);
+}
+.qa-cursor-ring > svg {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+  opacity: 0;
+  transform: scale(0.4);
   transition:
     opacity var(--motion-fast) var(--ease-out),
     transform var(--motion-normal) var(--ease-snap);
@@ -712,9 +840,6 @@ html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true
   border: 1.5px solid var(--accent);
   opacity: 0;
 }
-.qa-cursor-ripple > * {
-  display: none;
-}
 .cursor-ripple-go {
   animation: cursor-ripple 480ms var(--ease-out) forwards;
 }
@@ -726,6 +851,27 @@ html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true
   to {
     opacity: 0;
     scale: 1.5;
+  }
+}
+.qa-cursor-spark {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+}
+.cursor-spark-go {
+  animation: cursor-spark 520ms var(--ease-out) forwards;
+}
+@keyframes cursor-spark {
+  from {
+    opacity: 0.9;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--sx), var(--sy)) scale(0.2);
   }
 }
 
@@ -773,14 +919,33 @@ html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true
     rotate: 1turn;
   }
 }
+.qa-cursor[data-state="link"] .qa-cursor-ring {
+  border-color: var(--accent);
+}
+.qa-cursor[data-state="link"] .qa-cursor-arrow {
+  opacity: 1;
+  transform: none;
+}
+.qa-cursor[data-state="link"][data-external] .qa-cursor-arrow {
+  transform: rotate(-45deg);
+}
+.qa-cursor[data-state="link"] .qa-cursor-dot,
+.qa-cursor[data-state="drag"] .qa-cursor-dot {
+  opacity: 0;
+}
 .qa-cursor[data-state="drag"] .qa-cursor-ring {
   border-color: var(--accent);
-  border-style: dotted;
   border-width: 2px;
 }
+.qa-cursor[data-state="drag"] .qa-cursor-grip {
+  opacity: 1;
+  transform: none;
+}
 .qa-cursor[data-dragging] .qa-cursor-ring {
-  border-style: solid;
   background: color-mix(in oklab, var(--accent) 18%, transparent);
+}
+.qa-cursor[data-dragging] .qa-cursor-grip {
+  transform: scale(0.8);
 }
 .qa-cursor[data-pressed] .qa-cursor-dot {
   width: 10px;
@@ -791,7 +956,9 @@ html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true
 @media (prefers-reduced-motion: reduce) {
   /* Ambient loops stop where they stand instead of running to their end state. */
   .parade-walker,
-  .marquee-track {
+  .marquee-track,
+  .stage-drift,
+  .arena-floor-plane::before {
     animation: none !important;
   }
   .parade-walker {
