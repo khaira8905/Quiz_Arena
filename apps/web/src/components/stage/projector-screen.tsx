@@ -10,6 +10,7 @@ import { StartSequence } from "@/components/game/start-sequence";
 import { cn } from "@/lib/cn";
 import { PodiumCeremony } from "./podium-ceremony";
 import { EASE } from "@/lib/motion";
+import { Procession } from "@/components/ambient/procession";
 
 const QUESTION_PHASES: ProjectorView["phase"][] = [
   "QUESTION_READING",
@@ -161,40 +162,44 @@ function Stage({ view, sound }: { view: ProjectorView; sound: boolean }) {
 function StageLobby({ view }: { view: ProjectorView }) {
   const reduced = useReducedMotion();
   return (
-    <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
-      <h1 className="sr-only">
-        {view.quizTitle}: join with game PIN {view.code}
-      </h1>
-      <div className="flex min-h-0 flex-col">
-        <motion.p
-          initial={reduced ? false : { opacity: 0, y: "-2vh" }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE.emphasis }}
-          aria-hidden
-          className="font-display text-[clamp(2rem,4.2vw,9rem)] font-bold leading-[0.92] tracking-[-0.045em]"
-        >
-          Join the
-          <br />
-          <span className="text-accent">arena</span>
-        </motion.p>
-        <div className="min-h-0 flex-1">
-          <JoinPanel code={view.code} coverImageUrl={view.coverImageUrl} />
+    <div className="flex h-full flex-col">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-[4vw]">
+        <h1 className="sr-only">
+          {view.quizTitle}: join with game PIN {view.code}
+        </h1>
+        <div className="flex min-h-0 flex-col">
+          <motion.p
+            initial={reduced ? false : { opacity: 0, y: "-2vh" }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: EASE.emphasis }}
+            aria-hidden
+            className="font-display text-[clamp(2rem,4.2vw,9rem)] font-bold leading-[0.92] tracking-[-0.045em]"
+          >
+            Join the
+            <br />
+            <span className="text-accent">arena</span>
+          </motion.p>
+          <div className="min-h-0 flex-1">
+            <JoinPanel code={view.code} coverImageUrl={view.coverImageUrl} />
+          </div>
+        </div>
+        <div className="flex min-h-0 flex-col gap-[3vh] border-l border-line pl-[4vw]">
+          <div className="flex items-end justify-between">
+            <PlayerCounter count={view.playerCount} />
+            {view.playerCount === 0 && (
+              <span className="label animate-pulse text-[clamp(0.75rem,1vw,2rem)] text-fg-3">
+                Waiting for players
+              </span>
+            )}
+          </div>
+          <div className="tick-rule" />
+          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+            <Roster players={view.lobbyPlayers} total={view.playerCount} />
+          </div>
         </div>
       </div>
-      <div className="flex min-h-0 flex-col gap-[3vh] border-l border-line pl-[4vw]">
-        <div className="flex items-end justify-between">
-          <PlayerCounter count={view.playerCount} />
-          {view.playerCount === 0 && (
-            <span className="label animate-pulse text-[clamp(0.75rem,1vw,2rem)] text-fg-3">
-              Waiting for players
-            </span>
-          )}
-        </div>
-        <div className="tick-rule" />
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-          <Roster players={view.lobbyPlayers} total={view.playerCount} />
-        </div>
-      </div>
+      {/* A competitor walks onto the floor for each player who joins. */}
+      <Procession players={view.lobbyPlayers} className="mt-[2vh] h-[8vh] shrink-0" />
     </div>
   );
 }
