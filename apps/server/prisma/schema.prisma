@@ -172,22 +172,36 @@ model Question {
   updatedAt        DateTime     @updatedAt
 
   quiz       Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  imageAsset MediaAsset?    @relation(fields: [imageAssetId], references: [id], onDelete: SetNull)
+  imageAsset MediaAsset?    @relation("QuestionImage", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  /// A library video shown instead of an image (the editor and API keep them exclusive).
+  videoAssetId String?
+  videoAsset   MediaAsset?  @relation("QuestionVideo", fields: [videoAssetId], references: [id], onDelete: SetNull)
   options    AnswerOption[]
 
   @@index([quizId, order])
   @@index([imageAssetId])
+  @@index([videoAssetId])
 }
 
-/// An uploaded image. Only metadata lives here; the optimized files live in object storage
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+/// An uploaded image or video. Only metadata lives here; the files live in object storage
 /// (or the local media folder in development) under `storageKey`.
 model MediaAsset {
   id          String      @id @default(cuid())
   ownerId     String
+  kind        MediaKind   @default(IMAGE)
+  /// Video only: length as decoded by the uploader's browser (or reported by Google Drive).
+  durationMs  Int?
+  /// Video only: a still frame (WebP); `variants` and `placeholder` belong to it.
+  posterUrl   String?
   /// Display name, editable; never used as a file path.
   name        String
   storageKey  String      @unique
-  /// Full-size optimized WebP (longest side at most 1920px).
+  /// Images: the full-size optimized WebP (longest side at most 1920px). Videos: the file.
   url         String
   /// Smaller renditions by width, e.g. { "960": url, "480": url }.
   variants    Json        @default("{}")
@@ -202,10 +216,12 @@ model MediaAsset {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  questions Question[]
+  owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  questions      Question[] @relation("QuestionImage")
+  videoQuestions Question[] @relation("QuestionVideo")
 
   @@index([ownerId, createdAt])
+  @@index([ownerId, kind])
 }
 
 model AnswerOption {

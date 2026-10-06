@@ -244,6 +244,8 @@ export const questionUpdateSchema = z.object({
   text: plainText(QUESTION_TEXT_MAX).optional(),
   imageUrl: imageUrl.optional(),
   imageAssetId: z.string().min(1).max(64).nullable().optional(),
+  /** A library video; setting one removes the image, and setting an image removes it. */
+  videoAssetId: z.string().min(1).max(64).nullable().optional(),
   imageFit: z.enum(IMAGE_FITS).optional(),
   imagePosition: z.enum(IMAGE_POSITIONS).optional(),
   timeLimitSec: timerSeconds.nullable().optional(),

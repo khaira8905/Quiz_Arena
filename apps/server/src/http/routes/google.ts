@@ -1,19 +1,25 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { mediaNameFromFile } from "@quizarena/shared";
+import { mediaNameFromFile, VIDEO_DRIVE_MAX_BYTES, VIDEO_MAX_DURATION_MS } from "@quizarena/shared";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import { AppError } from "../../lib/errors";
 import type { GoogleDriveClient, TokenCipher } from "../../lib/google-drive";
-import { mediaDto, saveImage } from "../../media/service";
+import { newId } from "../../lib/random";
+import { mediaDto, recordVideo, saveImage } from "../../media/service";
+import { videoExtension } from "../../media/video";
 import { requireUser, type AppContext } from "../context";
 
 const STATE_COOKIE = "qa_google_state";
 const filesQuery = z.object({
   q: z.string().trim().max(100).optional(),
   pageToken: z.string().max(500).optional(),
+  kind: z.enum(["image", "video"]).default("image"),
 });
 const fileParams = z.object({ fileId: z.string().regex(/^[A-Za-z0-9_-]{10,200}$/) });
-const importBody = z.object({ fileId: z.string().regex(/^[A-Za-z0-9_-]{10,200}$/) });
+const importBody = z.object({
+  fileId: z.string().regex(/^[A-Za-z0-9_-]{10,200}$/),
+  kind: z.enum(["image", "video"]).default("image"),
+});
 
 export interface GoogleContext {
   client: GoogleDriveClient;
@@ -158,9 +164,9 @@ export function googleRoutes(app: FastifyInstance, ctx: AppContext) {
     { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
     async (req) => {
       const userId = await requireUser(ctx, req);
-      const { q, pageToken } = filesQuery.parse(req.query);
+      const { q, pageToken, kind } = filesQuery.parse(req.query);
       const token = await accessFor(userId);
-      return requireGoogle().client.listImages(token, { q, pageToken });
+      return requireGoogle().client.listImages(token, { q, pageToken, kind });
     },
   );
 
@@ -186,10 +192,27 @@ export function googleRoutes(app: FastifyInstance, ctx: AppContext) {
     { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
     async (req, reply) => {
       const userId = await requireUser(ctx, req);
-      const { fileId } = importBody.parse(req.body);
-      if (!ctx.media.storage)
-        throw new AppError("MEDIA_UNAVAILABLE", ctx.media.reason ?? undefined);
+      const { fileId, kind } = importBody.parse(req.body);
+      const storage = ctx.media.storage;
+      if (!storage) throw new AppError("MEDIA_UNAVAILABLE", ctx.media.reason ?? undefined);
       const token = await accessFor(userId);
+      if (kind === "video") {
+        const video = await requireGoogle().client.downloadVideo(token, fileId);
+        const key = `media/${userId.toLowerCase()}/${newId()}`;
+        await storage.put(`${key}.${videoExtension(video.mime)}`, video.body, video.mime);
+        const asset = await recordVideo(ctx.db, storage, {
+          ownerId: userId,
+          key,
+          mime: video.mime,
+          maxBytes: VIDEO_DRIVE_MAX_BYTES,
+          name: mediaNameFromFile(video.name),
+          source: "GOOGLE_DRIVE",
+          durationMs: Math.min(video.durationMs, VIDEO_MAX_DURATION_MS),
+          width: video.width,
+          height: video.height,
+        });
+        return reply.code(201).send({ asset: mediaDto(asset) });
+      }
       const file = await requireGoogle().client.download(token, fileId);
       const asset = await saveImage(ctx.db, ctx.media.storage, ctx.media.reason, {
         ownerId: userId,

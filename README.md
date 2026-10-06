@@ -33,8 +33,13 @@ the moment the timer hits zero.
 - **Question images:** upload from the device (drag and drop, progress bar, automatic
   resizing), the media library, **Google Drive** (real OAuth, read-only) or a link. Frame the
   image with Fit (whole / fill) and Position (center / top / bottom). See [docs/MEDIA.md](docs/MEDIA.md)
-- **Media library:** search, sort, unused filter, preview, rename, delete (warns about questions
-  that use the image). Images are stored as optimized WebP in object storage, never in the
+- **Question videos:** MP4 or WebM up to 100 MB, from the device, the library or Google
+  Drive. Uploads go straight to the bucket via a presigned URL, with real progress, a server
+  check of the file's bytes, and a poster frame. The projector plays them muted, pausing as
+  answers lock; the host can replay or unmute from the control room. Phones show a cue
+  instead of streaming. See [docs/MEDIA.md](docs/MEDIA.md#question-videos)
+- **Media library:** images and videos, kind filter, search, sort, unused filter, hover
+  preview for videos, rename, delete (warns about questions that use the file). Images are stored as optimized WebP in object storage, never in the
   database
 - **Question bank:** every question across all quizzes, filtered by text, tag, category,
   difficulty, type or quiz; add copies to any quiz

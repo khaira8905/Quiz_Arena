@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
+import { VIDEO_ACCEPT, VIDEO_DRIVE_MAX_BYTES, type VideoMime } from "@quizarena/shared";
 import { AppError } from "./errors";
 
 /**
@@ -19,6 +20,7 @@ const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 const FILES_URL = "https://www.googleapis.com/drive/v3/files";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+const VIDEO_TYPES = VIDEO_ACCEPT;
 /** Drive photos are often large; they're resized after download, so allow more than uploads. */
 export const DRIVE_IMPORT_MAX_BYTES = 25 * 1024 * 1024;
 /** Thumbnails come from Google's image CDN only. */
@@ -31,6 +33,8 @@ export interface DriveFile {
   size: number | null;
   width: number | null;
   height: number | null;
+  /** Videos: length as Drive measured it (null while Drive is still processing it). */
+  durationMs: number | null;
   modifiedTime: string | null;
 }
 
@@ -175,11 +179,12 @@ export class GoogleDriveClient {
   }
 
   /** Images in the organiser's Drive (PNG/JPG/WEBP), newest first, optionally by name. */
-  async listImages(token: string, opts: { q?: string; pageToken?: string } = {}) {
-    const clauses = [
-      "trashed = false",
-      `(${IMAGE_TYPES.map((t) => `mimeType = '${t}'`).join(" or ")})`,
-    ];
+  async listImages(
+    token: string,
+    opts: { q?: string; pageToken?: string; kind?: "image" | "video" } = {},
+  ) {
+    const types = opts.kind === "video" ? VIDEO_TYPES : IMAGE_TYPES;
+    const clauses = ["trashed = false", `(${types.map((t) => `mimeType = '${t}'`).join(" or ")})`];
     if (opts.q)
       clauses.push(`name contains '${opts.q.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`);
     const params = new URLSearchParams({
@@ -187,7 +192,7 @@ export class GoogleDriveClient {
       pageSize: "40",
       orderBy: "modifiedTime desc",
       fields:
-        "nextPageToken,files(id,name,mimeType,size,modifiedTime,imageMediaMetadata(width,height))",
+        "nextPageToken,files(id,name,mimeType,size,modifiedTime,imageMediaMetadata(width,height),videoMediaMetadata(width,height,durationMillis))",
       includeItemsFromAllDrives: "true",
       supportsAllDrives: "true",
     });
@@ -202,6 +207,7 @@ export class GoogleDriveClient {
         size?: string;
         modifiedTime?: string;
         imageMediaMetadata?: { width?: number; height?: number };
+        videoMediaMetadata?: { width?: number; height?: number; durationMillis?: string };
       }[];
     };
     return {
@@ -211,8 +217,11 @@ export class GoogleDriveClient {
         name: f.name,
         mimeType: f.mimeType,
         size: f.size ? Number(f.size) : null,
-        width: f.imageMediaMetadata?.width ?? null,
-        height: f.imageMediaMetadata?.height ?? null,
+        width: f.imageMediaMetadata?.width ?? f.videoMediaMetadata?.width ?? null,
+        height: f.imageMediaMetadata?.height ?? f.videoMediaMetadata?.height ?? null,
+        durationMs: f.videoMediaMetadata?.durationMillis
+          ? Number(f.videoMediaMetadata.durationMillis)
+          : null,
         modifiedTime: f.modifiedTime ?? null,
       })),
     };
@@ -222,7 +231,7 @@ export class GoogleDriveClient {
     if (!/^[A-Za-z0-9_-]{10,200}$/.test(fileId)) throw new AppError("NOT_FOUND");
     const res = await this.drive(
       token,
-      `${FILES_URL}/${fileId}?fields=id,name,mimeType,size,thumbnailLink&supportsAllDrives=true`,
+      `${FILES_URL}/${fileId}?fields=id,name,mimeType,size,thumbnailLink,videoMediaMetadata(width,height,durationMillis)&supportsAllDrives=true`,
     );
     return (await res.json()) as {
       id: string;
@@ -230,6 +239,7 @@ export class GoogleDriveClient {
       mimeType: string;
       size?: string;
       thumbnailLink?: string;
+      videoMediaMetadata?: { width?: number; height?: number; durationMillis?: string };
     };
   }
 
@@ -267,6 +277,39 @@ export class GoogleDriveClient {
       throw new AppError("FILE_TOO_LARGE", "That Drive image is over 25 MB.");
     }
     return { name: meta.name, body };
+  }
+
+  /**
+   * Downloads one video for import (MP4 or WebM, at most 40 MB: it passes through this
+   * server's memory). Duration and size come from Drive's own processing of the file.
+   */
+  async downloadVideo(token: string, fileId: string) {
+    const meta = await this.meta(token, fileId);
+    if (!(VIDEO_TYPES as readonly string[]).includes(meta.mimeType)) {
+      throw new AppError("UNSUPPORTED_MEDIA", "Only MP4 and WebM videos can be imported.");
+    }
+    const tooBig = `That Drive video is over ${VIDEO_DRIVE_MAX_BYTES / 1024 / 1024} MB. Download it and upload it from your computer instead.`;
+    if (meta.size && Number(meta.size) > VIDEO_DRIVE_MAX_BYTES) {
+      throw new AppError("FILE_TOO_LARGE", tooBig);
+    }
+    const v = meta.videoMediaMetadata;
+    if (!v?.width || !v.height || !v.durationMillis) {
+      throw new AppError(
+        "BAD_REQUEST",
+        "Google Drive is still processing that video. Try again in a minute.",
+      );
+    }
+    const res = await this.drive(token, `${FILES_URL}/${fileId}?alt=media&supportsAllDrives=true`);
+    const body = Buffer.from(await res.arrayBuffer());
+    if (body.length > VIDEO_DRIVE_MAX_BYTES) throw new AppError("FILE_TOO_LARGE", tooBig);
+    return {
+      name: meta.name,
+      body,
+      mime: meta.mimeType as VideoMime,
+      width: v.width,
+      height: v.height,
+      durationMs: Number(v.durationMillis),
+    };
   }
 
   async revoke(refreshToken: string) {

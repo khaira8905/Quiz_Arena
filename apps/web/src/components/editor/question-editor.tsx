@@ -27,6 +27,7 @@ import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useDeleteQuestion, useDuplicateQuestion, useUpdateQuestion } from "@/lib/queries";
 import { ImageField } from "@/components/media/image-field";
+import { VideoField } from "@/components/media/video-field";
 import { DriveImageButton } from "@/components/media/google-drive";
 import { TagEditor } from "./tag-editor";
 import { useAutosave, useSaveTracker } from "./save-tracker";
@@ -38,6 +39,8 @@ const toDraft = (q: QuestionDto): Draft => ({
   text: q.text,
   imageUrl: q.imageUrl,
   imageAssetId: q.imageAssetId,
+  videoAssetId: q.videoAssetId,
+  video: q.video,
   imageFit: q.imageFit,
   imagePosition: q.imagePosition,
   timeLimitSec: q.timeLimitSec,
@@ -86,6 +89,8 @@ export function QuestionEditor({
   const dup = useDuplicateQuestion(quizId);
   const { track } = useSaveTracker();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Which media picker shows while the question has none (an image or a video, never both).
+  const [mediaKind, setMediaKind] = useState<"image" | "video">("image");
   const [customTimer, setCustomTimer] = useState(
     question.timeLimitSec !== null &&
       !(TIMER_PRESETS as readonly number[]).includes(question.timeLimitSec),
@@ -159,22 +164,58 @@ export function QuestionEditor({
               {draft.text.length}/{QUESTION_TEXT_MAX}
             </div>
 
-            <ImageField
-              value={{
-                url: draft.imageUrl,
-                assetId: draft.imageAssetId,
-                fit: draft.imageFit,
-                position: draft.imagePosition,
-              }}
-              onChange={(patch) => {
-                setDraft((d) => ({ ...d, ...patch }));
-                // A library image is sent by id; the server fills in its URL itself.
-                if ("imageAssetId" in patch && patch.imageAssetId) {
-                  schedule({ imageAssetId: patch.imageAssetId }, true);
-                } else schedule(patch, true);
-              }}
-              drive={(pick) => <DriveImageButton onPick={pick} />}
-            />
+            {!draft.imageUrl && !draft.videoAssetId && (
+              <Segmented
+                label="Question media"
+                value={mediaKind}
+                options={[
+                  { value: "image", label: "Image" },
+                  { value: "video", label: "Video" },
+                ]}
+                onChange={setMediaKind}
+                className="mt-5 w-fit"
+              />
+            )}
+            {draft.videoAssetId || (!draft.imageUrl && mediaKind === "video") ? (
+              <div className="mt-3">
+                <VideoField
+                  value={{ assetId: draft.videoAssetId, video: draft.video }}
+                  onPick={(a) => {
+                    // The server clears any image when a video is set.
+                    setDraft((d) => ({
+                      ...d,
+                      videoAssetId: a.id,
+                      video: { url: a.url, posterUrl: a.posterUrl, durationMs: a.durationMs },
+                      imageUrl: null,
+                      imageAssetId: null,
+                    }));
+                    schedule({ videoAssetId: a.id }, true);
+                  }}
+                  onRemove={() => {
+                    setDraft((d) => ({ ...d, videoAssetId: null, video: null }));
+                    schedule({ videoAssetId: null }, true);
+                  }}
+                  drive={(pick) => <DriveImageButton kind="video" onPick={pick} />}
+                />
+              </div>
+            ) : (
+              <ImageField
+                value={{
+                  url: draft.imageUrl,
+                  assetId: draft.imageAssetId,
+                  fit: draft.imageFit,
+                  position: draft.imagePosition,
+                }}
+                onChange={(patch) => {
+                  setDraft((d) => ({ ...d, ...patch }));
+                  // A library image is sent by id; the server fills in its URL itself.
+                  if ("imageAssetId" in patch && patch.imageAssetId) {
+                    schedule({ imageAssetId: patch.imageAssetId }, true);
+                  } else schedule(patch, true);
+                }}
+                drive={(pick) => <DriveImageButton onPick={pick} />}
+              />
+            )}
 
             <div className="mt-6 grid grid-cols-1 gap-3 @xl:grid-cols-2">
               <AnimatePresence initial={false}>

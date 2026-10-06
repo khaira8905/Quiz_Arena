@@ -8,6 +8,7 @@ import {
   Check,
   Clock,
   Crown,
+  Film,
   Flame,
   LogOut,
   Volume2,
@@ -267,6 +268,7 @@ function ReadingScreen({ view }: { view: PlayerView }) {
       >
         {q.text}
       </motion.h1>
+      {q.video && <VideoCue className="mt-4" />}
       <div className="mt-auto flex flex-col items-center gap-3 pt-8 text-center" role="status">
         {timer ? (
           <>
@@ -300,6 +302,23 @@ function ReadingScreen({ view }: { view: PlayerView }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Question videos play on the big screen only: a hundred phones streaming the same clip
+ * would choke venue Wi-Fi, and most phones would play it muted anyway.
+ */
+function VideoCue({ className }: { className?: string }) {
+  return (
+    <p
+      className={cn(
+        "inline-flex w-fit items-center gap-2 rounded-full border border-line-strong bg-elevated px-3 py-1.5 text-body-sm text-fg-2",
+        className,
+      )}
+    >
+      <Film className="h-4 w-4 text-accent" aria-hidden /> Watch the video on the big screen
+    </p>
   );
 }
 
@@ -453,6 +472,7 @@ function QuestionScreen({ game, view, sound }: { game: Game; view: PlayerView; s
       >
         {q.text}
       </button>
+      {q.video && <VideoCue />}
 
       <div
         className={cn(

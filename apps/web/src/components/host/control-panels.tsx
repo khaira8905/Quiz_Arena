@@ -4,7 +4,7 @@ import type { ARENA_THEMES } from "@quizarena/shared/appearance";
 import { MOTION_LEVELS } from "@quizarena/shared/appearance";
 import type { HostView, PodiumStep, TimerState } from "@quizarena/shared/game";
 import type { LiveSettingsPatch } from "@quizarena/shared/schemas";
-import { Check, ImageIcon, UserX } from "lucide-react";
+import { Check, Film, ImageIcon, RotateCcw, UserX, Volume2, VolumeX } from "lucide-react";
 import { motion } from "motion/react";
 import { memo, useMemo } from "react";
 import { answerStyle } from "@/components/game/answer-style";
@@ -133,7 +133,14 @@ function TimeLeft({ view }: { view: HostView }) {
 /* ------------------------------------------------------------------ question */
 
 /** What the host sees and the room doesn't: the answer key and the live split. */
-export function QuestionPanel({ view }: { view: HostView }) {
+export function QuestionPanel({
+  view,
+  onMedia,
+}: {
+  view: HostView;
+  /** Sends MEDIA_REPLAY / MEDIA_SOUND for a question video. */
+  onMedia?: (command: "MEDIA_REPLAY" | "MEDIA_SOUND") => void;
+}) {
   const q = view.question;
   if (!q) return null;
   const total = Object.values(view.distribution).reduce((a, b) => a + b, 0);
@@ -206,7 +213,15 @@ export function QuestionPanel({ view }: { view: HostView }) {
             })}
           </ul>
         </div>
-        {q.imageUrl ? (
+        {q.video ? (
+          <VideoControls
+            poster={q.video.posterUrl}
+            durationMs={q.video.durationMs}
+            sound={view.media.sound}
+            canControl={view.availableCommands.includes("MEDIA_REPLAY")}
+            onMedia={onMedia}
+          />
+        ) : q.imageUrl ? (
           <QuestionImage
             src={q.imageUrl}
             fit={q.imageFit}
@@ -222,6 +237,75 @@ export function QuestionPanel({ view }: { view: HostView }) {
         )}
       </div>
     </motion.section>
+  );
+}
+
+/**
+ * The question video, as the host controls it: what's on screen (its poster), and the two
+ * things the host can do: start it again on every stage, and turn its sound on or off.
+ */
+function VideoControls({
+  poster,
+  durationMs,
+  sound,
+  canControl,
+  onMedia,
+}: {
+  poster: string | null;
+  durationMs: number | null;
+  sound: boolean;
+  canControl: boolean;
+  onMedia?: (command: "MEDIA_REPLAY" | "MEDIA_SOUND") => void;
+}) {
+  const secs = durationMs ? Math.round(durationMs / 1000) : null;
+  return (
+    <div className="flex w-full shrink-0 flex-col gap-2 md:w-48 md:self-start">
+      <div className="relative hidden aspect-video w-full overflow-hidden rounded-sm bg-black md:block">
+        {poster ? (
+          // eslint-disable-next-line @next/next/no-img-element -- storage poster frame
+          <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <span className="absolute inset-0 grid place-items-center text-fg-3">
+            <Film className="h-5 w-5" aria-hidden />
+          </span>
+        )}
+        <span className="numeric absolute bottom-1 right-1 rounded-sm bg-black/75 px-1.5 text-caption font-semibold text-white">
+          {secs !== null ? `${Math.floor(secs / 60)}:${pad2(secs % 60)}` : "Video"}
+        </span>
+      </div>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          disabled={!canControl}
+          onClick={() => onMedia?.("MEDIA_REPLAY")}
+          className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-line-strong text-body-sm font-semibold transition-colors not-disabled:hover:border-fg-3 disabled:opacity-45"
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Replay
+        </button>
+        <button
+          type="button"
+          disabled={!canControl}
+          aria-pressed={sound}
+          onClick={() => onMedia?.("MEDIA_SOUND")}
+          className={cn(
+            "inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border text-body-sm font-semibold transition-colors disabled:opacity-45",
+            sound
+              ? "border-accent bg-accent text-accent-ink"
+              : "border-line-strong not-disabled:hover:border-fg-3",
+          )}
+        >
+          {sound ? (
+            <Volume2 className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <VolumeX className="h-3.5 w-3.5" aria-hidden />
+          )}
+          {sound ? "Sound on" : "Muted"}
+        </button>
+      </div>
+      <p className="text-caption text-fg-3">
+        Plays on the projector while players read and answer.
+      </p>
+    </div>
   );
 }
 

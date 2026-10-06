@@ -19,10 +19,7 @@ export default async function LoginPage({
         <Logo />
         <div>
           <p className="label text-accent">Control room</p>
-          <p
-            className="mt-5 font-display text-display font-bold leading-[0.9]"
-            aria-hidden
-          >
+          <p className="mt-5 font-display text-display font-bold leading-[0.9]" aria-hidden>
             Build it.
             <br />
             Run it.

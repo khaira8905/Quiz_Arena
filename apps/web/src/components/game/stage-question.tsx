@@ -1,12 +1,13 @@
 "use client";
 
-import type { GamePhase, PublicQuestion, TimerState } from "@quizarena/shared/game";
+import type { GamePhase, MediaState, PublicQuestion, TimerState } from "@quizarena/shared/game";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { screenTransition, useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { formatNumber, pad2 } from "@/lib/format";
 import { answerScale, questionScale } from "@/lib/text-fit";
 import { QuestionImage } from "@/components/media/question-image";
+import { StageVideo } from "@/components/media/stage-video";
 import { StageDistribution } from "@/components/stage/stage-distribution";
 import { useCountdown } from "@/lib/use-countdown";
 import { StageAnswerTile, type TileState } from "./answer-tile";
@@ -32,6 +33,8 @@ export function StageQuestion({
   sound,
   readingEndsAt = null,
   serverTime = 0,
+  media = { epoch: 0, sound: false },
+  mediaAudio = false,
 }: {
   question: PublicQuestion;
   phase: GamePhase;
@@ -48,6 +51,10 @@ export function StageQuestion({
   /** Reading period: when answers open (null = the host opens them). */
   readingEndsAt?: number | null;
   serverTime?: number;
+  /** Question video playback, as the server says (replays, sound). */
+  media?: MediaState;
+  /** False for previews: the video never makes a sound there. */
+  mediaAudio?: boolean;
 }) {
   const reduced = useReducedMotion();
   const { appearance, motion: arenaMotion } = useArena();
@@ -109,7 +116,12 @@ export function StageQuestion({
                 </span>
               )}
             </div>
-            <div className={cn("flex min-h-0 gap-[2.5vw]", question.imageUrl ? "items-start" : "")}>
+            <div
+              className={cn(
+                "flex min-h-0 gap-[2.5vw]",
+                question.imageUrl || question.video ? "items-start" : "",
+              )}
+            >
               <motion.h1
                 initial={reduced || lively ? false : { opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -123,7 +135,32 @@ export function StageQuestion({
               >
                 <SplitWords text={question.text} animate={lively} delay={0.12} />
               </motion.h1>
-              {question.imageUrl && (
+              {question.video && (
+                <motion.div
+                  initial={
+                    reduced
+                      ? false
+                      : lively
+                        ? { clipPath: "inset(100% 0% 0% 0%)", scale: 1.06 }
+                        : { opacity: 0 }
+                  }
+                  animate={{ clipPath: "inset(0% 0% 0% 0%)", scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.25, duration: 0.9, ease: EASE.emphasis }}
+                  className="w-[38vw] shrink-0"
+                >
+                  {/* Plays while the question is read and answered; pauses once answers
+                      lock, so the room's attention moves to the result. */}
+                  <StageVideo
+                    video={question.video}
+                    playing={reading || active}
+                    epoch={media.epoch}
+                    sound={media.sound}
+                    audio={mediaAudio}
+                    className="aspect-video w-full"
+                  />
+                </motion.div>
+              )}
+              {question.imageUrl && !question.video && (
                 <motion.div
                   // The picture is unveiled bottom-up while it settles from a slight zoom.
                   initial={

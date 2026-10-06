@@ -226,6 +226,8 @@ export const COMMAND_LABELS: Record<HostCommand, string> = {
   LEADERBOARD: "Leaderboard",
   NEXT: "Next question",
   PODIUM_NEXT: "Next reveal",
+  MEDIA_REPLAY: "Replay video",
+  MEDIA_SOUND: "Video sound",
   END: "End game",
 };
 

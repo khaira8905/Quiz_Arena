@@ -25,10 +25,33 @@ export const MEDIA_FULL_SIDE = 1920;
 export const MEDIA_VARIANT_WIDTHS = [960, 480] as const;
 export const MEDIA_NAME_MAX = 120;
 
+/* ------------------------------------------------------------------------------- video */
+
+/** Question videos: stored as uploaded (no server transcoding), so only formats every
+ *  projector browser plays are accepted. */
+export const VIDEO_ACCEPT = ["video/mp4", "video/webm"] as const;
+export type VideoMime = (typeof VIDEO_ACCEPT)[number];
+export const VIDEO_ACCEPT_LABEL = "MP4 (H.264) or WebM";
+/** Large enough for a minute or two of 1080p; the bucket serves it, not the game server. */
+export const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+/** Drive videos pass through the game server's memory, so they get a tighter cap. */
+export const VIDEO_DRIVE_MAX_BYTES = 40 * 1024 * 1024;
+/** A question clip, not a film: longer videos are refused before uploading. */
+export const VIDEO_MAX_DURATION_MS = 5 * 60 * 1000;
+
+export const MEDIA_KINDS = ["IMAGE", "VIDEO"] as const;
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+
 export interface MediaAssetDto {
   id: string;
+  kind: MediaKind;
   name: string;
+  /** The image, or for a video the video file itself. */
   url: string;
+  mimeType: string;
+  /** Video only: length, and a still frame (null until the browser has sent one). */
+  durationMs: number | null;
+  posterUrl: string | null;
   /** Smaller renditions by width ("960", "480"); only those smaller than the original. */
   variants: Record<string, string>;
   placeholder: string;
@@ -45,6 +68,7 @@ export interface MediaConfigDto {
   /** Where files go: the server's disk (development) or S3-compatible object storage. */
   driver: "local" | "s3" | "none";
   maxBytes: number;
+  videoMaxBytes: number;
   /** Why uploads are off, for the organiser. */
   reason: string | null;
   googleDrive: boolean;
@@ -61,7 +85,36 @@ export const mediaListQuerySchema = z.object({
   q: z.string().max(120).optional(),
   sort: z.enum(["recent", "name", "size"]).default("recent"),
   unused: z.enum(["1", "0"]).optional(),
+  kind: z.enum(["image", "video"]).optional(),
 });
+
+/** Step 1 of a video upload: what's coming. The server answers with where to send it. */
+export const videoUploadRequestSchema = z.object({
+  name: z.string().max(260),
+  mimeType: z.enum(VIDEO_ACCEPT),
+  bytes: z.number().int().min(1).max(VIDEO_MAX_BYTES),
+});
+
+/** Where the browser sends the file: straight to the bucket, or to the game server. */
+export interface VideoUploadTicketDto {
+  ticket: string;
+  target: { url: string; method: "PUT"; headers: Record<string, string> };
+}
+
+/** Step 3: the file is up; the browser reports what it decoded. */
+export const videoCompleteSchema = z.object({
+  ticket: z.string().min(20).max(2000),
+  durationMs: z.number().int().min(1).max(VIDEO_MAX_DURATION_MS),
+  width: z.number().int().min(16).max(8192),
+  height: z.number().int().min(16).max(8192),
+});
+
+/** Question video as players and the stage see it. */
+export interface QuestionVideo {
+  url: string;
+  posterUrl: string | null;
+  durationMs: number | null;
+}
 
 /** A display name from an uploaded file's name: never trusted as a path, only as a label. */
 export function mediaNameFromFile(filename: string | undefined | null): string {
