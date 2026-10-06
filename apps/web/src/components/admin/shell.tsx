@@ -21,7 +21,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Skeleton, Spinner } from "@/components/ui/misc";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useDashboard, useLogout, useMe } from "@/lib/queries";
@@ -246,8 +246,8 @@ function Sidebar({
       </ul>
       <div className="mt-auto border-t border-line p-4">
         <div className="mb-4 flex items-center justify-between">
-          <span className="label text-fg-3">Theme</span>
-          <ThemeSwitcher />
+          <span className="label text-fg-3">Day / night</span>
+          <ThemeToggle />
         </div>
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center bg-elevated font-display text-body font-bold text-accent notch-sm">

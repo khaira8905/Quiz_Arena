@@ -599,7 +599,7 @@ describe("reading period, stats step, podium and timer control", () => {
     vi.advanceTimersByTime(START_COUNTDOWN_MS);
     expect(room.currentPhase).toBe("QUESTION_ACTIVE");
     expect(room.hostView().timer!.durationMs).toBe(12_000);
-    expect(codeOf(() => room.updateSettings({ theme: "BLUE" }))).toBe("COMMAND_NOT_ALLOWED");
+    expect(codeOf(() => room.updateSettings({ theme: "WHITE" }))).toBe("COMMAND_NOT_ALLOWED");
   });
 });
 

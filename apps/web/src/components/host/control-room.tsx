@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Badge, Kbd, Spinner, StatusScreen } from "@/components/ui/misc";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/cn";
 import { displayHost, joinUrl, pad2 } from "@/lib/format";
 import {
@@ -254,7 +254,7 @@ export function HostControlRoom({ code }: { code: string }) {
             >
               <Expand className="h-4 w-4" /> Fullscreen <Kbd>F</Kbd>
             </Button>
-            <ThemeSwitcher />
+            <ThemeToggle />
           </div>
         </div>
       </header>

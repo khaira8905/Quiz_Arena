@@ -190,8 +190,11 @@ export function ArenaEditor({ source }: { source: ArenaSource }) {
 
       {/* ------------------------------------------------------------ controls */}
       <div className="flex min-w-0 flex-col gap-6">
-        <Panel title="Theme" description="A complete visual system for the projector and phones.">
-          <div role="radiogroup" aria-label="Arena theme" className="grid grid-cols-3 gap-2">
+        <Panel
+          title="Theme"
+          description="Night or day: a complete visual system for the projector and phones."
+        >
+          <div role="radiogroup" aria-label="Arena theme" className="grid grid-cols-2 gap-2">
             {ARENA_THEMES.map((t) => (
               <ThemeCard
                 key={t}

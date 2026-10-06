@@ -1,6 +1,6 @@
 import { LoginForm } from "@/components/admin/login-form";
 import { Logo } from "@/components/brand/logo";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export const metadata = { title: "Sign in" };
 
@@ -42,7 +42,7 @@ export default async function LoginPage({
       </section>
 
       <section className="relative flex flex-col justify-center px-6 py-12 sm:px-12">
-        <ThemeSwitcher className="absolute right-6 top-6" />
+        <ThemeToggle className="absolute right-6 top-6" />
         <div className="mx-auto w-full max-w-sm">
           <Logo className="mb-10 lg:hidden" />
           <h1 className="font-display text-h1">Sign in</h1>

@@ -320,9 +320,8 @@ const TIMER_CHOICES = [
 ];
 const LIMITS = [20, 50, 100, 200, 300, 500, 1000];
 const THEME_NAMES: Record<(typeof ARENA_THEMES)[number], string> = {
-  BLUE: "Blue",
-  WHITE: "White",
-  BLACK: "Black",
+  BLACK: "Black + Orange",
+  WHITE: "White + Blue",
 };
 const MOTION_NAMES: Record<(typeof MOTION_LEVELS)[number], string> = {
   SUBTLE: "Subtle",
@@ -353,7 +352,7 @@ export function LobbySettings({
           <Segmented
             label="Arena theme"
             value={s.appearance.theme}
-            options={(["BLUE", "WHITE", "BLACK"] as const).map((t) => ({
+            options={(["BLACK", "WHITE"] as const).map((t) => ({
               value: t,
               label: THEME_NAMES[t],
             }))}

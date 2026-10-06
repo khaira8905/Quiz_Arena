@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cursorPreference } from "@/components/ui/cursor";
 import { Skeleton } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { api, isApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { useMe, useMediaConfig, usePreferences, useUpdatePreferences } from "@/lib/queries";
@@ -88,10 +88,12 @@ function InterfacePrefs() {
     <div className="flex max-w-3xl flex-col gap-5 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-body font-medium text-fg">Colour theme</p>
-          <p className="mt-0.5 text-body-sm text-fg-3">Black, Blue or White.</p>
+          <p className="text-body font-medium text-fg">Day / night</p>
+          <p className="mt-0.5 text-body-sm text-fg-3">
+            Night is black and orange; day is white and blue.
+          </p>
         </div>
-        <ThemeSwitcher />
+        <ThemeToggle />
       </div>
       <Switch
         checked={cursor}
