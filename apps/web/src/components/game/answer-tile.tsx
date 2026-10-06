@@ -6,6 +6,7 @@ import { useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { answerStyle } from "./answer-style";
 import { EASE } from "@/lib/motion";
+import { Sweep } from "@/components/motion/sweep";
 
 export type TileState = "idle" | "selected" | "dimmed" | "correct" | "wrong" | "neutral";
 
@@ -70,6 +71,12 @@ export function StageAnswerTile({
           style.ink,
         )}
       >
+        {/* A glint as the tile lands, and again when it's revealed as correct. */}
+        <Sweep
+          play={!reduced && arenaMotion.emphasis && (state === "idle" || state === "correct")}
+          run={state}
+          delay={state === "correct" ? 0.2 : delay + 0.3}
+        />
         {showStats && share !== undefined && (
           <motion.div
             className={cn("absolute inset-y-0 left-0 origin-left", style.meter)}
