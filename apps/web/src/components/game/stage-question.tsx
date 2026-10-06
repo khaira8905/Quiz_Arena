@@ -94,18 +94,28 @@ export function StageQuestion({
         <div className="flex items-start justify-between gap-[2vw]">
           <div className="flex min-w-0 flex-1 flex-col gap-[2vh]">
             <div className="flex items-center gap-[1.4vw]">
+              {/* 1. The number flies forward out of the depth of the stage. */}
               <motion.span
                 key={question.index}
-                initial={reduced ? false : { y: -16, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="numeric text-[clamp(1.5rem,2.6vw,5.5rem)] font-extrabold leading-none text-accent"
+                initial={
+                  reduced
+                    ? false
+                    : lively
+                      ? { z: -700, opacity: 0, transformPerspective: 900, filter: "blur(6px)" }
+                      : { y: -16, opacity: 0 }
+                }
+                animate={{ z: 0, y: 0, opacity: 1, transformPerspective: 900, filter: "blur(0px)" }}
+                transition={{ duration: 0.7, ease: EASE.emphasis }}
+                className="numeric inline-block text-[clamp(1.5rem,2.6vw,5.5rem)] font-extrabold leading-none text-accent"
               >
                 Q{pad2(question.index + 1)}
               </motion.span>
               <span className="numeric text-[clamp(1rem,1.5vw,3rem)] font-bold text-fg-3">
                 / {pad2(question.total)}
               </span>
-              {!minimal && <ProgressTicks index={question.index} total={question.total} />}
+              {!minimal && (
+                <ProgressTicks index={question.index} total={question.total} lively={lively} />
+              )}
               {question.points !== 1000 && (
                 <span className="label border border-line-strong px-[0.8vw] py-[0.6vh] text-[clamp(0.75rem,0.9vw,1.75rem)] text-fg-2">
                   {question.points === 0
@@ -122,10 +132,17 @@ export function StageQuestion({
                 question.imageUrl || question.video ? "items-start" : "",
               )}
             >
+              {/* 2. The question tips up into place as its words arrive. */}
               <motion.h1
-                initial={reduced || lively ? false : { opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08, duration: 0.5, ease: EASE.out }}
+                initial={
+                  reduced
+                    ? false
+                    : lively
+                      ? { rotateX: 24, z: -120, transformPerspective: 1400, originY: 1 }
+                      : { opacity: 0, y: 18 }
+                }
+                animate={{ opacity: 1, y: 0, rotateX: 0, z: 0, transformPerspective: 1400 }}
+                transition={{ delay: 0.1, duration: 0.8, ease: EASE.emphasis }}
                 className="min-w-0 flex-1 text-stage-question font-display text-balance break-words"
                 style={
                   qScale < 1
@@ -141,11 +158,25 @@ export function StageQuestion({
                     reduced
                       ? false
                       : lively
-                        ? { clipPath: "inset(100% 0% 0% 0%)", scale: 1.06 }
+                        ? {
+                            // 3. Media swings in from its own plane, unveiled bottom-up.
+                            clipPath: "inset(100% 0% 0% 0%)",
+                            rotateY: -16,
+                            z: -260,
+                            x: "3vw",
+                            transformPerspective: 1600,
+                          }
                         : { opacity: 0 }
                   }
-                  animate={{ clipPath: "inset(0% 0% 0% 0%)", scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.25, duration: 0.9, ease: EASE.emphasis }}
+                  animate={{
+                    clipPath: "inset(0% 0% 0% 0%)",
+                    rotateY: 0,
+                    z: 0,
+                    x: 0,
+                    opacity: 1,
+                    transformPerspective: 1600,
+                  }}
+                  transition={{ delay: 0.28, duration: 1, ease: EASE.emphasis }}
                   className="w-[38vw] shrink-0"
                 >
                   {/* Plays while the question is read and answered; pauses once answers
@@ -167,11 +198,25 @@ export function StageQuestion({
                     reduced
                       ? false
                       : lively
-                        ? { clipPath: "inset(100% 0% 0% 0%)", scale: 1.06 }
+                        ? {
+                            // 3. Media swings in from its own plane, unveiled bottom-up.
+                            clipPath: "inset(100% 0% 0% 0%)",
+                            rotateY: -16,
+                            z: -260,
+                            x: "3vw",
+                            transformPerspective: 1600,
+                          }
                         : { opacity: 0 }
                   }
-                  animate={{ clipPath: "inset(0% 0% 0% 0%)", scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.25, duration: 0.9, ease: EASE.emphasis }}
+                  animate={{
+                    clipPath: "inset(0% 0% 0% 0%)",
+                    rotateY: 0,
+                    z: 0,
+                    x: 0,
+                    opacity: 1,
+                    transformPerspective: 1600,
+                  }}
+                  transition={{ delay: 0.28, duration: 1, ease: EASE.emphasis }}
                   className="w-[34vw] shrink-0"
                 >
                   {/* A fixed 2:1 frame: the question and answers never move when it loads. */}
@@ -187,7 +232,19 @@ export function StageQuestion({
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-[1.5vh]">
-            {!bars && <Countdown timer={timer} active={active} sound={sound} />}
+            {/* 5. The timer snaps into place last, once the answers have landed. */}
+            {!bars && (
+              <motion.div
+                key={`timer-${question.id}`}
+                initial={
+                  lively ? { scale: 1.5, rotate: -25, opacity: 0, filter: "blur(8px)" } : false
+                }
+                animate={{ scale: 1, rotate: 0, opacity: 1, filter: "blur(0px)" }}
+                transition={{ delay: 0.75, type: "spring", stiffness: 420, damping: 22 }}
+              >
+                <Countdown timer={timer} active={active} sound={sound} />
+              </motion.div>
+            )}
             {!minimal && !reading && (
               <AnsweredMeter
                 answered={distribution ? total : answeredCount}
@@ -234,7 +291,7 @@ export function StageQuestion({
                   count={count}
                   share={total ? count / total : 0}
                   showStats={false}
-                  delay={reduced ? 0 : 0.12 + i * 0.09}
+                  delay={reduced ? 0 : 0.45 + i * 0.08}
                   textScale={aScale}
                   vertical={layout === "WIDE" && question.options.length > 2}
                 />
@@ -352,7 +409,16 @@ function ReadingPanel({ endsAt, serverTime }: { endsAt: number | null; serverTim
   );
 }
 
-function ProgressTicks({ index, total }: { index: number; total: number }) {
+/** 6. Progress: the current question's tick fills in from the left once all is in place. */
+function ProgressTicks({
+  index,
+  total,
+  lively,
+}: {
+  index: number;
+  total: number;
+  lively: boolean;
+}) {
   if (total > 30) return null;
   return (
     <span className="flex items-center gap-[0.25vw]" aria-hidden>
@@ -360,10 +426,19 @@ function ProgressTicks({ index, total }: { index: number; total: number }) {
         <span
           key={i}
           className={cn(
-            "h-[0.7vh] w-[1.1vw] transition-colors",
-            i < index ? "bg-fg-3" : i === index ? "bg-accent" : "bg-line-strong",
+            "relative h-[0.7vh] w-[1.1vw] overflow-hidden transition-colors",
+            i < index ? "bg-fg-3" : "bg-line-strong",
           )}
-        />
+        >
+          {i === index && (
+            <motion.span
+              className="absolute inset-0 origin-left bg-accent"
+              initial={lively ? { scaleX: 0 } : false}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.9, duration: 0.5, ease: EASE.out }}
+            />
+          )}
+        </span>
       ))}
     </span>
   );

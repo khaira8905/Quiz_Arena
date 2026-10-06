@@ -58,19 +58,29 @@ export function Leaderboard({
               const top = e.rank <= 3;
               const moved = e.previousRank !== null && e.previousRank !== e.rank;
               const up = moved && e.previousRank! > e.rank;
+              // A big climb (three places or more) lifts toward the room while it overtakes.
+              const climbing =
+                !reduced && settled === entries && up && e.previousRank! - e.rank >= 3;
               return (
                 <motion.li
                   key={e.participantId}
                   layout={reduced ? false : "position"}
                   initial={reduced ? false : { opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    z: climbing ? [0, 70, 0] : 0,
+                    transformPerspective: 1400,
+                  }}
                   exit={{ opacity: 0 }}
                   transition={{
                     layout: { type: "spring", stiffness: 260, damping: 30 },
+                    z: { duration: 1.1, ease: [0.22, 1, 0.36, 1] },
                     delay: reduced ? 0 : i * 0.035,
                   }}
                   className={cn(
                     "relative flex items-center overflow-hidden border",
+                    climbing && "z-10 shadow-[0_2vh_4vh_-2vh_var(--arena-3d-shadow)]",
                     stage
                       ? top
                         ? "h-[7vh] gap-[1.4vw] px-[1.4vw]"
@@ -95,7 +105,16 @@ export function Leaderboard({
                       top ? cn(TOP_STYLES[e.rank - 1], "notch-sm") : "text-fg-3",
                     )}
                   >
-                    {e.rank}
+                    {/* The badge flips to the new rank. */}
+                    <motion.span
+                      key={e.rank}
+                      className="inline-block"
+                      initial={reduced || !moved ? false : { rotateX: -90, opacity: 0 }}
+                      animate={{ rotateX: 0, opacity: 1 }}
+                      transition={{ delay: 0.75, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      {e.rank}
+                    </motion.span>
                   </span>
                   <span
                     className={cn(

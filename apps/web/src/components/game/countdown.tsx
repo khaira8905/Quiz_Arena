@@ -7,7 +7,7 @@ import type { TimerStyle } from "@quizarena/shared/appearance";
 import { useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { play } from "@/lib/sound";
-import { urgencyFor, useCountdown } from "@/lib/use-countdown";
+import { tensionFor, urgencyFor, useCountdown } from "@/lib/use-countdown";
 import { EASE } from "@/lib/motion";
 
 /**
@@ -18,8 +18,9 @@ import { EASE } from "@/lib/motion";
  */
 const RING = {
   stroke: ["var(--accent)", "var(--warning)", "var(--danger)", "var(--danger)", "var(--danger)"],
-  pulse: [1, 1.035, 1.08, 1.12, 1],
 };
+/** Pulse size per tension level: calm, 10s, 5s, 3s, 2s, 1s. */
+const PULSE = [1, 1.02, 1.045, 1.075, 1.09, 1.14];
 
 export function Countdown({
   timer,
@@ -36,6 +37,7 @@ export function Countdown({
 }) {
   const { seconds, progress } = useCountdown(timer, active, { fine: true });
   const urgency = urgencyFor(seconds, active && !timer?.paused);
+  const tension = tensionFor(seconds, active && !timer?.paused);
   const reduced = useReducedMotion();
   const { appearance, motion: arenaMotion } = useArena();
   // The operator's panel always uses the ring; the projector follows the arena's style.
@@ -174,16 +176,41 @@ export function Countdown({
         )}
       </AnimatePresence>
 
+      {/* Zero: an impact ring, once. */}
+      <AnimatePresence>
+        {lively && tension === 6 && (
+          <motion.span
+            key="impact"
+            className="absolute inset-0 rounded-full border-[3px] border-danger"
+            initial={{ scale: 0.9, opacity: 0.9 }}
+            animate={{ scale: 1.9, opacity: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          />
+        )}
+      </AnimatePresence>
+
       <motion.svg
         viewBox="0 0 100 100"
         className="absolute inset-0 -rotate-90"
         animate={
           lively
-            ? { scale: urgency >= 1 && urgency < 4 ? [1, RING.pulse[urgency]!, 1] : 1 }
+            ? tension === 6
+              ? // Impact: a short, controlled shake.
+                { scale: [1.12, 1], x: [0, -6, 6, -4, 3, 0] }
+              : tension >= 1
+                ? {
+                    // Two seconds: rapid tension, two beats a second.
+                    scale:
+                      tension === 4 ? [1, PULSE[4]!, 1, PULSE[4]!, 1] : [1, PULSE[tension]!, 1],
+                  }
+                : { scale: 1 }
             : undefined
         }
-        transition={{ duration: 0.45, ease: "easeOut" }}
-        key={lively && urgency >= 1 && urgency < 4 ? `pulse-${seconds}` : "static"}
+        transition={{
+          duration: tension === 6 ? 0.45 : tension === 4 ? 0.8 : 0.45,
+          ease: "easeOut",
+        }}
+        key={lively && tension >= 1 ? `pulse-${seconds}-${tension}` : "static"}
       >
         <circle
           cx="50"
