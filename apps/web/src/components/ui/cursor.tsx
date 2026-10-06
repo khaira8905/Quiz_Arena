@@ -142,6 +142,7 @@ export function Cursor() {
       let th = tw;
       let radius = "999px";
 
+      if (magnet && !magnet.isConnected) releaseMagnet();
       if (magnet) {
         const r = magnet.getBoundingClientRect();
         const cx = r.left + r.width / 2;
@@ -250,16 +251,38 @@ export function Cursor() {
       releaseMagnet();
       setState("hidden");
     };
-    // Things change under a still pointer too (a button becomes busy, a dialog opens).
+    // Things change under a still pointer too: a button becomes busy, a dialog opens, the
+    // page navigates away from the button the ring was wrapped around. Re-read what's under
+    // the pointer, at most every 120ms however busy the page is.
+    let lastCheck = 0;
+    let queued: ReturnType<typeof setTimeout> | null = null;
     const recheck = () => {
-      if (!seen) return;
-      const el = document.elementFromPoint(pointer.x, pointer.y);
-      const { state: next, label: text } = classify(el);
-      if (state !== "hidden") setState(next, text);
+      if (!seen || queued) return;
+      queued = setTimeout(
+        () => {
+          queued = null;
+          lastCheck = performance.now();
+          const {
+            state: next,
+            el,
+            label: text,
+          } = classify(document.elementFromPoint(pointer.x, pointer.y));
+          const magnetic =
+            next === "hover" && el?.matches(".magnetic, [data-magnetic]") && !pressed ? el : null;
+          if (magnetic !== magnet) {
+            releaseMagnet();
+            magnet = magnetic;
+          }
+          if (state !== "hidden") setState(next, text);
+          wake();
+        },
+        Math.max(0, 120 - (performance.now() - lastCheck)),
+      );
     };
     const observer = new MutationObserver(recheck);
     observer.observe(document.body, {
       subtree: true,
+      childList: true,
       attributes: true,
       attributeFilter: ["aria-busy", "disabled", "aria-disabled"],
     });
@@ -272,6 +295,7 @@ export function Cursor() {
     window.addEventListener("scroll", releaseMagnet, { passive: true, capture: true });
     return () => {
       cancelAnimationFrame(frame);
+      if (queued) clearTimeout(queued);
       observer.disconnect();
       releaseMagnet();
       delete html.dataset.cursor;

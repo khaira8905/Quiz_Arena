@@ -129,9 +129,12 @@ function NavItem({
     >
       <div
         className={cn(
-          "group flex items-stretch border bg-surface transition-[border-color,background-color,box-shadow]",
+          "group flex items-stretch border bg-surface",
+          // Picked up: it tilts and lifts off the list; dropped: it springs back flat.
+          "transition-[border-color,background-color,box-shadow,rotate,scale] duration-[var(--motion-normal)] ease-[var(--ease-snap)]",
           selected ? "border-accent bg-elevated" : "border-line hover:border-line-strong",
-          isDragging && "shadow-[0_16px_40px_-12px_rgb(0_0_0/0.8)]",
+          isDragging &&
+            "rotate-[-1.2deg] scale-[1.02] border-accent shadow-[0_16px_40px_-12px_rgb(0_0_0/0.8)] motion-reduce:rotate-0 motion-reduce:scale-100",
         )}
       >
         <button
