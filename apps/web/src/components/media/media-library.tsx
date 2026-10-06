@@ -6,7 +6,17 @@ import {
   type MediaAssetDto,
   VIDEO_ACCEPT,
 } from "@quizarena/shared/media";
-import { Check, Copy, Film, ImageIcon, Pencil, Search, Trash2, Upload } from "lucide-react";
+import {
+  Check,
+  Copy,
+  CornerDownRight,
+  Film,
+  ImageIcon,
+  Pencil,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,12 +27,13 @@ import { Input, Select } from "@/components/ui/field";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, timeAgo } from "@/lib/format";
 import { formatBytes } from "@/lib/media-upload";
 import { useDeleteMedia, useMedia, useMediaConfig, useRenameMedia } from "@/lib/queries";
 import { DriveImageButton } from "./google-drive";
 import { useImageUpload } from "./image-field";
 import { AssetThumb } from "./media-picker";
+import { UseInQuestion } from "./use-in-question";
 import { Tilt } from "@/components/motion/tilt";
 import { QuestionImage } from "./question-image";
 import { useVideoUpload, VideoUploadProgress } from "./video-field";
@@ -264,9 +275,9 @@ export function MediaLibrary() {
                     <span className="block truncate px-3 pt-2 text-body-sm font-medium">
                       {a.name}
                     </span>
-                    <span className="block px-3 pb-2.5 text-caption text-fg-3">
+                    <span className="block truncate px-3 pb-2.5 text-caption text-fg-3">
                       {a.kind === "VIDEO" ? `${formatDuration(a.durationMs)} · ` : ""}
-                      {a.width}×{a.height} · {formatBytes(a.bytes)}
+                      {a.width}×{a.height} · {formatBytes(a.bytes)} · {timeAgo(a.createdAt)}
                     </span>
                   </button>
                 </Tilt>
@@ -293,6 +304,7 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
   const [name, setName] = useState(asset.name);
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [using, setUsing] = useState(false);
 
   const save = async () => {
     const v = name.trim();
@@ -375,6 +387,9 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
               <Pencil className="h-4 w-4" /> Rename
             </Button>
           )}
+          <Button size="sm" variant="secondary" onClick={() => setUsing((u) => !u)}>
+            <CornerDownRight className="h-4 w-4" /> Use in a question
+          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -395,6 +410,7 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
             <Trash2 className="h-4 w-4" /> Delete
           </Button>
         </div>
+        {using && <UseInQuestion asset={asset} onDone={() => setUsing(false)} />}
       </Dialog>
       <ConfirmDialog
         open={confirm}

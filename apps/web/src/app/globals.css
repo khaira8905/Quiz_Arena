@@ -758,6 +758,8 @@ html.theme-crossfade *::after {
 .parade-walker {
   position: absolute;
   inset: 0;
+  contain: layout paint;
+  will-change: transform;
   animation: parade var(--parade-duration, 42s) linear infinite;
   animation-delay: var(--parade-delay, 0s);
 }
