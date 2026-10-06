@@ -34,6 +34,7 @@ import { PHONE_ROWS_THRESHOLD } from "@/lib/text-fit";
 import { ordinal, pad2 } from "@/lib/format";
 import type { usePlayerGame } from "@/lib/game/use-player-game";
 import { play, setSoundEnabled, soundPreference, unlockAudio } from "@/lib/sound";
+import { EASE } from "@/lib/motion";
 
 export type Game = ReturnType<typeof usePlayerGame>;
 
@@ -261,7 +262,7 @@ function ReadingScreen({ view }: { view: PlayerView }) {
       <motion.h1
         initial={reduced ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.35, ease: EASE.out }}
         className="mt-4 font-display text-[1.75rem] font-bold leading-[1.15] tracking-[-0.02em] break-words"
       >
         {q.text}
@@ -544,7 +545,7 @@ function RevealScreen({ view }: { view: PlayerView }) {
             ? { x: [0, -12, 10, -6, 0], opacity: 1, scale: 1 }
             : { scale: 1, opacity: 1 }
         }
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.45, ease: EASE.out }}
       >
         <span className="grid h-14 w-14 place-items-center rounded-full bg-black/15">
           {outcome === "correct" ? (
@@ -555,7 +556,7 @@ function RevealScreen({ view }: { view: PlayerView }) {
             <Clock className="h-7 w-7" />
           )}
         </span>
-        <h1 className="mt-4 font-display text-[2.75rem] font-extrabold uppercase leading-none tracking-[-0.04em]">
+        <h1 className="mt-4 font-display text-[2.75rem] font-bold leading-none tracking-[-0.04em]">
           {heading}
         </h1>
         {outcome === "correct" && r && (

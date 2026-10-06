@@ -12,6 +12,7 @@ import { isApiError } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import { useDeleteQuiz, useDuplicateQuiz } from "@/lib/queries";
 import { useGoLive } from "./use-go-live";
+import { EASE } from "@/lib/motion";
 
 export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: number }) {
   const [confirm, setConfirm] = useState(false);
@@ -25,7 +26,7 @@ export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: nu
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.28, ease: EASE.out }}
       className="group relative flex flex-col border border-line bg-surface transition-colors hover:border-line-strong"
     >
       <Link

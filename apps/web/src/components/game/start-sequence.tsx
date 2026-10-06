@@ -142,8 +142,8 @@ export function StartSequence({
             <div
               className={
                 stage
-                  ? "font-display text-[min(13vh,9vw)] font-extrabold uppercase leading-none tracking-[-0.045em]"
-                  : "font-display text-5xl font-extrabold uppercase tracking-[-0.045em]"
+                  ? "font-display text-[min(13vh,9vw)] font-bold leading-none tracking-[-0.045em]"
+                  : "font-display text-5xl font-bold tracking-[-0.045em]"
               }
             >
               Quiz<span className="text-accent">Arena</span>

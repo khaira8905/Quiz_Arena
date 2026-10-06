@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { Button } from "./button";
+import { EASE } from "@/lib/motion";
 
 export function Dialog({
   open,
@@ -49,7 +50,7 @@ export function Dialog({
                 initial={{ opacity: 0, x: "-50%", y: "-46%", scale: 0.97 }}
                 animate={{ opacity: 1, x: "-50%", y: "-50%", scale: 1 }}
                 exit={{ opacity: 0, x: "-50%", y: "-48%", scale: 0.98 }}
-                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.18, ease: EASE.out }}
               >
                 <RD.Title className="pr-8 font-display text-h2">{title}</RD.Title>
                 {description ? (

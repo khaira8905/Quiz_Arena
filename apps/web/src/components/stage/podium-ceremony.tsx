@@ -9,6 +9,7 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn } from "@/lib/cn";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { play } from "@/lib/sound";
+import { EASE } from "@/lib/motion";
 
 const PAGE_SIZE = 10;
 const PAGE_MS = 7000;
@@ -48,7 +49,7 @@ export function PodiumCeremony({
       <div className="grid h-full place-items-center text-center">
         <div>
           <p className="label text-[clamp(0.8rem,1.2vw,2.4rem)] text-fg-3">Game over</p>
-          <h1 className="mt-[2vh] font-display text-[clamp(2.5rem,5vw,10rem)] font-extrabold uppercase leading-none tracking-[-0.04em]">
+          <h1 className="mt-[2vh] font-display text-[clamp(2.5rem,5vw,10rem)] font-bold leading-none tracking-[-0.04em]">
             No players this time
           </h1>
         </div>
@@ -78,7 +79,7 @@ export function PodiumCeremony({
             className="absolute inset-0"
             initial={reduced ? false : { opacity: 0, y: "3vh" }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.7, ease: EASE.emphasis }}
           >
             <FullStandings results={results} quizTitle={quizTitle} />
           </motion.div>
@@ -97,8 +98,8 @@ export function PodiumCeremony({
                   initial={reduced ? false : { opacity: 0, y: "-2vh", scale: 1.04 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  className="mt-[1vh] font-display text-[clamp(2rem,4.4vw,9rem)] font-extrabold uppercase leading-none tracking-[-0.04em]"
+                  transition={{ duration: 0.6, ease: EASE.emphasis }}
+                  className="mt-[1vh] font-display text-[clamp(2rem,4.4vw,9rem)] font-bold leading-none tracking-[-0.04em]"
                 >
                   {step === "COMPLETE"
                     ? "Quiz complete"
@@ -250,7 +251,7 @@ function FullStandings({ results, quizTitle }: { results: FinalResults; quizTitl
       <div className="mb-[2.5vh] flex items-end justify-between gap-[2vw]">
         <div>
           <p className="label text-[clamp(0.8rem,1.1vw,2.2rem)] text-fg-3">{quizTitle}</p>
-          <h1 className="mt-[0.6vh] font-display text-[clamp(2rem,3.8vw,8rem)] font-extrabold uppercase leading-none tracking-[-0.04em]">
+          <h1 className="mt-[0.6vh] font-display text-[clamp(2rem,3.8vw,8rem)] font-bold leading-none tracking-[-0.04em]">
             Final leaderboard
           </h1>
         </div>
@@ -293,7 +294,7 @@ function FullStandings({ results, quizTitle }: { results: FinalResults; quizTitl
             initial={reduced ? false : { opacity: 0, x: "2vw" }}
             animate={{ opacity: 1, x: 0 }}
             exit={reduced ? undefined : { opacity: 0, x: "-2vw" }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.45, ease: EASE.out }}
           >
             {rows.map((s, i) => (
               <motion.div

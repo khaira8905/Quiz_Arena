@@ -20,7 +20,7 @@ export default async function LoginPage({
         <div>
           <p className="label text-accent">Control room</p>
           <p
-            className="mt-5 font-display text-display font-extrabold uppercase leading-[0.9]"
+            className="mt-5 font-display text-display font-bold leading-[0.9]"
             aria-hidden
           >
             Build it.
