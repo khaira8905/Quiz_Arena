@@ -37,8 +37,8 @@ import { Panel } from "./quiz-settings";
 import { useAutosave } from "./save-tracker";
 
 const TYPE_SAMPLES: Record<TypographyPreset, { name: string; display: string; body: string }> = {
-  ARENA: { name: "Arena", display: "var(--font-sora)", body: "var(--font-geist)" },
-  TECHNICAL: { name: "Technical", display: "var(--font-space-grotesk)", body: "var(--font-geist)" },
+  ARENA: { name: "Arena", display: "var(--font-space-grotesk)", body: "var(--font-geist)" },
+  TECHNICAL: { name: "Technical", display: "var(--font-geist)", body: "var(--font-geist)" },
   CLEAN: { name: "Clean", display: "var(--font-jakarta)", body: "var(--font-jakarta)" },
 };
 

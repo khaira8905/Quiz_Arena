@@ -40,7 +40,7 @@ export default function Home() {
             <span className="h-1.5 w-1.5 animate-live-pulse rounded-full bg-accent" />
             No app. No accounts. Just a PIN.
           </p>
-          <h1 className="mt-6 font-display text-display uppercase">
+          <h1 className="mt-6 font-display text-display">
             100 players.
             <br />
             <span className="text-accent">One arena.</span>

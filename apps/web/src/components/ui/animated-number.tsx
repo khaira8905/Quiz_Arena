@@ -3,6 +3,7 @@
 import { animate, useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { formatNumber } from "@/lib/format";
+import { EASE } from "@/lib/motion";
 
 /**
  * Counts from the previous value to the new one by writing straight to the DOM node —
@@ -35,7 +36,7 @@ export function AnimatedNumber({
     }
     const controls = animate(prev.current, value, {
       duration,
-      ease: [0.16, 1, 0.3, 1],
+      ease: EASE.emphasis,
       onUpdate: (v) => (node.textContent = format(Math.round(v))),
     });
     prev.current = value;

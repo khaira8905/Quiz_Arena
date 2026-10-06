@@ -15,6 +15,7 @@ import { usePlayerGame } from "@/lib/game/use-player-game";
 import { pokeServer } from "@/lib/server-wake";
 import { unlockAudio } from "@/lib/sound";
 import { PlayerGame } from "./player-game";
+import { EASE } from "@/lib/motion";
 
 /** Player entry flow: code → nickname → game. Everything else is in <PlayerGame>. */
 export function PlayArena({ initialCode }: { initialCode: string | null }) {
@@ -115,7 +116,7 @@ const stepMotion = {
   initial: { opacity: 0, x: 24 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: -24 },
-  transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const },
+  transition: { duration: 0.25, ease: EASE.out },
 };
 
 function CodeStep({

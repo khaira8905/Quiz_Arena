@@ -1,14 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Plus_Jakarta_Sans, Sora, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { uiThemeBootScript, uiThemeCss } from "@/lib/ui-theme";
 import "./globals.css";
 
-/** Display face: geometric, wide and heavy — questions, codes, countdowns, scores. */
-const sora = Sora({
+/**
+ * Display face: Space Grotesk — confident, slightly engineered, with distinctive tabular
+ * numerals. Questions, PINs, timers, scores and headlines.
+ */
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-sora",
-  weight: ["600", "700", "800"],
+  variable: "--font-space-grotesk",
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 /** Interface face: neutral and very legible at small sizes — admin UI, forms, body copy. */
@@ -21,14 +24,7 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-/** Arena typography presets (TECHNICAL / CLEAN). Not preloaded: only arenas that pick them load them. */
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-  weight: ["500", "600", "700"],
-  display: "swap",
-  preload: false,
-});
+/** CLEAN arena preset only; not preloaded, so only arenas that pick it load it. */
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-jakarta",
@@ -58,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       data-ui-theme="BLACK"
       // The boot script may switch the theme attribute before React hydrates.
       suppressHydrationWarning
-      className={`${sora.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jakarta.variable}`}
+      className={`${spaceGrotesk.variable} ${geist.variable} ${geistMono.variable} ${jakarta.variable}`}
     >
       <head>
         {/* Static strings built on the server from the shared theme tokens. */}

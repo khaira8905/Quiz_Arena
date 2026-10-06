@@ -9,6 +9,7 @@ import { StageQuestion } from "@/components/game/stage-question";
 import { StartSequence } from "@/components/game/start-sequence";
 import { cn } from "@/lib/cn";
 import { PodiumCeremony } from "./podium-ceremony";
+import { EASE } from "@/lib/motion";
 
 const QUESTION_PHASES: ProjectorView["phase"][] = [
   "QUESTION_READING",
@@ -133,7 +134,7 @@ function Stage({ view, sound }: { view: ProjectorView; sound: boolean }) {
       return (
         <div className="mx-auto flex h-full max-w-[75vw] flex-col overflow-hidden">
           <div className="mb-[3vh] flex items-end justify-between">
-            <h1 className="font-display text-[clamp(2rem,4vw,8rem)] font-extrabold uppercase leading-none tracking-[-0.04em]">
+            <h1 className="font-display text-[clamp(2rem,4vw,8rem)] font-bold leading-none tracking-[-0.04em]">
               Leaderboard
             </h1>
             {view.question && (
@@ -168,9 +169,9 @@ function StageLobby({ view }: { view: ProjectorView }) {
         <motion.p
           initial={reduced ? false : { opacity: 0, y: "-2vh" }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.7, ease: EASE.emphasis }}
           aria-hidden
-          className="font-display text-[clamp(2rem,4.2vw,9rem)] font-extrabold uppercase leading-[0.92] tracking-[-0.045em]"
+          className="font-display text-[clamp(2rem,4.2vw,9rem)] font-bold leading-[0.92] tracking-[-0.045em]"
         >
           Join the
           <br />

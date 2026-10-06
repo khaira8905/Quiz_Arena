@@ -8,6 +8,7 @@ import { useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { play } from "@/lib/sound";
 import { urgencyFor, useCountdown } from "@/lib/use-countdown";
+import { EASE } from "@/lib/motion";
 
 /**
  * The countdown is a core game element, not a widget. Urgency escalates through motion,
@@ -77,7 +78,7 @@ export function Countdown({
           }
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={reduced ? undefined : { y: "40%", opacity: 0, scale: 0.8 }}
-          transition={{ duration: urgency >= 2 ? 0.28 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: urgency >= 2 ? 0.28 : 0.22, ease: EASE.out }}
         >
           {seconds}
         </motion.span>

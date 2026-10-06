@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useArena } from "@/components/arena/arena-theme";
 import { cn } from "@/lib/cn";
 import { answerStyle } from "./answer-style";
+import { EASE } from "@/lib/motion";
 
 export type TileState = "idle" | "selected" | "dimmed" | "correct" | "wrong" | "neutral";
 
@@ -57,7 +58,7 @@ export function StageAnswerTile({
         scale: framed && arenaMotion.emphasis ? 1.02 : 1,
         filter: dim ? "saturate(0.35)" : "saturate(1)",
       }}
-      transition={{ delay, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ delay, duration: 0.42, ease: EASE.out }}
       className={cn("notch relative min-h-0", framed ? "z-10 bg-fg p-[0.35vw]" : style.bg)}
     >
       <div
@@ -75,7 +76,7 @@ export function StageAnswerTile({
             style={{ width: "100%" }}
             initial={{ scaleX: 0 }}
             animate={{ scaleX: share }}
-            transition={{ delay: delay + 0.15, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: delay + 0.15, duration: 0.9, ease: EASE.emphasis }}
             aria-hidden
           />
         )}
@@ -196,7 +197,7 @@ export function PhoneAnswerButton({
       whileHover={disabled || reduced ? undefined : { y: -3 }}
       whileTap={disabled || reduced ? undefined : { scale: 0.95 }}
       animate={animate}
-      transition={{ duration: state === "wrong" ? 0.42 : 0.25, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: state === "wrong" ? 0.42 : 0.25, ease: EASE.out }}
       className={cn(
         "notch relative flex min-h-0 text-left disabled:cursor-default",
         framed ? "bg-fg p-1" : style.bg,

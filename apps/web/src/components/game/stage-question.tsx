@@ -11,6 +11,7 @@ import { StageDistribution } from "@/components/stage/stage-distribution";
 import { useCountdown } from "@/lib/use-countdown";
 import { StageAnswerTile, type TileState } from "./answer-tile";
 import { Countdown, StageTimerBar } from "./countdown";
+import { EASE } from "@/lib/motion";
 
 /**
  * The projector question screen. Built for distance: the question is the largest text on
@@ -109,7 +110,7 @@ export function StageQuestion({
               <motion.h1
                 initial={reduced ? false : { opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ delay: 0.08, duration: 0.5, ease: EASE.out }}
                 className="min-w-0 flex-1 text-stage-question font-display text-balance break-words"
                 style={
                   qScale < 1
@@ -123,7 +124,7 @@ export function StageQuestion({
                 <motion.div
                   initial={reduced ? false : { opacity: 0, scale: 0.96, y: 12 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ delay: 0.2, duration: 0.6, ease: EASE.out }}
                   className="w-[34vw] shrink-0"
                 >
                   {/* A fixed 2:1 frame: the question and answers never move when it loads. */}
@@ -206,7 +207,7 @@ export function StageQuestion({
                 initial={reduced ? false : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="text-center font-display text-[clamp(1.25rem,2.2vw,4.5rem)] font-extrabold uppercase tracking-[-0.02em] text-fg-2"
+                className="text-center font-display text-[clamp(1.25rem,2.2vw,4.5rem)] font-bold tracking-[-0.02em] text-fg-2"
               >
                 What did everyone choose?
               </motion.p>
@@ -219,7 +220,7 @@ export function StageQuestion({
                 exit={{ opacity: 0 }}
                 className="flex items-center justify-center gap-[1vw] border-y border-danger/50 bg-danger-soft py-[1.2vh]"
               >
-                <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-extrabold uppercase tracking-[-0.02em] text-danger">
+                <span className="font-display text-[clamp(1.25rem,2vw,4rem)] font-bold tracking-[-0.02em] text-danger">
                   {/* Locked before the clock ran out means everyone answered. */}
                   {playerCount > 0 && answeredCount >= playerCount ? "Everyone's in" : "Time's up"}
                 </span>
@@ -266,10 +267,10 @@ function ReadingPanel({ endsAt, serverTime }: { endsAt: number | null; serverTim
   return (
     <div className="flex min-h-[38vh] flex-1 flex-col items-center justify-center gap-[3vh] border border-dashed border-line-strong">
       <motion.p
-        initial={reduced ? false : { opacity: 0, letterSpacing: "0.3em" }}
-        animate={{ opacity: 1, letterSpacing: "0.08em" }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className="font-display text-[clamp(1.5rem,3vw,6.5rem)] font-extrabold uppercase text-fg-2"
+        initial={reduced ? false : { opacity: 0, letterSpacing: "0.18em", filter: "blur(8px)" }}
+        animate={{ opacity: 1, letterSpacing: "-0.03em", filter: "blur(0px)" }}
+        transition={{ duration: 0.9, ease: EASE.emphasis }}
+        className="font-display text-[clamp(1.5rem,3vw,6.5rem)] font-bold text-fg-2"
       >
         Read the question
       </motion.p>
@@ -281,7 +282,7 @@ function ReadingPanel({ endsAt, serverTime }: { endsAt: number | null; serverTim
               initial={reduced ? false : { y: "-30%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={reduced ? undefined : { y: "30%", opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.3, ease: EASE.out }}
               className="numeric text-[clamp(3rem,7vw,15rem)] font-extrabold leading-none text-accent"
             >
               {seconds}

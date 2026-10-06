@@ -19,15 +19,15 @@ import { cn } from "@/lib/cn";
  */
 
 const TYPOGRAPHY: Record<TypographyPreset, Record<string, string>> = {
-  /** Wide geometric display over a neutral grotesk: the default arena voice. */
+  /** The QuizArena voice: Space Grotesk display and numerals over neutral Geist. */
   ARENA: {
-    "--display-family": "var(--font-sora)",
+    "--display-family": "var(--font-space-grotesk)",
     "--body-family": "var(--font-geist)",
     "--mono-family": "var(--font-geist-mono)",
   },
-  /** Squarer, engineered display with mono details: esports / hackathon energy. */
+  /** Engineered and data-dense: heavy Geist display with mono details. Hackathons, tech talks. */
   TECHNICAL: {
-    "--display-family": "var(--font-space-grotesk)",
+    "--display-family": "var(--font-geist)",
     "--body-family": "var(--font-geist)",
     "--mono-family": "var(--font-geist-mono)",
   },

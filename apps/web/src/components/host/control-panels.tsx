@@ -16,6 +16,7 @@ import { cn } from "@/lib/cn";
 import { formatNumber, pad2 } from "@/lib/format";
 import { PHASE_LABELS } from "@/lib/game/use-host-game";
 import { useCountdown } from "@/lib/use-countdown";
+import { EASE } from "@/lib/motion";
 
 /* ------------------------------------------------------------------ status */
 
@@ -142,7 +143,7 @@ export function QuestionPanel({ view }: { view: HostView }) {
       key={q.id}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.35, ease: EASE.out }}
       className="border border-line bg-surface"
       aria-label="Current question"
     >
@@ -175,7 +176,7 @@ export function QuestionPanel({ view }: { view: HostView }) {
                     className={cn("absolute inset-y-0 left-0 opacity-20", s.bg)}
                     initial={false}
                     animate={{ width: `${share * 100}%` }}
-                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.45, ease: EASE.out }}
                   />
                   <span
                     className={cn(

@@ -54,6 +54,7 @@ import {
   QuestionPanel,
   StatusPanel,
 } from "./control-panels";
+import { EASE } from "@/lib/motion";
 
 const CONFIRM: HostCommand[] = ["SKIP", "END"];
 const PRIMARY_SETTLE_MS = 900;
@@ -444,7 +445,7 @@ export function HostControlRoom({ code }: { code: string }) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.25, ease: EASE.out }}
                 className="overflow-hidden border border-line bg-surface"
                 aria-label="Projector preview"
               >
