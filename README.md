@@ -54,6 +54,13 @@ the moment the timer hits zero.
   Option A–D, Correct answer, Time limit, Points, Explanation, Image URL), Kahoot's spreadsheet
   template works as-is, and every row is previewed with its problems before anything is saved.
   A template CSV can be downloaded from the import dialog
+- **Motion and depth:** a branded desktop cursor (interpolated ring, theme-coloured trail,
+  spring-physics magnetic buttons, link arrow, VIEW / PLAY / EDIT on media, drag grip,
+  loading ring, click sparks); 3D tilt on media and cards; a parallax landing hero with 3D
+  string art and walkers at three depths; a lobby crowd on a perspective floor; questions
+  that assemble in layered 3D; a podium with lit blocks and a moving camera. All of it is
+  CSS 3D or 2D canvas (no WebGL), touch- and reduced-motion-aware, and driven by server
+  state, never by local timers
 - **Two themes, one day/night switch:** Black + Orange (night) and White + Blue (day). A
   single sun/moon icon morphs as it switches, and the new theme spreads out from it across
   the page. Remembered per browser; a first visit follows the system setting. The projector

@@ -6,10 +6,12 @@ import { Competitor } from "./competitor";
  * walker in a row is evenly spaced, so nobody bunches up. CSS only (no JS per frame); with
  * reduced motion they stand where they are.
  */
+// The far row glides without swinging limbs: at that size the stride is invisible, and
+// skipping it saves a repaint per walker per frame.
 const ROWS = [
-  { count: 7, duration: 78, scale: 0.46, bottom: 46, opacity: 0.4, seed: 3 },
-  { count: 8, duration: 58, scale: 0.7, bottom: 22, opacity: 0.7, seed: 17 },
-  { count: 10, duration: 44, scale: 1, bottom: 0, opacity: 1, seed: 29 },
+  { count: 7, duration: 78, scale: 0.46, bottom: 46, opacity: 0.4, seed: 3, stride: false },
+  { count: 7, duration: 58, scale: 0.7, bottom: 22, opacity: 0.7, seed: 17, stride: true },
+  { count: 8, duration: 44, scale: 1, bottom: 0, opacity: 1, seed: 29, stride: true },
 ] as const;
 
 export function Parade({ className }: { className?: string }) {
@@ -43,7 +45,7 @@ export function Parade({ className }: { className?: string }) {
                 >
                   <Competitor
                     seed={(row.seed + i * 7) * 41}
-                    walking
+                    walking={row.stride}
                     className="absolute bottom-0 left-0 h-full w-auto"
                   />
                 </div>

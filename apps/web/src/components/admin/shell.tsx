@@ -219,19 +219,24 @@ function Sidebar({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors",
+                    "group/nav relative flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors",
                     active ? "text-fg" : "text-fg-2 hover:bg-elevated hover:text-fg",
                   )}
                 >
+                  {/* The highlight and its accent bar glide to the active item. */}
                   {active && (
                     <motion.span
                       layoutId="nav-active"
                       className="absolute inset-0 rounded-md border border-line-strong bg-elevated"
                       transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                    />
+                    >
+                      <span className="absolute bottom-2 left-0 top-2 w-0.5 bg-accent" />
+                    </motion.span>
                   )}
-                  {active && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent" />}
-                  <Icon className="relative h-4 w-4" aria-hidden />
+                  <Icon
+                    className="relative h-4 w-4 transition-transform duration-[var(--motion-normal)] ease-[var(--ease-snap)] group-hover/nav:translate-x-0.5 group-hover/nav:-rotate-6"
+                    aria-hidden
+                  />
                   <span className="relative">{item.label}</span>
                   {item.href === "/admin/sessions" && live > 0 && (
                     <span className="label relative ml-auto inline-flex items-center gap-1.5 text-accent">
