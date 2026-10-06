@@ -15,7 +15,8 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
  * pointer is still.
  */
 
-type CursorState = "default" | "hover" | "text" | "disabled" | "media" | "drag" | "loading" | "hidden";
+type CursorState =
+  "default" | "hover" | "text" | "disabled" | "media" | "drag" | "loading" | "hidden";
 
 const STORAGE_KEY = "qa-cursor";
 const TRAIL = 4;
@@ -63,7 +64,11 @@ const INTERACTIVE_SELECTOR =
   'a[href], button, [role="button"], [role="radio"], [role="switch"], [role="tab"], [role="menuitem"], [role="option"], label[for], summary, [data-cursor="hover"]';
 
 /** Classify the element under the pointer. Cheap: a handful of closest() calls per move. */
-function classify(target: Element | null): { state: CursorState; el: HTMLElement | null; label?: string } {
+function classify(target: Element | null): {
+  state: CursorState;
+  el: HTMLElement | null;
+  label?: string;
+} {
   if (!target) return { state: "hidden", el: null };
   const explicit = target.closest<HTMLElement>("[data-cursor]");
   if (target.closest(TEXT_SELECTOR)) return { state: "text", el: null };
@@ -206,7 +211,8 @@ export function Cursor() {
         ringPos.y = pointer.y;
         for (const p of trailPos) Object.assign(p, pointer);
       }
-      if (dot.current) dot.current.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
+      if (dot.current)
+        dot.current.style.transform = `translate3d(${pointer.x}px, ${pointer.y}px, 0)`;
 
       const { state: next, el, label: text } = classify(e.target as Element);
       const magnetic =
