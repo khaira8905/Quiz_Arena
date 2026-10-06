@@ -28,7 +28,16 @@ const QUESTION_PHASES: ProjectorView["phase"][] = [
  * ProjectorView, and the projector window, the host's live preview and the admin's arena
  * preview all render this same component, so what the host previews is what the room sees.
  */
-export function ProjectorScreen({ view, sound }: { view: ProjectorView; sound: boolean }) {
+export function ProjectorScreen({
+  view,
+  sound,
+  preview = false,
+}: {
+  view: ProjectorView;
+  sound: boolean;
+  /** The host's or editor's copy: never plays audio. */
+  preview?: boolean;
+}) {
   const { eventName, logoUrl, projectorLayout } = view.settings.appearance;
   const inQuestion = QUESTION_PHASES.includes(view.phase);
   // MINIMAL drops the top strip while a question is on screen: nothing but the question.
@@ -102,7 +111,7 @@ export function ProjectorScreen({ view, sound }: { view: ProjectorView; sound: b
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Stage view={view} sound={sound} />
+            <Stage view={view} sound={sound} preview={preview} />
           </motion.div>
         </AnimatePresence>
       </main>
@@ -111,7 +120,15 @@ export function ProjectorScreen({ view, sound }: { view: ProjectorView; sound: b
   );
 }
 
-function Stage({ view, sound }: { view: ProjectorView; sound: boolean }) {
+function Stage({
+  view,
+  sound,
+  preview,
+}: {
+  view: ProjectorView;
+  sound: boolean;
+  preview: boolean;
+}) {
   switch (view.phase) {
     case "LOBBY":
       return <StageLobby view={view} />;
@@ -140,6 +157,8 @@ function Stage({ view, sound }: { view: ProjectorView; sound: boolean }) {
           showStats={view.settings.showAnswerStats}
           showCorrect={view.settings.showCorrectAnswers}
           explanation={view.explanation}
+          media={view.media}
+          mediaAudio={!preview}
           readingEndsAt={view.readingEndsAt}
           serverTime={view.serverTime}
           sound={sound}

@@ -38,7 +38,8 @@ export const keys = {
   mediaConfig: ["media-config"] as const,
   bank: (f: object) => ["bank", f] as const,
   preferences: ["preferences"] as const,
-  media: (q: string, sort: string, unused: boolean) => ["media", q, sort, unused] as const,
+  media: (q: string, sort: string, unused: boolean, kind: string) =>
+    ["media", q, sort, unused, kind] as const,
 };
 
 /* ---------------------------------------------------------------- auth */
@@ -306,15 +307,21 @@ export function useMediaConfig() {
 }
 
 export function useMedia(
-  { q = "", sort = "recent", unused = false }: { q?: string; sort?: string; unused?: boolean } = {},
+  {
+    q = "",
+    sort = "recent",
+    unused = false,
+    kind = "",
+  }: { q?: string; sort?: string; unused?: boolean; kind?: "" | "image" | "video" } = {},
   enabled = true,
 ) {
   return useQuery({
-    queryKey: keys.media(q, sort, unused),
+    queryKey: keys.media(q, sort, unused, kind),
     queryFn: () => {
       const params = new URLSearchParams({ sort });
       if (q) params.set("q", q);
       if (unused) params.set("unused", "1");
+      if (kind) params.set("kind", kind);
       return api<{ assets: MediaAssetDto[] }>(`/media?${params}`).then((r) => r.assets);
     },
     enabled,

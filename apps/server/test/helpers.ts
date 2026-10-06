@@ -111,15 +111,21 @@ export class RecordingOutput implements RoomOutput {
   }
 }
 
-export function makeRoom(settings: Partial<LiveSettings> = {}, questionCount = 3) {
+export function makeRoom(
+  settings: Partial<LiveSettings> = {},
+  questionCount = 3,
+  edit?: (snapshot: QuizSnapshot) => void,
+) {
   const output = new RecordingOutput();
   const persistence = new MemoryGamePersistence();
+  const snapshot = makeSnapshot(settings, questionCount);
+  edit?.(snapshot);
   const room = new GameRoom(
     {
       sessionId: "sess_1",
       code: "QA123456",
       hostId: "user_1",
-      snapshot: makeSnapshot(settings, questionCount),
+      snapshot,
     },
     output,
     persistence,

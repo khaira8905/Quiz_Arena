@@ -1,4 +1,4 @@
-import type { ImageFit, ImagePosition } from "./media";
+import type { ImageFit, ImagePosition, QuestionVideo } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { QuestionType } from "./question-types";
 import type { ScoringMode } from "./scoring";
@@ -42,6 +42,10 @@ export const HOST_COMMANDS = [
   "NEXT",
   /** Final results: next podium beat (3rd → 2nd → 1st → full leaderboard). */
   "PODIUM_NEXT",
+  /** Question video: play it again from the start on every stage. */
+  "MEDIA_REPLAY",
+  /** Question video: sound on/off on the stage (it starts muted). */
+  "MEDIA_SOUND",
   "END",
 ] as const;
 export type HostCommand = (typeof HOST_COMMANDS)[number];
@@ -89,9 +93,20 @@ export interface PublicQuestion {
   imageFit: ImageFit;
   imagePosition: ImagePosition;
   imagePlaceholder: string | null;
+  /** A video instead of an image. The stage plays it; phones show its poster. */
+  video: QuestionVideo | null;
   points: number;
   durationMs: number;
   options: PublicOption[];
+}
+
+/**
+ * How the stage should be playing the question video, decided by the server so every
+ * screen agrees: `epoch` goes up on each replay; `sound` is the host's unmute.
+ */
+export interface MediaState {
+  epoch: number;
+  sound: boolean;
 }
 
 /**
@@ -218,6 +233,8 @@ export interface HostView {
   playerCount: number;
   connectedCount: number;
   question: PublicQuestion | null;
+  /** Question video playback, as the stage is told to play it. */
+  media: MediaState;
   /** The host is trusted; the projector only displays this on reveal. */
   correctOptionIds: string[] | null;
   explanation: string | null;
@@ -276,6 +293,9 @@ export interface ProjectorView {
   podiumStep: PodiumStep | null;
   /** The next question's image, so the stage can load it before it's needed. */
   nextImageUrl: string | null;
+  /** Likewise for the next question's video. */
+  nextVideoUrl: string | null;
+  media: MediaState;
 }
 
 export type GameView = PlayerView | HostView | ProjectorView;

@@ -1,7 +1,12 @@
 "use client";
 
-import { MEDIA_ACCEPT, MEDIA_ACCEPT_LABEL, type MediaAssetDto } from "@quizarena/shared/media";
-import { Check, Copy, ImageIcon, Pencil, Search, Trash2, Upload } from "lucide-react";
+import {
+  MEDIA_ACCEPT,
+  MEDIA_ACCEPT_LABEL,
+  type MediaAssetDto,
+  VIDEO_ACCEPT,
+} from "@quizarena/shared/media";
+import { Check, Copy, Film, ImageIcon, Pencil, Search, Trash2, Upload } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,19 +22,26 @@ import { formatBytes } from "@/lib/media-upload";
 import { useDeleteMedia, useMedia, useMediaConfig, useRenameMedia } from "@/lib/queries";
 import { DriveImageButton } from "./google-drive";
 import { useImageUpload } from "./image-field";
+import { AssetThumb } from "./media-picker";
 import { QuestionImage } from "./question-image";
+import { useVideoUpload, VideoUploadProgress } from "./video-field";
+import { Segmented } from "@/components/ui/switch";
+import { formatDuration } from "@/lib/video-upload";
 
 /**
- * MEDIA LIBRARY: every image the organiser has uploaded, with size, dimensions, date and
- * where it's used. Upload, preview, rename, delete, and reuse from the question editor.
+ * MEDIA LIBRARY: every image and video the organiser has uploaded, with size, dimensions,
+ * length, date and where it's used. Upload, preview, rename, delete, and reuse from the
+ * question editor.
  */
 export function MediaLibrary() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"recent" | "name" | "size">("recent");
   const [unused, setUnused] = useState(false);
-  const { data, isPending, isError, refetch } = useMedia({ q: q.trim(), sort, unused });
+  const [kind, setKind] = useState<"" | "image" | "video">("");
+  const { data, isPending, isError, refetch } = useMedia({ q: q.trim(), sort, unused, kind });
   const { data: config } = useMediaConfig();
   const { upload, state, cancel } = useImageUpload();
+  const video = useVideoUpload();
   const fileInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<MediaAssetDto | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -47,7 +59,11 @@ export function MediaLibrary() {
     if (!files?.length) return;
     if (config && !config.enabled) return void toast.error(config.reason ?? "Uploads are off.");
     let done = 0;
-    for (const f of Array.from(files)) if (await upload(f)) done++;
+    for (const f of Array.from(files)) {
+      // Videos take their own path (direct to storage, with a poster frame).
+      if ((VIDEO_ACCEPT as readonly string[]).includes(f.type)) await video.upload(f);
+      else if (await upload(f)) done++;
+    }
     if (done) toast.success(done === 1 ? "Image uploaded" : `${done} images uploaded`);
   };
 
@@ -74,11 +90,12 @@ export function MediaLibrary() {
       <PageHeader
         eyebrow="Library"
         title="Media"
-        description="Images for your questions. Upload once, reuse in any quiz."
+        description="Images and videos for your questions. Upload once, reuse in any quiz."
         actions={
           <>
             {config?.googleDrive && (
               <DriveImageButton
+                kind={kind === "video" ? "video" : "image"}
                 onPick={(a) => {
                   toast.success(`“${a.name}” added from Google Drive`);
                   setPreview(a);
@@ -90,7 +107,7 @@ export function MediaLibrary() {
               onClick={() => fileInput.current?.click()}
               disabled={config ? !config.enabled : false}
             >
-              <Upload className="h-4 w-4" /> Upload images
+              <Upload className="h-4 w-4" /> Upload
             </Button>
           </>
         }
@@ -99,7 +116,7 @@ export function MediaLibrary() {
         ref={fileInput}
         type="file"
         multiple
-        accept={MEDIA_ACCEPT.join(",")}
+        accept={[...MEDIA_ACCEPT, ...VIDEO_ACCEPT].join(",")}
         className="sr-only"
         tabIndex={-1}
         aria-hidden
@@ -132,11 +149,28 @@ export function MediaLibrary() {
         </div>
       )}
 
+      {video.state && (
+        <div className="mt-6">
+          <VideoUploadProgress state={video.state} />
+        </div>
+      )}
+
       <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Segmented
+          label="Show"
+          value={kind}
+          options={[
+            { value: "", label: "All" },
+            { value: "image", label: "Images" },
+            { value: "video", label: "Videos" },
+          ]}
+          onChange={setKind}
+          className="w-fit"
+        />
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-3" />
           <Input
-            aria-label="Search images"
+            aria-label="Search media"
             placeholder="Search by name"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -164,7 +198,7 @@ export function MediaLibrary() {
         </label>
         {data && (
           <span className="ml-auto text-body-sm text-fg-3">
-            {data.length} {data.length === 1 ? "image" : "images"} · {formatBytes(totalBytes)}
+            {data.length} {data.length === 1 ? "file" : "files"} · {formatBytes(totalBytes)}
           </span>
         )}
       </div>
@@ -172,7 +206,7 @@ export function MediaLibrary() {
       <div className="mt-6">
         {isError ? (
           <EmptyState
-            title="Couldn't load your images"
+            title="Couldn't load your media"
             description="The server didn't respond."
             action={<Button onClick={() => refetch()}>Retry</Button>}
           />
@@ -184,12 +218,14 @@ export function MediaLibrary() {
           </div>
         ) : data.length === 0 ? (
           <EmptyState
-            icon={<ImageIcon className="h-6 w-6" />}
-            title={q || unused ? "No images match" : "No images yet"}
+            icon={
+              kind === "video" ? <Film className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />
+            }
+            title={q || unused || kind ? "Nothing matches" : "No media yet"}
             description={
-              q || unused
+              q || unused || kind
                 ? "Try another name or filter."
-                : `Upload ${MEDIA_ACCEPT_LABEL} images, or drop them anywhere on this page.`
+                : `Upload ${MEDIA_ACCEPT_LABEL} images or MP4/WebM videos, or drop them anywhere on this page.`
             }
           />
         ) : (
@@ -205,17 +241,15 @@ export function MediaLibrary() {
                   type="button"
                   onClick={() => setPreview(a)}
                   data-cursor="media"
-                  data-cursor-label="Open"
+                  data-cursor-label={a.kind === "VIDEO" ? "Play" : "Open"}
                   className="card-interactive group relative block w-full overflow-hidden rounded-md border border-line bg-surface text-left"
                 >
                   <span className="relative block aspect-[4/3] overflow-hidden bg-sunken">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- library thumbnail */}
-                    <img
-                      src={a.variants["480"] ?? a.url}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-[var(--motion-slow)] ease-[var(--ease-out)] group-hover:scale-[1.04]"
+                    <AssetThumb
+                      asset={a}
+                      className="transition-transform duration-[var(--motion-slow)] ease-[var(--ease-out)] group-hover:scale-[1.04]"
                     />
+                    {a.kind === "VIDEO" && <HoverPreview src={a.url} />}
                     <span
                       className={cn(
                         "label absolute left-2 top-2 rounded-sm px-1.5 py-0.5",
@@ -229,6 +263,7 @@ export function MediaLibrary() {
                     {a.name}
                   </span>
                   <span className="block px-3 pb-2.5 text-caption text-fg-3">
+                    {a.kind === "VIDEO" ? `${formatDuration(a.durationMs)} · ` : ""}
                     {a.width}×{a.height} · {formatBytes(a.bytes)}
                   </span>
                 </button>
@@ -271,14 +306,35 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
   return (
     <>
       <Dialog open onOpenChange={(o) => !o && onClose()} title={asset.name} size="lg">
-        <QuestionImage
-          src={asset.url}
-          placeholder={asset.placeholder}
-          className="mt-4 aspect-[16/10] w-full"
-          alt={asset.name}
-        />
+        {asset.kind === "VIDEO" ? (
+          <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-md bg-black">
+            <video
+              src={asset.url}
+              poster={asset.posterUrl ?? undefined}
+              controls
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-contain"
+              aria-label={asset.name}
+            />
+          </div>
+        ) : (
+          <QuestionImage
+            src={asset.url}
+            placeholder={asset.placeholder}
+            className="mt-4 aspect-[16/10] w-full"
+            alt={asset.name}
+          />
+        )}
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm sm:grid-cols-4">
-          <Meta label="Dimensions" value={`${asset.width} × ${asset.height}`} />
+          <Meta
+            label={asset.kind === "VIDEO" ? "Length · size" : "Dimensions"}
+            value={
+              asset.kind === "VIDEO"
+                ? `${formatDuration(asset.durationMs)} · ${asset.width} × ${asset.height}`
+                : `${asset.width} × ${asset.height}`
+            }
+          />
           <Meta label="Stored size" value={formatBytes(asset.bytes)} />
           <Meta label="Added" value={formatDateTime(asset.createdAt)} />
           <Meta
@@ -301,7 +357,7 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
             >
               <Input
                 autoFocus
-                aria-label="Image name"
+                aria-label="Name"
                 value={name}
                 maxLength={120}
                 onChange={(e) => setName(e.target.value)}
@@ -322,7 +378,7 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
             onClick={() =>
               void navigator.clipboard
                 .writeText(new URL(asset.url, location.origin).toString())
-                .then(() => toast.success("Image link copied"))
+                .then(() => toast.success("Link copied"))
             }
           >
             <Copy className="h-4 w-4" /> Copy link
@@ -343,14 +399,14 @@ function AssetDialog({ asset, onClose }: { asset: MediaAssetDto; onClose: () => 
         title={`Delete “${asset.name}”?`}
         description={
           asset.usageCount
-            ? `It's used by ${asset.usageCount} question${asset.usageCount === 1 ? "" : "s"}; they'll lose the image. This can't be undone.`
-            : "The image is removed from storage. This can't be undone."
+            ? `It's used by ${asset.usageCount} question${asset.usageCount === 1 ? "" : "s"}; they'll lose it. This can't be undone.`
+            : "The file is removed from storage. This can't be undone."
         }
-        confirmLabel="Delete image"
+        confirmLabel={asset.kind === "VIDEO" ? "Delete video" : "Delete image"}
         onConfirm={async () => {
           try {
             await del.mutateAsync({ id: asset.id, force: asset.usageCount > 0 });
-            toast.success("Image deleted");
+            toast.success(asset.kind === "VIDEO" ? "Video deleted" : "Image deleted");
             onClose();
           } catch (err) {
             toast.error(isApiError(err) ? err.message : "Couldn't delete");
@@ -367,5 +423,32 @@ function Meta({ label, value }: { label: string; value: string }) {
       <dt className="label text-fg-3">{label}</dt>
       <dd className="mt-1 font-medium">{value}</dd>
     </div>
+  );
+}
+
+/**
+ * Hovering a video tile plays it, muted, in place. The video element only exists while
+ * hovered, so a grid of fifty videos costs nothing until someone points at one.
+ */
+function HoverPreview({ src }: { src: string }) {
+  const [on, setOn] = useState(false);
+  return (
+    <span
+      className="absolute inset-0"
+      onPointerEnter={(e) => e.pointerType === "mouse" && setOn(true)}
+      onPointerLeave={() => setOn(false)}
+    >
+      {on && (
+        <video
+          src={src}
+          muted
+          autoPlay
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+          aria-hidden
+        />
+      )}
+    </span>
   );
 }

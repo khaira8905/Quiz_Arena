@@ -602,3 +602,53 @@ describe("reading period, stats step, podium and timer control", () => {
     expect(codeOf(() => room.updateSettings({ theme: "BLUE" }))).toBe("COMMAND_NOT_ALLOWED");
   });
 });
+
+describe("question video", () => {
+  const clip = {
+    url: "https://cdn.example.com/media/u/clip.mp4",
+    posterUrl: null,
+    durationMs: 9000,
+  };
+  const videoRoom = async () => {
+    const ctx = makeRoom({}, 3, (s) => {
+      s.questions[0]!.video = clip;
+      s.questions[2]!.video = { ...clip, url: "https://cdn.example.com/media/u/next.webm" };
+    });
+    await ctx.room.join("Ada");
+    ctx.room.command("START");
+    vi.advanceTimersByTime(START_COUNTDOWN_MS);
+    return ctx;
+  };
+
+  it("puts the video on the stage and phones, and lets the host replay and unmute it", async () => {
+    const { room, output } = await videoRoom();
+    expect(room.projectorView().question?.video).toEqual(clip);
+    expect(room.availableCommands()).toEqual(
+      expect.arrayContaining(["MEDIA_REPLAY", "MEDIA_SOUND"]),
+    );
+    expect(room.projectorView().media).toEqual({ epoch: 0, sound: false });
+
+    room.command("MEDIA_REPLAY");
+    room.command("MEDIA_SOUND");
+    expect(output.lastProjectorView().media).toEqual({ epoch: 1, sound: true });
+    expect(room.hostView().media).toEqual({ epoch: 1, sound: true });
+
+    // Still controllable after the reveal, and the next question starts muted from the top.
+    room.command("REVEAL");
+    expect(room.availableCommands()).toContain("MEDIA_REPLAY");
+    room.command("NEXT");
+    expect(room.projectorView().media).toEqual({ epoch: 0, sound: false });
+    // Question 2 has no video: no media commands.
+    expect(room.availableCommands()).not.toContain("MEDIA_REPLAY");
+    expect(codeOf(() => room.command("MEDIA_SOUND"))).toBe("COMMAND_NOT_ALLOWED");
+  });
+
+  it("preloads the next question's video on the stage from the reveal on", async () => {
+    const { room } = await videoRoom();
+    room.command("REVEAL");
+    room.command("NEXT");
+    expect(room.projectorView().nextVideoUrl).toBeNull(); // question 2 is open
+    room.command("REVEAL");
+    expect(room.projectorView().nextVideoUrl).toBe("https://cdn.example.com/media/u/next.webm");
+  });
+});

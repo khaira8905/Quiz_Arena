@@ -2,7 +2,7 @@ import { bankQuerySchema, userPreferencesSchema, type BankFacetsDto } from "@qui
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "../../db";
 import { requireUser, type AppContext } from "../context";
-import { questionDto } from "../mappers";
+import { questionDto, videoSelect } from "../mappers";
 
 export function bankRoutes(app: FastifyInstance, ctx: AppContext) {
   /**
@@ -31,7 +31,11 @@ export function bankRoutes(app: FastifyInstance, ctx: AppContext) {
     const [questions, all] = await Promise.all([
       ctx.db.question.findMany({
         where,
-        include: { options: true, quiz: { select: { id: true, title: true } } },
+        include: {
+          options: true,
+          videoAsset: videoSelect,
+          quiz: { select: { id: true, title: true } },
+        },
         orderBy: [{ updatedAt: "desc" }],
         take: 300,
       }),

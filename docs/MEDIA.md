@@ -1,4 +1,4 @@
-# Images: uploads, storage and Google Drive
+# Images and videos: uploads, storage and Google Drive
 
 Question images can come from three places:
 
@@ -31,6 +31,59 @@ The projector shows each image in a fixed 2:1 frame, so the layout never jumps. 
 blurred placeholder appears first, then the image fades in. During the reveal and
 leaderboard, the projector loads the next question's image in the background. Organisers
 choose **Fit** (whole image, or fill the frame) and **Position** (center, top, bottom).
+
+## Question videos
+
+A question can show a **video instead of an image** (never both; choosing one removes the
+other). Sources: upload from the device, the media library, or Google Drive.
+
+**Formats and limits.** MP4 (H.264) or WebM, up to 100 MB and 5 minutes. Drive imports are
+capped at 40 MB, because they pass through the game server's memory. Videos are stored as
+uploaded: there is no server-side transcoding (the free hosting tier has no CPU for it), so
+the file must already play in a browser.
+
+**How an upload works:**
+
+1. **Checking (in the browser).** The browser decodes the file. That gives the real
+   duration and frame size, and refuses anything this browser can't play: a projector
+   browser couldn't play it either. A poster frame is captured about one second in.
+2. **Uploading.** The server issues a short-lived signed ticket. With S3 storage the browser
+   then sends the file **straight to the bucket** through a presigned `PUT` URL (15
+   minutes, content type pinned), so the game server never holds it. With `local` storage,
+   it streams to the server's disk. Either way there is a real progress bar.
+3. **Processing.** The server checks that the file is in storage, that its size is what was
+   promised, and that its **first bytes** say MP4 (`ftyp`) or WebM (EBML). It deletes the
+   file otherwise. The poster frame goes through the same decode and re-encode as any image.
+   Postgres stores only metadata: kind, duration, size, poster and placeholder.
+
+**During a game:**
+
+- The projector plays the video **muted and without controls** while players read and
+  answer. It pauses when answers lock or the stats or reveal appear.
+- The control room shows the clip with **Replay** and **Sound**. Replay restarts it on every
+  stage at once (the server bumps a playback epoch). Sound unmutes the projector only; the
+  host's live preview never plays audio. Browsers allow sound only after someone has
+  clicked the projector window once, and it says so if they haven't.
+- From the reveal on, the projector buffers the next question's video in the background.
+- **Phones don't stream it.** A hundred phones downloading the same clip would swamp venue
+  Wi-Fi, so players see "Watch the video on the big screen".
+
+**Bucket CORS (needed for direct video uploads).** The browser uploads to the bucket from
+your site's origin, so the bucket must allow it. On R2: bucket **Settings → CORS policy**:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://your-app.vercel.app"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["content-type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+`GET` also lets the admin capture poster frames for Drive imports. Without it, those
+videos still work but show no poster. Supabase and AWS have equivalent CORS settings.
 
 ## Storage providers
 

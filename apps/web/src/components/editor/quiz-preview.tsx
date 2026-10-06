@@ -75,6 +75,7 @@ export function QuizPreview({ id }: { id: string }) {
         imageFit: q.imageFit,
         imagePosition: q.imagePosition,
         imagePlaceholder: null,
+        video: q.video,
         points: q.points,
         durationMs,
         options: q.options.map((o) => ({ id: o.id, text: o.text || "—" })),

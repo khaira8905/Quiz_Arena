@@ -1,5 +1,5 @@
 import type { Difficulty } from "./constants";
-import type { ImageFit, ImagePosition } from "./media";
+import type { ImageFit, ImagePosition, QuestionVideo } from "./media";
 import type { ArenaAppearance } from "./appearance";
 import type { FinalResults } from "./game";
 import type { QuestionType } from "./question-types";
@@ -41,6 +41,9 @@ export interface QuestionDto {
   text: string;
   imageUrl: string | null;
   imageAssetId: string | null;
+  /** A library video shown instead of an image (never both). */
+  videoAssetId: string | null;
+  video: QuestionVideo | null;
   imageFit: ImageFit;
   imagePosition: ImagePosition;
   tags: string[];

@@ -44,6 +44,7 @@ export function sessionRoutes(app: FastifyInstance, ctx: AppContext) {
           include: {
             options: { orderBy: { order: "asc" } },
             imageAsset: { select: { placeholder: true } },
+            videoAsset: { select: { url: true, posterUrl: true, durationMs: true } },
           },
           orderBy: { order: "asc" },
         },

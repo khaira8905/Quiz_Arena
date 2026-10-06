@@ -13,6 +13,7 @@ import { api, isApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatBytes } from "@/lib/media-upload";
 import { invalidateMedia } from "@/lib/queries";
+import { capturePosterFromUrl, formatDuration } from "@/lib/video-upload";
 
 interface DriveStatus {
   configured: boolean;
@@ -26,6 +27,7 @@ interface DriveFile {
   size: number | null;
   width: number | null;
   height: number | null;
+  durationMs?: number | null;
 }
 
 export function useGoogleStatus(enabled = true) {
@@ -83,9 +85,12 @@ export function connectGoogle(): Promise<boolean> {
 export function DriveImageButton({
   onPick,
   size = "sm",
+  kind = "image",
 }: {
   onPick: (asset: MediaAssetDto) => void;
   size?: "sm" | "md";
+  /** Images (default) or MP4/WebM videos. */
+  kind?: "image" | "video";
 }) {
   const qc = useQueryClient();
   const status = useGoogleStatus();
@@ -113,6 +118,7 @@ export function DriveImageButton({
       </Button>
       {open && (
         <DrivePickerDialog
+          kind={kind}
           email={status.data?.email ?? null}
           onClose={() => setOpen(false)}
           onPick={(a) => {
@@ -126,10 +132,12 @@ export function DriveImageButton({
 }
 
 function DrivePickerDialog({
+  kind,
   email,
   onClose,
   onPick,
 }: {
+  kind: "image" | "video";
   email: string | null;
   onClose: () => void;
   onPick: (asset: MediaAssetDto) => void;
@@ -145,9 +153,9 @@ function DrivePickerDialog({
   }, [q]);
 
   const files = useInfiniteQuery({
-    queryKey: ["google-files", debounced],
+    queryKey: ["google-files", kind, debounced],
     queryFn: ({ pageParam }) => {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ kind });
       if (debounced) params.set("q", debounced);
       if (pageParam) params.set("pageToken", pageParam);
       return api<{ files: DriveFile[]; nextPageToken: string | null }>(`/google/files?${params}`);
@@ -169,20 +177,23 @@ function DrivePickerDialog({
   const choose = async (f: DriveFile) => {
     setImporting(f.id);
     try {
-      const { asset } = await api<{ asset: MediaAssetDto }>("/google/import", {
+      let { asset } = await api<{ asset: MediaAssetDto }>("/google/import", {
         method: "POST",
-        json: { fileId: f.id },
+        json: { fileId: f.id, kind },
       });
+      // Videos get their poster from a frame of the stored copy.
+      if (asset.kind === "VIDEO") asset = await capturePosterFromUrl(asset);
       void invalidateMedia(qc);
       onPick(asset);
     } catch (err) {
-      toast.error(isApiError(err) ? err.message : "Couldn't import that image.");
+      toast.error(isApiError(err) ? err.message : `Couldn't import that ${noun}.`);
     } finally {
       setImporting(null);
     }
   };
 
   const list = files.data?.pages.flatMap((p) => p.files) ?? [];
+  const noun = kind === "video" ? "video" : "image";
 
   return (
     <Dialog
@@ -191,8 +202,8 @@ function DrivePickerDialog({
       title="Google Drive"
       description={
         email
-          ? `Images in ${email}'s Drive. Picking one copies it into your media library.`
-          : "Picking an image copies it into your media library."
+          ? `${kind === "video" ? "MP4 and WebM videos (up to 40 MB)" : "Images"} in ${email}'s Drive. Picking one copies it into your media library.`
+          : `Picking ${kind === "video" ? "a video" : "an image"} copies it into your media library.`
       }
       size="lg"
     >
@@ -200,7 +211,7 @@ function DrivePickerDialog({
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-3" />
         <Input
           aria-label="Search Drive"
-          placeholder="Search your Drive images"
+          placeholder={`Search your Drive ${noun}s`}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="pl-9"
@@ -219,7 +230,11 @@ function DrivePickerDialog({
           </p>
         ) : list.length === 0 ? (
           <p className="py-10 text-center text-body-sm text-fg-3">
-            {debounced ? "No images match that name." : "No PNG, JPG or WEBP images in this Drive."}
+            {debounced
+              ? `No ${noun}s match that name.`
+              : kind === "video"
+                ? "No MP4 or WebM videos in this Drive."
+                : "No PNG, JPG or WEBP images in this Drive."}
           </p>
         ) : (
           <>
@@ -244,6 +259,11 @@ function DrivePickerDialog({
                         className="absolute inset-0 h-full w-full object-cover"
                         onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                       />
+                      {f.durationMs ? (
+                        <span className="numeric absolute bottom-1.5 right-1.5 rounded-sm bg-black/75 px-1.5 py-0.5 text-caption font-semibold text-white">
+                          {formatDuration(f.durationMs)}
+                        </span>
+                      ) : null}
                       {importing === f.id && (
                         <span className="absolute inset-0 grid place-items-center bg-black/50">
                           <Spinner className="h-6 w-6 text-white" />
@@ -256,7 +276,7 @@ function DrivePickerDialog({
                     <span className="block px-2 pb-1.5 text-caption text-fg-3">
                       {f.width && f.height
                         ? `${f.width}×${f.height}`
-                        : f.mimeType.replace("image/", "").toUpperCase()}
+                        : f.mimeType.replace(/^(image|video)\//, "").toUpperCase()}
                       {f.size ? ` · ${formatBytes(f.size)}` : ""}
                     </span>
                   </button>

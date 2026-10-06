@@ -19,7 +19,7 @@ import { z } from "zod";
 import { Prisma } from "../../db";
 import { AppError } from "../../lib/errors";
 import { requireUser, type AppContext } from "../context";
-import { questionDto, quizDto, quizSummaryDto } from "../mappers";
+import { questionDto, quizDto, quizSummaryDto, videoSelect } from "../mappers";
 
 const idParams = z.object({ id: z.string().min(1).max(64) });
 const listQuery = z.object({
@@ -30,7 +30,7 @@ const listQuery = z.object({
 const counts = { _count: { select: { questions: true, sessions: true } } } as const;
 const withQuestions = {
   ...counts,
-  questions: { include: { options: true }, orderBy: { order: "asc" } },
+  questions: { include: { options: true, videoAsset: videoSelect }, orderBy: { order: "asc" } },
 } as const;
 
 function questionCreateData(q: QuestionInput, order: number) {
@@ -76,7 +76,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
   const ownedQuestion = async (userId: string, id: string) => {
     const question = await ctx.db.question.findFirst({
       where: { id, quiz: { ownerId: userId } },
-      include: { options: { orderBy: { order: "asc" } } },
+      include: { options: { orderBy: { order: "asc" } }, videoAsset: videoSelect },
     });
     if (!question) throw new AppError("NOT_FOUND", "Question not found.");
     return question;
@@ -204,6 +204,8 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
             type: q.type,
             text: q.text,
             imageUrl: q.imageUrl,
+            imageAssetId: q.imageAssetId,
+            videoAssetId: q.videoAssetId,
             timeLimitSec: q.timeLimitSec,
             points: q.points,
             explanation: q.explanation,
@@ -266,7 +268,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
           create: input.options.map((o, i) => ({ order: i, text: o.text, isCorrect: o.isCorrect })),
         },
       },
-      include: { options: true },
+      include: { options: true, videoAsset: videoSelect },
     });
     await touchQuiz(id);
     return reply.code(201).send({ question: questionDto(question) });
@@ -354,16 +356,33 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
 
     // The image: a library asset (its URL is filled in here, never trusted from the client),
     // an external https link, or nothing.
-    let image = { imageUrl: existing.imageUrl, imageAssetId: existing.imageAssetId };
-    if (patch.imageAssetId) {
+    // A question shows an image or a video, never both: choosing one clears the other.
+    let image = {
+      imageUrl: existing.imageUrl,
+      imageAssetId: existing.imageAssetId,
+      videoAssetId: existing.videoAssetId,
+    };
+    if (patch.videoAssetId) {
       const asset = await ctx.db.mediaAsset.findFirst({
-        where: { id: patch.imageAssetId, ownerId: userId },
+        where: { id: patch.videoAssetId, ownerId: userId, kind: "VIDEO" },
+        select: { id: true },
+      });
+      if (!asset) throw new AppError("NOT_FOUND", "That video isn't in your media library.");
+      image = { imageUrl: null, imageAssetId: null, videoAssetId: asset.id };
+    } else if (patch.imageAssetId) {
+      const asset = await ctx.db.mediaAsset.findFirst({
+        where: { id: patch.imageAssetId, ownerId: userId, kind: "IMAGE" },
         select: { id: true, url: true },
       });
       if (!asset) throw new AppError("NOT_FOUND", "That image isn't in your media library.");
-      image = { imageUrl: asset.url, imageAssetId: asset.id };
-    } else if (patch.imageUrl !== undefined || patch.imageAssetId === null) {
-      image = { imageUrl: patch.imageUrl ?? null, imageAssetId: null };
+      image = { imageUrl: asset.url, imageAssetId: asset.id, videoAssetId: null };
+    } else if (patch.imageUrl) {
+      image = { imageUrl: patch.imageUrl, imageAssetId: null, videoAssetId: null };
+    } else {
+      if (patch.imageUrl === null || patch.imageAssetId === null) {
+        image = { ...image, imageUrl: null, imageAssetId: null };
+      }
+      if (patch.videoAssetId === null) image = { ...image, videoAssetId: null };
     }
 
     // Full structural validation of the merged question.
@@ -439,7 +458,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
     const quiz = await ownedQuiz(userId, id);
     const sources = await ctx.db.question.findMany({
       where: { id: { in: questionIds }, quiz: { ownerId: userId } },
-      include: { options: { orderBy: { order: "asc" } } },
+      include: { options: { orderBy: { order: "asc" } }, videoAsset: videoSelect },
     });
     if (sources.length !== new Set(questionIds).size) throw new AppError("NOT_FOUND");
     if (quiz.questions.length + sources.length > MAX_QUESTIONS_PER_QUIZ) {
@@ -455,7 +474,8 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
       quiz.questions.length === 1 &&
       !quiz.questions[0]!.text.trim() &&
       quiz.questions[0]!.options.every((o) => !o.text.trim()) &&
-      !quiz.questions[0]!.imageUrl
+      !quiz.questions[0]!.imageUrl &&
+      !quiz.questions[0]!.videoAssetId
         ? quiz.questions[0]!
         : null;
     const start = blank ? 0 : quiz.questions.length;
@@ -470,6 +490,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
             text: q.text,
             imageUrl: q.imageUrl,
             imageAssetId: q.imageAssetId,
+            videoAssetId: q.videoAssetId,
             imageFit: q.imageFit,
             imagePosition: q.imagePosition,
             timeLimitSec: q.timeLimitSec,
@@ -518,6 +539,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
           text: q.text,
           imageUrl: q.imageUrl,
           imageAssetId: q.imageAssetId,
+          videoAssetId: q.videoAssetId,
           imageFit: q.imageFit,
           imagePosition: q.imagePosition,
           timeLimitSec: q.timeLimitSec,
@@ -535,7 +557,7 @@ export function quizRoutes(app: FastifyInstance, ctx: AppContext) {
             })),
           },
         },
-        include: { options: true },
+        include: { options: true, videoAsset: videoSelect },
       }),
       ctx.db.quiz.update({ where: { id: q.quizId }, data: { updatedAt: new Date() } }),
     ]);

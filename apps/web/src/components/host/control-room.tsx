@@ -433,7 +433,7 @@ export function HostControlRoom({ code }: { code: string }) {
               </section>
             )
           ) : (
-            <QuestionPanel view={view} />
+            <QuestionPanel view={view} onMedia={(cmd) => void run(cmd)} />
           )}
         </div>
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArenaThemeProvider } from "@/components/arena/arena-theme";
 import { preloadImage } from "@/components/media/question-image";
+import { preloadVideo } from "@/components/media/stage-video";
 import { buttonClasses } from "@/components/ui/button-classes";
 import { Kbd, Spinner, StatusScreen } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
@@ -38,6 +39,10 @@ export function ProjectorStage({ code, preview }: { code: string; preview: boole
 
   // The next question's image loads in the background while the room looks at the reveal.
   useEffect(() => preloadImage(view?.nextImageUrl), [view?.nextImageUrl]);
+  // Likewise the next video, on the real projector only (previews don't need it).
+  useEffect(() => {
+    if (!preview) preloadVideo(view?.nextVideoUrl);
+  }, [view?.nextVideoUrl, preview]);
 
   // Phase-change sound cues (the countdown ticks itself).
   useEffect(() => {
@@ -162,7 +167,7 @@ export function ProjectorStage({ code, preview }: { code: string; preview: boole
         )}
         onClick={preview ? undefined : unlockAudio}
       >
-        <ProjectorScreen view={view} sound={sound} />
+        <ProjectorScreen view={view} sound={sound} preview={preview} />
 
         {!preview && (
           <AnimatePresence>

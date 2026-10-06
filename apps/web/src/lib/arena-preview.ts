@@ -158,6 +158,7 @@ function publicQuestion(s: ArenaPreviewState): {
       imageFit: "CONTAIN",
       imagePosition: "CENTER",
       imagePlaceholder: null,
+      video: null,
       points: q.points,
       durationMs: q.durationSec * 1000,
       options,
@@ -243,6 +244,8 @@ export function previewProjectorView(s: ArenaPreviewState, now: number): Project
     results: phase === "FINISHED" ? results() : null,
     podiumStep: phase === "FINISHED" ? "FIRST" : null,
     nextImageUrl: null,
+    nextVideoUrl: null,
+    media: { epoch: 0, sound: false },
   };
 }
 

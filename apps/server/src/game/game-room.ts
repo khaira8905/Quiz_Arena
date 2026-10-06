@@ -92,6 +92,14 @@ interface PendingAnswer {
 }
 
 const HOST_LEADERBOARD_SIZE = 10;
+/** Phases where the current question (and its video) is on the stage. */
+const QUESTION_SCREEN_PHASES: GamePhase[] = [
+  "QUESTION_READING",
+  "QUESTION_ACTIVE",
+  "QUESTION_LOCKED",
+  "ANSWER_DISTRIBUTION",
+  "ANSWER_REVEAL",
+];
 const PLAYER_LEADERBOARD_SIZE = 5;
 /** Names the stage shows in the lobby; beyond this it shows "+N more". */
 const STAGE_ROSTER_SIZE = 140;
@@ -119,6 +127,8 @@ export class GameRoom {
   /** Host's lobby choice: one timer for every question (null = per-question timers). */
   private timerOverrideMs: number | null = null;
   private podiumStep: PodiumStep | null = null;
+  /** Question video: bumped by each replay; sound is the host's unmute (per question). */
+  private media = { epoch: 0, sound: false };
 
   private readonly participants = new Map<string, Participant>();
   private readonly byKey = new Map<string, string>();
@@ -390,6 +400,13 @@ export class GameRoom {
   /* ======================================================================== host commands */
 
   availableCommands(): HostCommand[] {
+    const base = this.phaseCommands();
+    // A question with a video can be replayed and unmuted while it's on screen.
+    const onScreen = this.question?.video && QUESTION_SCREEN_PHASES.includes(this.phase);
+    return onScreen ? [...base, "MEDIA_REPLAY", "MEDIA_SOUND"] : base;
+  }
+
+  private phaseCommands(): HostCommand[] {
     const stats = this.snapshot.settings.showAnswerStats ? (["SHOW_STATS"] as const) : [];
     switch (this.phase) {
       case "LOBBY":
@@ -451,6 +468,12 @@ export class GameRoom {
         return this.broadcast();
       case "PODIUM_NEXT":
         return this.podiumNext();
+      case "MEDIA_REPLAY":
+        this.media = { ...this.media, epoch: this.media.epoch + 1 };
+        return this.broadcast();
+      case "MEDIA_SOUND":
+        this.media = { ...this.media, sound: !this.media.sound };
+        return this.broadcast();
       case "PAUSE":
         return this.pause();
       case "RESUME":
@@ -493,6 +516,8 @@ export class GameRoom {
     this.paused = false;
     this.answers = new Map();
     for (const p of this.participants.values()) p.lastResult = null;
+    // Each question's video starts muted, from the top.
+    this.media = { epoch: 0, sound: false };
 
     this.durationMs = this.timerOverrideMs ?? q.durationMs;
 
@@ -895,6 +920,7 @@ export class GameRoom {
       imageFit: q.imageFit ?? "CONTAIN",
       imagePosition: q.imagePosition ?? "CENTER",
       imagePlaceholder: q.imagePlaceholder ?? null,
+      video: q.video ?? null,
       points: q.points,
       durationMs: this.durationMs,
       options: hideOptions ? [] : q.options.map((o) => ({ id: o.id, text: o.text })),
@@ -1004,6 +1030,8 @@ export class GameRoom {
       results: this.phase === "FINISHED" ? this.results : null,
       podiumStep: this.podiumStep,
       nextImageUrl: this.nextImageUrl(),
+      nextVideoUrl: this.nextVideoUrl(),
+      media: { ...this.media },
     };
   }
 
@@ -1021,11 +1049,24 @@ export class GameRoom {
     return this.snapshot.questions[this.questionIndex + 1]?.imageUrl ?? null;
   }
 
+  private nextVideoUrl(): string | null {
+    return this.nextImageUrl() === null && this.preloadWindow()
+      ? (this.snapshot.questions[this.questionIndex + 1]?.video?.url ?? null)
+      : null;
+  }
+
+  private preloadWindow() {
+    return ["ANSWER_REVEAL", "ANSWER_DISTRIBUTION", "LEADERBOARD", "QUESTION_LOCKED"].includes(
+      this.phase,
+    );
+  }
+
   hostView(): HostView {
     const q = this.question;
     const showQuestion = this.inQuestion;
     return {
       role: "host",
+      media: { ...this.media },
       sessionId: this.sessionId,
       code: this.code,
       quizTitle: this.snapshot.title,

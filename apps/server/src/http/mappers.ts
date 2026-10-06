@@ -18,13 +18,29 @@ export const userDto = (u: User): UserDto => ({
   createdAt: u.createdAt.toISOString(),
 });
 
-export const questionDto = (q: Question & { options: AnswerOption[] }): QuestionDto => ({
+/** Include this as `videoAsset` wherever questions are loaded for a QuestionDto. */
+export const videoSelect = { select: { url: true, posterUrl: true, durationMs: true } } as const;
+
+export const questionDto = (
+  q: Question & {
+    options: AnswerOption[];
+    videoAsset?: { url: string; posterUrl: string | null; durationMs: number | null } | null;
+  },
+): QuestionDto => ({
   id: q.id,
   order: q.order,
   type: q.type,
   text: q.text,
   imageUrl: q.imageUrl,
   imageAssetId: q.imageAssetId,
+  videoAssetId: q.videoAsset ? q.videoAssetId : null,
+  video: q.videoAsset
+    ? {
+        url: q.videoAsset.url,
+        posterUrl: q.videoAsset.posterUrl,
+        durationMs: q.videoAsset.durationMs,
+      }
+    : null,
   imageFit: q.imageFit,
   imagePosition: q.imagePosition,
   tags: q.tags,
