@@ -41,7 +41,7 @@ export function Switch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full border p-0.5 transition-colors duration-200",
+          "relative mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full border p-0.5 transition-colors duration-[var(--motion-normal)] disabled:cursor-not-allowed",
           checked ? "border-accent bg-accent" : "border-line-strong bg-sunken",
           disabled && "opacity-50",
         )}
@@ -49,6 +49,8 @@ export function Switch({
         <motion.span
           layout
           transition={{ type: "spring", stiffness: 700, damping: 40 }}
+          // The thumb squashes slightly while pressed, like a physical toggle.
+          whileTap={{ scaleX: 1.25 }}
           className={cn("h-4.5 w-4.5 rounded-full", checked ? "ml-auto bg-accent-ink" : "bg-fg-3")}
         />
       </button>

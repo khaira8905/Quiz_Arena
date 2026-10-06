@@ -2,12 +2,14 @@
 
 import { MotionConfig } from "motion/react";
 import { Toaster } from "sonner";
+import { Cursor } from "@/components/ui/cursor";
 
 /** App-wide providers. Motion honours the OS "reduce motion" setting everywhere. */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig reducedMotion="user">
       {children}
+      <Cursor />
       <Toaster
         position="bottom-right"
         theme="dark"

@@ -5,8 +5,9 @@ import { cn } from "@/lib/cn";
 
 const controlBase =
   "rounded-md border border-line-strong bg-sunken px-3.5 text-body text-fg placeholder:text-fg-3 " +
-  "transition-[border-color,box-shadow] duration-150 hover:border-fg-3 " +
-  "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft " +
+  "transition-[border-color,box-shadow,background-color] duration-[var(--motion-fast)] ease-[var(--ease-out)] hover:border-fg-3 " +
+  // Focus: the ring grows out from the border rather than snapping on.
+  "focus:border-accent focus:bg-surface focus:outline-none focus:ring-[3px] focus:ring-accent-soft " +
   "disabled:opacity-50 aria-[invalid=true]:border-danger";
 
 /**
