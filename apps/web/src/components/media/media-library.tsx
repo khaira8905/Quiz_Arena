@@ -204,7 +204,9 @@ export function MediaLibrary() {
                 <button
                   type="button"
                   onClick={() => setPreview(a)}
-                  className="group block w-full overflow-hidden rounded-md border border-line bg-surface text-left transition-colors hover:border-fg-3"
+                  data-cursor="media"
+                  data-cursor-label="Open"
+                  className="card-interactive group relative block w-full overflow-hidden rounded-md border border-line bg-surface text-left"
                 >
                   <span className="relative block aspect-[4/3] overflow-hidden bg-sunken">
                     {/* eslint-disable-next-line @next/next/no-img-element -- library thumbnail */}
@@ -212,7 +214,7 @@ export function MediaLibrary() {
                       src={a.variants["480"] ?? a.url}
                       alt=""
                       loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-[var(--motion-slow)] ease-[var(--ease-out)] group-hover:scale-[1.04]"
                     />
                     <span
                       className={cn(

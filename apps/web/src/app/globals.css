@@ -360,6 +360,36 @@ html[data-ui-theme="BLUE"],
     mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
   }
 
+  /* Clickable cards: lift on hover and draw an accent rule across the top edge. */
+  .card-interactive {
+    transition:
+      translate var(--motion-normal) var(--ease-out),
+      box-shadow var(--motion-normal) var(--ease-out),
+      border-color var(--motion-fast) var(--ease-out);
+  }
+  .card-interactive::before {
+    content: "";
+    position: absolute;
+    inset: -1px -1px auto;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--motion-slow) var(--ease-emphasis);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .card-interactive:hover,
+  .card-interactive:focus-within {
+    translate: 0 -2px;
+    box-shadow: var(--shadow-md);
+    border-color: var(--line-strong);
+  }
+  .card-interactive:hover::before,
+  .card-interactive:focus-within::before {
+    transform: scaleX(1);
+  }
+
   /* Raised surface with the theme's depth. */
   .surface-raised {
     background: var(--surface);
@@ -480,6 +510,150 @@ html[data-ui-theme="BLUE"],
     scrollbar-width: thin;
     scrollbar-color: var(--line-strong) transparent;
   }
+}
+
+/* ----------------------------------------------------------------------------------------
+   CURSOR (components/ui/cursor.tsx). Mounted only for fine pointers without reduced motion.
+   The native pointer hides except over text fields, which keep their I-beam.
+   ---------------------------------------------------------------------------------------- */
+html[data-cursor="custom"],
+html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true"], iframe) {
+  cursor: none !important;
+}
+.qa-cursor {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  contain: strict;
+}
+.qa-cursor > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.qa-cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 999px;
+  background: var(--accent);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    width var(--motion-fast) var(--ease-out),
+    height var(--motion-fast) var(--ease-out),
+    margin var(--motion-fast) var(--ease-out);
+}
+.qa-cursor-trail {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: visibility 0s;
+}
+.qa-cursor-ring {
+  display: grid;
+  place-items: center;
+  border: 1.5px solid color-mix(in oklab, var(--text-primary) 55%, transparent);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    border-radius var(--motion-normal) var(--ease-out);
+}
+.qa-cursor-label {
+  font: 600 0.6875rem/1 var(--body-family), system-ui, sans-serif;
+  color: var(--accent-ink);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-normal) var(--ease-snap);
+}
+.qa-cursor-ripple {
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 999px;
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+}
+.qa-cursor-ripple > * {
+  display: none;
+}
+.cursor-ripple-go {
+  animation: cursor-ripple 480ms var(--ease-out) forwards;
+}
+@keyframes cursor-ripple {
+  from {
+    opacity: 0.7;
+    scale: 0.4;
+  }
+  to {
+    opacity: 0;
+    scale: 1.5;
+  }
+}
+
+/* States */
+.qa-cursor[data-state="hidden"] > *,
+.qa-cursor[data-state="text"] > * {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+.qa-cursor:not([data-state="default"]) .qa-cursor-trail {
+  visibility: hidden;
+}
+.qa-cursor[data-state="hover"] .qa-cursor-ring {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+.qa-cursor[data-state="hover"] .qa-cursor-dot {
+  opacity: 0;
+}
+.qa-cursor[data-state="media"] .qa-cursor-ring {
+  border-color: transparent;
+  background: var(--accent);
+}
+.qa-cursor[data-state="media"] .qa-cursor-label {
+  opacity: 1;
+  transform: none;
+}
+.qa-cursor[data-state="media"] .qa-cursor-dot {
+  opacity: 0;
+}
+.qa-cursor[data-state="disabled"] .qa-cursor-ring {
+  border-style: dashed;
+  border-color: color-mix(in oklab, var(--text-primary) 30%, transparent);
+}
+.qa-cursor[data-state="disabled"] .qa-cursor-dot {
+  background: var(--text-muted);
+}
+.qa-cursor[data-state="loading"] .qa-cursor-ring {
+  border-color: color-mix(in oklab, var(--text-primary) 18%, transparent);
+  border-top-color: var(--accent);
+  animation: cursor-spin 700ms linear infinite;
+}
+@keyframes cursor-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+.qa-cursor[data-state="drag"] .qa-cursor-ring {
+  border-color: var(--accent);
+  border-style: dotted;
+  border-width: 2px;
+}
+.qa-cursor[data-dragging] .qa-cursor-ring {
+  border-style: solid;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+}
+.qa-cursor[data-pressed] .qa-cursor-dot {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
 }
 
 @media (prefers-reduced-motion: reduce) {

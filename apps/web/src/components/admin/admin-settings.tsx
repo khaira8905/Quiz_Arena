@@ -3,12 +3,16 @@
 import { quizSettingsSchema, type QuizSettings } from "@quizarena/shared/schemas";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, HardDrive, XCircle } from "lucide-react";
+import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/page-header";
 import { SettingsPanels } from "@/components/editor/quiz-settings";
 import { connectGoogle, useGoogleStatus } from "@/components/media/google-drive";
 import { Button } from "@/components/ui/button";
+import { cursorPreference } from "@/components/ui/cursor";
 import { Skeleton } from "@/components/ui/misc";
+import { Switch } from "@/components/ui/switch";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { api, isApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { useMe, useMediaConfig, usePreferences, useUpdatePreferences } from "@/lib/queries";
@@ -43,6 +47,9 @@ export function AdminSettings() {
             <GoogleCard />
           </div>
         </Section>
+        <Section title="Interface" description="How the portal looks and feels in this browser.">
+          <InterfacePrefs />
+        </Section>
         <Section title="Profile" description="Your name and password.">
           <div className="max-w-3xl">
             <ProfileSection />
@@ -68,6 +75,31 @@ function Section({
       <p className="mt-1 max-w-2xl text-body-sm text-fg-3">{description}</p>
       <div className="mt-5">{children}</div>
     </section>
+  );
+}
+
+function InterfacePrefs() {
+  const cursor = useSyncExternalStore(
+    cursorPreference.subscribe,
+    cursorPreference.get,
+    cursorPreference.getServer,
+  );
+  return (
+    <div className="flex max-w-3xl flex-col gap-5 rounded-lg border border-line bg-surface p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-body font-medium text-fg">Colour theme</p>
+          <p className="mt-0.5 text-body-sm text-fg-3">Black, Blue or White.</p>
+        </div>
+        <ThemeSwitcher />
+      </div>
+      <Switch
+        checked={cursor}
+        onChange={cursorPreference.set}
+        label="Arena cursor"
+        description="A following ring that wraps buttons and reacts to what's under it. Mouse and trackpad only; always off when your system asks for reduced motion."
+      />
+    </div>
   );
 }
 

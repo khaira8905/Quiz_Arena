@@ -27,7 +27,7 @@ export function QuizCard({ quiz, index = 0 }: { quiz: QuizSummaryDto; index?: nu
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.28, ease: EASE.out }}
-      className="group relative flex flex-col border border-line bg-surface transition-colors hover:border-line-strong"
+      className="card-interactive group relative flex flex-col border border-line bg-surface"
     >
       <Link
         href={`/admin/quizzes/${quiz.id}`}
