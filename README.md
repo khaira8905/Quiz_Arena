@@ -60,7 +60,7 @@ the moment the timer hits zero.
   string art and walkers at three depths; a lobby crowd on a perspective floor; questions
   that assemble in layered 3D; a podium with lit blocks and a moving camera. All of it is
   CSS 3D or 2D canvas (no WebGL), touch- and reduced-motion-aware, and driven by server
-  state, never by local timers
+  state, never by local timers. See [docs/DESIGN.md](docs/DESIGN.md)
 - **Two themes, one day/night switch:** Black + Orange (night) and White + Blue (day). A
   single sun/moon icon morphs as it switches, and the new theme spreads out from it across
   the page. Remembered per browser; a first visit follows the system setting. The projector
