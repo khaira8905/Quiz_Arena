@@ -46,7 +46,6 @@ export function useCountdown(
   };
 }
 
-/** Urgency level drives the countdown's escalating motion: 0 calm → 4 expired. */
 /**
  * Finer-grained tension for motion (colour still follows urgencyFor): calm · 10s · 5s · 3s ·
  * 2s · 1s · zero. Purely presentational; the server's clock decides when time is up.
@@ -62,6 +61,7 @@ export function tensionFor(seconds: number, active: boolean): 0 | 1 | 2 | 3 | 4 
   return 0;
 }
 
+/** Urgency level drives the countdown's colour and ring: 0 calm → 4 expired. */
 export function urgencyFor(seconds: number, active: boolean): 0 | 1 | 2 | 3 | 4 {
   if (!active) return 0;
   if (seconds <= 0) return 4;
