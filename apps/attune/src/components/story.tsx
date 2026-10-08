@@ -1,7 +1,33 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { INTERVENTION_META, SCENARIOS, STATE_META, startSession } from "@attune/engine";
+import storyMedia from "../../public/media/story/chapters.json";
 import { Eyebrow } from "./ui";
+import { VoxelStoryVideoCard } from "./ui/voxel-story-video-card";
+
+/** The 26-second story, recorded from the real app by `scripts/record-story.mjs`. */
+export function AttuneStoryVideo({
+  className,
+  autoPlayInView = false,
+}: {
+  className?: string;
+  autoPlayInView?: boolean;
+}) {
+  return (
+    <VoxelStoryVideoCard
+      eyebrow="The wow moment · recorded from the app"
+      title="“I'm bored” → a harder, real problem, in one tap"
+      description="Before → Detection → Intervention → Response → Adaptation. A fictional demo learner, real engine."
+      sources={[{ src: "/media/story/attune-story.webm", type: "video/webm" }]}
+      poster="/media/story/poster.jpg"
+      captions="/media/story/captions.vtt"
+      chapters={storyMedia.chapters}
+      durationLabel={`0:${String(storyMedia.duration).padStart(2, "0")}`}
+      autoPlayInView={autoPlayInView}
+      className={className}
+    />
+  );
+}
 
 /**
  * The pitch, as a page: problem → insight → model → how it works → live demo → adaptation →
@@ -66,6 +92,8 @@ export function Story() {
       <p className="type-h2 mt-5 max-w-3xl text-ink-2">
         We&apos;re trying to understand what stops them from wanting to learn in the first place.
       </p>
+
+      <AttuneStoryVideo className="mt-10" />
 
       <Section
         id="problem"

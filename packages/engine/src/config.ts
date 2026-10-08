@@ -202,12 +202,12 @@ export const MODALITY_META: Record<Modality, { label: string; phrase: string }> 
 
 export const CONTROL_META: Record<ControlAction, { label: string; said: string }> = {
   TOO_EASY: { label: "Too easy", said: "You said this was too easy." },
-  TOO_HARD: { label: "Too hard", said: "You said this was too hard." },
+  TOO_HARD: { label: "Too difficult", said: "You said this was too difficult." },
   EXPLAIN_DIFFERENTLY: {
     label: "Explain differently",
     said: "You asked for a different explanation.",
   },
-  CHALLENGE_ME: { label: "Challenge me", said: "You asked for a challenge." },
+  CHALLENGE_ME: { label: "Give me a challenge", said: "You asked for a challenge." },
   EXPLORE: { label: "Let me explore", said: "You asked to explore." },
   NOT_INTERESTED: { label: "Not interested", said: "You said this didn't interest you." },
   CHANGE_ACTIVITY: { label: "Something else", said: "You asked for something different." },

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, MailCheck, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
@@ -96,10 +96,7 @@ export function Unconfigured() {
       Attune works fully without an account: everything stays on this device. To enable sign-in, add
       the Supabase URL and publishable key (see the README).
       <span className="mt-2 block">
-        <Link
-          href="/session"
-          className="font-medium text-accent underline-offset-4 hover:underline"
-        >
+        <Link href="/session" className="font-medium text-accent underline underline-offset-4">
           Continue without an account
         </Link>
       </span>
@@ -149,7 +146,6 @@ function PasswordInput({
 /* ---------------------------------------------------------------------------------------------- */
 
 export function LoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const { status, signIn, resendConfirmation } = useAuth();
   const next = safeNext(params.get("next"), "/session");
@@ -174,9 +170,8 @@ export function LoginForm() {
       setUnconfirmed(/confirm your email/i.test(result.error));
       return;
     }
-    toast.success("Welcome back.");
-    router.replace(next);
-    router.refresh();
+    // A full navigation, so the server (and its route cache) sees the new session cookie.
+    window.location.assign(next);
   };
 
   const resend = async () => {
@@ -200,7 +195,7 @@ export function LoginForm() {
           New here?{" "}
           <Link
             href={`/signup${next !== "/session" ? `?next=${encodeURIComponent(next)}` : ""}`}
-            className="font-medium text-accent underline-offset-4 hover:underline"
+            className="font-medium text-accent underline underline-offset-4"
           >
             Create an account
           </Link>{" "}
@@ -283,7 +278,6 @@ export function LoginForm() {
 /* ---------------------------------------------------------------------------------------------- */
 
 export function SignupForm() {
-  const router = useRouter();
   const { status, signUp, resendConfirmation } = useAuth();
   const [values, setValues] = useState({ displayName: "", email: "", password: "" });
   const [errors, setErrors] = useState<Errors>({});
@@ -308,9 +302,8 @@ export function SignupForm() {
       setSentTo(data.email);
       return;
     }
-    toast.success("Account created.");
-    router.replace("/session?welcome=1");
-    router.refresh();
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- auth changed: drop every cached page
+    window.location.assign("/session?welcome=1");
   };
 
   if (sentTo) {
@@ -356,10 +349,7 @@ export function SignupForm() {
       footer={
         <>
           Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-medium text-accent underline-offset-4 hover:underline"
-          >
+          <Link href="/login" className="font-medium text-accent underline underline-offset-4">
             Log in
           </Link>
         </>
@@ -456,7 +446,7 @@ export function ForgotForm() {
       title="Forgot your password?"
       lead="We'll email you a link to choose a new one."
       footer={
-        <Link href="/login" className="font-medium text-accent underline-offset-4 hover:underline">
+        <Link href="/login" className="font-medium text-accent underline underline-offset-4">
           Back to log in
         </Link>
       }
@@ -493,7 +483,6 @@ export function ForgotForm() {
 }
 
 export function ResetPasswordForm() {
-  const router = useRouter();
   const { status, updatePassword } = useAuth();
   const [values, setValues] = useState({ password: "", confirm: "" });
   const [errors, setErrors] = useState<Errors>({});
@@ -514,7 +503,8 @@ export function ResetPasswordForm() {
       return;
     }
     toast.success("Password changed. You're logged in.");
-    router.replace("/session");
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- auth changed: drop every cached page
+    window.location.assign("/session");
   };
 
   return (
@@ -530,7 +520,7 @@ export function ResetPasswordForm() {
           action={
             <Link
               href="/forgot-password"
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="font-medium text-accent underline underline-offset-4"
             >
               Request a new link
             </Link>

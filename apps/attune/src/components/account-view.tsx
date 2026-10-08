@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BadgeCheck, Download, MailWarning, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,7 +35,6 @@ function splitInterests(text: string): string[] {
 }
 
 export function AccountView() {
-  const router = useRouter();
   const { status, user, profile, supabase, refreshProfile, resendConfirmation } = useAuth();
   const store = useAttune();
   const { updateLearner, session } = store;
@@ -76,7 +74,7 @@ export function AccountView() {
           action={
             <Link
               href="/login?next=/account"
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="font-medium text-accent underline underline-offset-4"
             >
               Log in
             </Link>
@@ -151,8 +149,8 @@ export function AccountView() {
     try {
       await deleteAccount(supabase);
       await store.signOut();
-      toast.success("Your account and everything in it has been deleted.");
-      router.replace("/");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- auth changed: drop every cached page
+      window.location.assign("/?deleted=1");
     } catch {
       toast.error("Couldn't delete the account. Nothing was removed; try again.");
       setDeleting(false);
@@ -189,10 +187,7 @@ export function AccountView() {
             </dd>
             <dt className="text-muted">Password</dt>
             <dd>
-              <Link
-                href="/forgot-password"
-                className="text-accent underline-offset-4 hover:underline"
-              >
+              <Link href="/forgot-password" className="text-accent underline underline-offset-4">
                 Send a reset link
               </Link>
             </dd>

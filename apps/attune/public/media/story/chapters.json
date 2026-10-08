@@ -1,0 +1,30 @@
+{
+  "duration": 26,
+  "chapters": [
+    {
+      "time": 1.1,
+      "label": "Before",
+      "detail": "A capable learner, bored by the set work."
+    },
+    {
+      "time": 7.1,
+      "label": "Detection",
+      "detail": "Reads the state, and why."
+    },
+    {
+      "time": 11,
+      "label": "Intervention",
+      "detail": "A stretch challenge, not more of the same."
+    },
+    {
+      "time": 14.7,
+      "label": "Response",
+      "detail": "Too easy, then explain differently."
+    },
+    {
+      "time": 21.1,
+      "label": "Adaptation",
+      "detail": "Yesterday, today, and the pattern forming."
+    }
+  ]
+}

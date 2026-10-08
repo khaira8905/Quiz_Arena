@@ -79,7 +79,7 @@ export function ProgressView() {
           action={
             <Link
               href="/login?next=/progress"
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="font-medium text-accent underline underline-offset-4"
             >
               Log in
             </Link>
@@ -211,15 +211,18 @@ function ProgressBody({ p }: { p: Progress }) {
     {
       label: "Right first time",
       value: percent(p.firstTryRate),
-      detail: `${p.firstTries} first tries`,
+      detail: `${p.firstTries} first ${p.firstTries === 1 ? "try" : "tries"}`,
     },
     {
       label: "Retries that worked",
       value: percent(p.retrySuccessRate),
-      detail: `${p.retries} retries`,
+      detail: `${p.retries} ${p.retries === 1 ? "retry" : "retries"}`,
     },
     { label: "Hints used", value: String(p.hintsUsed) },
-    { label: "Time in activities", value: `${p.minutesSpent} min` },
+    {
+      label: "Time in activities",
+      value: p.timeSpentMs > 0 && p.minutesSpent === 0 ? "<1 min" : `${p.minutesSpent} min`,
+    },
   ];
   const concepts = p.concepts.filter((c) => c.attempts > 0);
   return (

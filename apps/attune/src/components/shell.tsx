@@ -445,7 +445,6 @@ function ThemeToggle() {
 }
 
 function AccountMenu() {
-  const router = useRouter();
   const { status, user, profile } = useAuth();
   const { signOut, pending, syncTarget, retrySync } = useAttune();
   const { open, setOpen, ref } = usePopover();
@@ -482,10 +481,13 @@ function AccountMenu() {
     setBusy(false);
     setOpen(false);
     setConfirming(false);
-    if (error) toast.error(error);
-    else toast.success("Logged out. Your progress stays in your account.");
-    router.push("/");
-    router.refresh();
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    // A full navigation: no page rendered for the signed-in user survives in the router cache.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- auth changed: drop every cached page
+    window.location.assign("/");
   };
 
   return (
@@ -566,7 +568,7 @@ function AccountBanner() {
         You were logged out with {pending} changes saved on this device.
         <Link
           href="/login?reason=expired"
-          className="font-medium text-accent underline-offset-4 hover:underline"
+          className="font-medium text-accent underline underline-offset-4"
         >
           Log in to sync them
         </Link>

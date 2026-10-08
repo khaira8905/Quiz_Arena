@@ -178,10 +178,7 @@ export function SettingsView() {
               ))}
               <p className="type-small text-muted">
                 See everything Attune knows about you on your{" "}
-                <Link
-                  href="/twin#privacy"
-                  className="text-accent underline-offset-4 hover:underline"
-                >
+                <Link href="/twin#privacy" className="text-accent underline underline-offset-4">
                   learner twin
                 </Link>
                 .
@@ -190,7 +187,7 @@ export function SettingsView() {
           ) : (
             <p className="mt-2 type-body text-ink-2">
               These apply to your learner model, which starts with your first check-in.{" "}
-              <Link href="/begin" className="text-accent underline-offset-4 hover:underline">
+              <Link href="/begin" className="text-accent underline underline-offset-4">
                 Start one
               </Link>
               .

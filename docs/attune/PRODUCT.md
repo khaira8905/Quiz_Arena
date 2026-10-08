@@ -151,29 +151,31 @@ the control constraints are applied.
 ## 6. System architecture
 
 Every box is a module behind a typed interface, so any of them can be replaced: a learned policy
-for the rule-plus-bandit selector, a database for the local store, a different model behind the AI
-gateway.
+for the rule-plus-bandit selector, another database behind the account repository
+(`lib/cloud.ts`), a different model behind the AI gateway.
 
 ```
 ┌──────────────────────────── Client (Next.js, works offline) ────────────────────────────┐
-│  Onboarding · Session · Twin · Community · Educator · Story                              │
+│  Onboarding · Session · Twin · Progress · Community · Educator · Story · Account        │
 │        │                                                                                 │
 │  Session Orchestrator ── @attune/engine (pure TypeScript, no I/O)                        │
 │        │                   ├─ Signal extraction    ├─ Engagement State Engine            │
 │        │                   ├─ Intervention Engine  ├─ Activity Engine + content library  │
-│        │                   ├─ Feedback Processor   ├─ Learner Model                      │
-│        │                   ├─ Why layer            └─ Analytics / metrics                │
+│        │                   ├─ Feedback Processor   ├─ Learner Model (+ merge)            │
+│        │                   ├─ Why layer            └─ Analytics / metrics / model story  │
 │        │                                                                                 │
-│  Connectivity manager (FULL / LIGHT / OFFLINE / SYNC) ─ Local store + event outbox       │
+│  Connectivity manager ─ device store + event outbox ─ sync status machine                │
 │  Service worker (app shell + activity pack cache)                                        │
-└────────┬──────────────────────────────────────────────────────────┬──────────────────────┘
-         │ POST /api/sync (zod-validated event batches)             │ POST /api/ai (optional)
-┌────────▼─────────────┐                                  ┌─────────▼──────────────────────┐
-│ Sync service         │                                  │ AI Gateway                     │
-│ idempotent, cursor-based │                              │ rewrites explanations and hooks │
-│ (in-memory in the prototype; │                          │ never makes decisions; falls   │
-│ Postgres in production)  │                              │ back to the library on failure │
-└──────────────────────┘                                  └────────────────────────────────┘
+└───────┬───────────────────────────────┬───────────────────────────────┬─────────────────┘
+        │ signed in: supabase-js, RLS    │ guest: POST /api/sync         │ POST /api/ai (optional)
+┌───────▼────────────────────────┐ ┌────▼─────────────────────┐ ┌───────▼──────────────────┐
+│ Supabase (Free)                │ │ Demo sync server          │ │ AI Gateway               │
+│ Auth: email + password, PKCE   │ │ idempotent, in-memory,    │ │ rewrites explanations;   │
+│ Postgres: events → trigger →   │ │ labelled as a demo        │ │ never decides; falls back│
+│ attempts / progress / feedback │ └──────────────────────────┘ │ to the library           │
+│ learner_models (revisioned)    │                              └──────────────────────────┘
+│ learning_sessions (resumable)  │
+└────────────────────────────────┘
 ```
 
 **Why the engine runs on the client.** Low-resource environments are a first-class requirement.
@@ -189,12 +191,15 @@ curated library is used and the UI says which source it used.
 
 ### Connectivity modes
 
-| Mode        | Trigger                                                   | Behaviour                                                                                       |
-| ----------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **FULL**    | Online on a good connection                               | AI gateway on, interactive visuals, motion                                                      |
-| **LIGHT**   | `saveData`, 2G/3G effective type, or the learner's choice | Text-first rendering of the same activity, no charts or motion, no AI calls, payload size shown |
-| **OFFLINE** | `offline` event, a failed probe, or the learner's choice  | Cached activity pack, the full engine runs locally, events queue in an outbox                   |
-| **SYNC**    | Connectivity returns                                      | Outbox drains in idempotent batches with visible progress, and the server acknowledges a cursor |
+| Mode        | Trigger                                                   | Behaviour                                                                                             |
+| ----------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **FULL**    | Online on a good connection                               | AI gateway on, interactive visuals, motion                                                            |
+| **LIGHT**   | `saveData`, 2G/3G effective type, or the learner's choice | Text-first rendering of the same activity, no charts or motion, no AI calls, payload size shown       |
+| **OFFLINE** | `offline` event, a failed probe, or the learner's choice  | Cached activity pack, the full engine runs locally, events queue in an outbox                         |
+| **SYNC**    | Connectivity returns                                      | Outbox drains in idempotent batches with visible progress; a failure backs off and offers "Retry now" |
+
+The sync state is always visible as one of six: **Online**, **Offline**, **Reconnecting** (the
+network is back but the server isn't answering yet), **Syncing**, **Synced**, **Sync failed**.
 
 All four are working behaviour in the prototype that you can switch between, not slides.
 
@@ -214,6 +219,14 @@ All boundary data is validated with zod schemas in `@attune/engine`.
   alternatives, the constraints applied, the activity, and the Why rationale.
 - **`TimelineEntry`**: the engagement index before and after each decision, plus the outcome. This
   drives the engagement arc.
+
+**In Postgres** (with an account; see `apps/attune/supabase/migrations`): `profiles`,
+`user_settings`, `learner_models` (JSON model + `revision` for optimistic concurrency),
+`learning_sessions` (resumable snapshot), `events` (append-only, unique per user and client event
+id), the derived `attempts`, `activity_progress` and `feedback` (written only by a trigger),
+`activities` (the catalogue, for foreign keys) and `milestones`. Every table has Row Level Security
+with own-row policies. Progress and metrics on the Progress page are counted from these rows, and
+never estimated.
 
 Things that are deliberately **not stored**: real names (only a display name the learner chooses),
 free-text check-ins (kept in memory for the session, reduced to keywords), location, contacts, and

@@ -247,7 +247,15 @@ export function Onboarding() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-2xl flex-col px-5 pb-16 pt-8 sm:pt-14">
       <div className="flex items-center gap-3">
-        <div className="flex flex-1 gap-1" aria-label={`Step ${index + 1} of ${STEPS.length}`}>
+        <div
+          className="flex flex-1 gap-1"
+          role="progressbar"
+          aria-label="Check-in progress"
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuenow={index + 1}
+          aria-valuetext={`Step ${index + 1} of ${STEPS.length}`}
+        >
           {STEPS.map((s, i) => (
             <span
               key={s}

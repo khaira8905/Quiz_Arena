@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 
 export const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
@@ -157,4 +158,40 @@ export async function logOut(page: Page) {
   const anyway = page.getByRole("button", { name: "Log out anyway" });
   if (await anyway.isVisible().catch(() => false)) await anyway.click();
   await page.getByRole("link", { name: "Log in" }).first().waitFor();
+}
+
+const AXE = createRequire(import.meta.url).resolve("axe-core");
+
+/** Serious and critical axe-core violations on the current page, as readable strings. */
+export async function axeSerious(page: Page): Promise<string[]> {
+  // Measure the settled page: entrance animations (opacity) would read as low contrast.
+  await page.waitForTimeout(300);
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity),
+  );
+  await page.addScriptTag({ path: AXE });
+  const result = await page.evaluate(async () => {
+    const axe = (
+      window as unknown as {
+        axe: {
+          run: (o: unknown) => Promise<{
+            violations: { id: string; impact: string; nodes: { target: string[] }[] }[];
+          }>;
+        };
+      }
+    ).axe;
+    return axe.run({ resultTypes: ["violations"] });
+  });
+  const path = new URL(page.url()).pathname;
+  return result.violations
+    .filter((v) => v.impact === "serious" || v.impact === "critical")
+    .map(
+      (v) =>
+        `${path}: ${v.id} (${v.nodes
+          .map((n) => n.target.join(" "))
+          .slice(0, 3)
+          .join(", ")})`,
+    );
 }

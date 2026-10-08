@@ -12,7 +12,9 @@ select is((select display_name from public.profiles where id = '11111111-1111-11
   'Asha', 'signup creates a profile from the display name');
 select is((select display_name from public.profiles where id = '22222222-2222-2222-2222-222222222222'),
   'Learner', 'a missing display name falls back to a default');
-select is((select count(*)::int from public.user_settings), 2, 'signup creates default settings');
+select is((select count(*)::int from public.user_settings
+            where user_id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')),
+  2, 'signup creates default settings');
 
 -- ---- As Asha ----------------------------------------------------------------------------------
 set local role authenticated;

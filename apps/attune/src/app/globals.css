@@ -328,3 +328,17 @@ html[data-motion="reduce"] *::after {
 input[type="range"] {
   accent-color: var(--accent);
 }
+
+/* Voxel story illustration: a slow float, off for reduced motion and Light/Offline modes. */
+@keyframes voxel-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.voxel-float {
+  animation: voxel-float 3.2s ease-in-out infinite;
+}

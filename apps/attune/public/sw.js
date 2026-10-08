@@ -4,11 +4,15 @@
  *   App shell + pages ... network first, cached copy when offline
  *   /_next/static/*  .... cache first (content-hashed, immutable)
  *   /api/*  ............. never cached; the app queues events in its outbox instead
+ *   /auth/*  ............ never cached (one-time sign-in links)
+ *   /media/*  ........... never cached here (video streams with Range requests; the story
+ *                         card falls back to its illustration when offline)
+ *   Supabase  ........... another origin, never intercepted; sync goes through the outbox
  *
  * The whole activity library ships inside the app bundle, so once the shell is cached the engine
  * runs fully offline: decisions, activities and the learner model all stay on the device.
  */
-const VERSION = "attune-v1";
+const VERSION = "attune-v2";
 const SHELL = [
   "/",
   "/begin",
@@ -17,6 +21,9 @@ const SHELL = [
   "/community",
   "/educator",
   "/story",
+  "/settings",
+  "/login",
+  "/signup",
   "/manifest.webmanifest",
   "/icon.svg",
 ];
@@ -43,7 +50,8 @@ async function networkFirst(request) {
   const cache = await caches.open(VERSION);
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    if (response.ok && response.status === 200)
+      cache.put(request, response.clone()).catch(() => {});
     return response;
   } catch {
     const cached = await cache.match(request, { ignoreSearch: request.mode === "navigate" });
@@ -61,7 +69,7 @@ async function cacheFirst(request) {
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) cache.put(request, response.clone());
+  if (response.ok && response.status === 200) cache.put(request, response.clone()).catch(() => {});
   return response;
 }
 
@@ -71,6 +79,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/auth/")) return;
+  if (url.pathname.startsWith("/media/")) return;
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(request));
     return;

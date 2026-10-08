@@ -38,7 +38,7 @@ const CONTROL_FEATURE: Record<ControlAction, string> = {
 
 const CONTROL_DETAIL: Record<ControlAction, string> = {
   TOO_EASY: "You said it was too easy",
-  TOO_HARD: "You said it was too hard",
+  TOO_HARD: "You said it was too difficult",
   EXPLAIN_DIFFERENTLY: "You asked for a different explanation",
   CHALLENGE_ME: "You asked for a challenge",
   EXPLORE: "You asked to explore",

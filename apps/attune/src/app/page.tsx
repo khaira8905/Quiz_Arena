@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { SCENARIOS, type ScenarioId } from "@attune/engine";
 import { BrandMark } from "@/components/shell";
+import { AttuneStoryVideo } from "@/components/story";
 import { Eyebrow, SimulatedTag } from "@/components/ui";
 import { useAttune } from "@/lib/store";
 
@@ -43,7 +44,7 @@ export default function Home() {
           <br />
           <em className="text-accent">Personalized engagement.</em>
         </h1>
-        <p className="mt-6 max-w-2xl text-[18px] leading-relaxed text-ink-2">
+        <p className="mt-6 max-w-2xl type-lead text-ink-2">
           A student can be bored, stuck, tired, curious or alone, and each needs something
           different. Attune works out which, changes the next few minutes to fit, and shows its
           reasoning. It runs on a cheap phone, offline.
@@ -68,6 +69,8 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      <AttuneStoryVideo className="mt-14" autoPlayInView />
 
       <section
         aria-label="The loop"

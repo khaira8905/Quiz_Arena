@@ -110,6 +110,7 @@ export function EngagementArc({
             onMouseEnter={() => setHover(i)}
             onFocus={() => setHover(i)}
             tabIndex={0}
+            role="img"
             aria-label={describe(p.entry, p.final, p.index)}
           >
             <circle cx={x(i)} cy={y(p.index)} r={12} fill="transparent" />

@@ -29,6 +29,8 @@ export interface ProgressView {
   retrySuccessRate: number | null;
   hintsUsed: number;
   minutesSpent: number;
+  /** Exact time, for "under a minute" rather than a misleading zero. */
+  timeSpentMs: number;
   feedback: { kind: string; value: string; count: number }[];
   concepts: ConceptProgress[];
 }
@@ -71,6 +73,7 @@ function summarise(
     retrySuccessRate: rate(retries.filter((a) => a.correct).length, retries.length),
     hintsUsed: attempts.filter((a) => a.usedHint).length,
     minutesSpent: Math.round(timeMs / 60_000),
+    timeSpentMs: timeMs,
     feedback: [...counts.values()].sort((a, b) => b.count - a.count),
     concepts: CONCEPTS.map((conceptId) => {
       const mine = attempts.filter((a) => a.conceptId === conceptId);

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Browser } from "playwright";
 import {
+  axeSerious,
   checkIn,
   deviceState,
   emailLink,
@@ -188,6 +189,130 @@ describe("resilience", () => {
       );
       expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(0);
     }
+    await context.close();
+  });
+
+  it("plays the story video, and chapters seek", async () => {
+    const { context, page, errors } = await freshPage(browser, { reducedMotion: "reduce" });
+    await page.goto("/story");
+    await page.waitForLoadState("networkidle");
+    const video = page.locator("article video");
+    // Reduced motion: nothing starts on its own.
+    expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+    await page.getByRole("button", { name: /Play the story/ }).click();
+    await page.waitForFunction(
+      () => (document.querySelector("article video") as HTMLVideoElement).currentTime > 0.5,
+    );
+    await page.getByRole("button", { name: /Adaptation/ }).click();
+    await page.waitForFunction(
+      () => (document.querySelector("article video") as HTMLVideoElement).currentTime >= 20,
+    );
+    await page.waitForSelector(
+      'ol[aria-label="Chapters"] button[aria-current="step"]:has-text("Adaptation")',
+    );
+    expect(errors).toEqual([]);
+    await context.close();
+  });
+
+  it("falls back to the voxel storyboard when the media is missing", async () => {
+    const { context, page, errors } = await freshPage(browser);
+    await context.route("**/media/story/**", (route) => route.fulfill({ status: 404, body: "" }));
+    await page.goto("/story");
+    await page.getByText("The video can't play here.").waitFor({ timeout: 15_000 });
+    await page
+      .getByRole("img", { name: /voxel illustration/ })
+      .first()
+      .waitFor();
+    // The chapters still tell the story as a storyboard.
+    await page.getByText("A stretch challenge, not more of the same.").waitFor();
+    expect(errors).toEqual([]);
+    await context.close();
+  });
+
+  it("a miss offers Try again, and the retry is recorded as attempt 2", async () => {
+    const { context, page, errors } = await freshPage(browser);
+    await checkIn(page, { name: "Sam", feeling: "Confused" });
+    type Current = { activity: { type: string; options?: string[]; answerIndex?: number } };
+    let current: Current | undefined;
+    for (let i = 0; i < 8; i++) {
+      const state = (await deviceState(page)) as unknown as { session: { current?: Current } };
+      current = state.session.current;
+      if (current && ["question", "micro"].includes(current.activity.type)) break;
+      await page.getByRole("button", { name: "Too difficult" }).click();
+      await page.waitForTimeout(300);
+    }
+    expect(["question", "micro"]).toContain(current?.activity.type);
+    const { options = [], answerIndex = 0 } = current!.activity;
+    const wrong = options.findIndex((_, i) => i !== answerIndex);
+    await page.getByRole("button", { name: options[wrong]!, exact: false }).first().click();
+    await page.getByText("Not quite.").waitFor();
+    await page.getByRole("button", { name: "Try again" }).click();
+    await page.getByText(/Attempt 2 of 3/).waitFor();
+    await page.getByRole("button", { name: options[answerIndex]!, exact: false }).first().click();
+    await page.getByText("Got it on try 2.").waitFor();
+    const events = (await deviceState(page))!.session!.events as unknown as {
+      type: string;
+      correct?: boolean;
+      attempt?: number;
+    }[];
+    const answers = events.filter((e) => e.type === "answer").slice(-2);
+    expect(answers.map((a) => [a.correct, a.attempt ?? 1])).toEqual([
+      [false, 1],
+      [true, 2],
+    ]);
+    expect(errors).toEqual([]);
+    await context.close();
+  });
+
+  it("has no serious accessibility violations on key screens (axe-core), light and dark", async () => {
+    const failures: string[] = [];
+    for (const scheme of ["light", "dark"] as const) {
+      const { context, page } = await freshPage(browser, { colorScheme: scheme });
+      for (const path of [
+        "/",
+        "/login",
+        "/signup",
+        "/forgot-password",
+        "/settings",
+        "/story",
+        "/begin",
+      ]) {
+        await page.goto(path);
+        await page.waitForLoadState("networkidle");
+        failures.push(...(await axeSerious(page)).map((f) => `${scheme} ${f}`));
+      }
+      await checkIn(page, { name: "Axe", feeling: "Bored" });
+      failures.push(...(await axeSerious(page)).map((f) => `${scheme} ${f}`));
+      await context.close();
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("deletes the account and everything in it", async () => {
+    const { context, page } = await freshPage(browser);
+    const email = uniqueEmail("delete");
+    await signUp(page, email, "delete-me-42", "Lee");
+    await page.goto(await emailLink(email, /verify/));
+    await page.waitForURL("**/session?welcome=1");
+    await checkIn(page, { name: "Lee", feeling: "Okay" });
+    await waitForSyncStatus(page, "synced", 30_000);
+    const userId = userIdFor(email);
+    expect(
+      sqlNumber(`select count(*) from public.events where user_id = '${userId}'`),
+    ).toBeGreaterThan(0);
+
+    await page.goto("/account");
+    const del = page.getByRole("button", { name: "Delete my account" });
+    expect(await del.isDisabled()).toBe(true);
+    await page.getByLabel('Type "delete" to confirm').fill("delete");
+    await del.click();
+    await page.waitForURL("**/?deleted=1");
+    expect(sqlNumber(`select count(*) from auth.users where id = '${userId}'`)).toBe(0);
+    expect(sqlNumber(`select count(*) from public.events where user_id = '${userId}'`)).toBe(0);
+    expect(
+      sqlNumber(`select count(*) from public.learner_models where user_id = '${userId}'`),
+    ).toBe(0);
+    expect((await deviceState(page))?.ownerId ?? null).toBeNull();
     await context.close();
   });
 });

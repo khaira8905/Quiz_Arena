@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Browser, BrowserContext, Page } from "playwright";
 import {
+  axeSerious,
   checkIn,
   deviceState,
   emailLink,
@@ -141,6 +142,7 @@ describe("learner journey", () => {
     await page.getByRole("cell", { name: "Too easy" }).waitFor();
     await page.getByText("Yesterday", { exact: true }).waitFor();
     await page.getByText("Emerging pattern").waitFor();
+    expect(await axeSerious(page)).toEqual([]);
   });
 
   it("edits the profile", async () => {
@@ -148,6 +150,7 @@ describe("learner journey", () => {
     await page.getByLabel("Name").fill("Robin S");
     await page.getByRole("button", { name: "Save profile" }).click();
     await page.getByText("Profile saved.").waitFor();
+    expect(await axeSerious(page)).toEqual([]);
     expect(
       sqlNumber(
         `select count(*) from public.profiles where id = '${userId}' and display_name = 'Robin S'`,

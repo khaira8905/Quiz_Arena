@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { ArrowRight, FastForward, Leaf } from "lucide-react";
-import { growthMoments, learnerPatterns, sessionMetrics, type Rate } from "@attune/engine";
+import { growthMoments, sessionMetrics, type Rate } from "@attune/engine";
 import { useAttune } from "@/lib/store";
 import { Button, Eyebrow, percent, SimulatedTag } from "../ui";
+import { ModelStoryStrip } from "../model-story";
 import { EngagementArc } from "./arc";
 
 function rateText(r: Rate): string {
@@ -17,7 +18,6 @@ export function SessionSummary() {
   const ended = Boolean(session.endedAt);
   const m = sessionMetrics(session);
   const moments = growthMoments(session);
-  const { patterns } = learnerPatterns(session.learner);
 
   const tiles = [
     {
@@ -66,7 +66,7 @@ export function SessionSummary() {
       <h1 className="type-h1 mt-2 text-ink">
         {ended ? "That's a good place to stop." : "This looks like a good place to stop."}
       </h1>
-      <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-2">
+      <p className="mt-3 max-w-2xl type-lead text-ink-2">
         {ended
           ? "We don't count minutes here. What matters is whether the work got unstuck, and whether you'd want to come back."
           : "You've done real work, and stopping on something that went well makes it easier to start next time. Your call."}
@@ -125,19 +125,10 @@ export function SessionSummary() {
         </section>
       )}
 
-      {patterns.length > 0 && (
-        <section className="mt-6 rounded-2xl bg-accent-soft p-4">
-          <p className="text-[13px] font-medium text-ink">What your twin learned</p>
-          {patterns.map((p) => (
-            <p key={p.text} className="mt-1 text-[14.5px] text-ink">
-              {p.text}{" "}
-              <span className="text-[12.5px] text-ink-2">
-                ({p.evidence} · {p.strength})
-              </span>
-            </p>
-          ))}
-        </section>
-      )}
+      <section className="mt-6">
+        <p className="mb-3 text-[13px] font-medium text-ink">What your twin learned</p>
+        <ModelStoryStrip session={session} />
+      </section>
 
       {ended && (
         <div className="mt-8 flex flex-wrap items-center gap-2">
@@ -148,7 +139,8 @@ export function SessionSummary() {
             See what changed in your twin <ArrowRight className="size-4" />
           </Link>
           <Button onClick={tomorrow}>
-            <FastForward className="size-4" /> Fast-forward to tomorrow
+            <FastForward className="size-4" />{" "}
+            {scenarioId ? "Fast-forward to tomorrow" : "Start the next day"}
           </Button>
           {scenarioId && <SimulatedTag>Demo</SimulatedTag>}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { ArrowRight, Cpu, Fingerprint, PanelRightClose, PanelRightOpen } from "lucide-react";
 import {
@@ -203,7 +204,12 @@ export function SessionView() {
       <div className={cn("mt-5 grid gap-5", traceOpen && "lg:grid-cols-[minmax(0,1fr)_360px]")}>
         <section aria-label="Current activity" className="min-w-0">
           {/* Decision header: state read → intervention → reason */}
-          <div key={decision.id} className="rise">
+          <motion.div
+            key={`${decision.id}-head`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+          >
             <div className="flex flex-wrap items-center gap-2">
               <StateBadge
                 state={decision.reading.primary}
@@ -217,33 +223,44 @@ export function SessionView() {
               )}
             </div>
             <h1 className="type-h1 mt-3 text-ink">{decision.rationale.headline}</h1>
-            <p className="mt-2 max-w-3xl text-[15.5px] leading-relaxed text-ink-2">
-              {decision.rationale.summary}
-            </p>
+            <p className="mt-2 max-w-3xl type-lead text-ink-2">{decision.rationale.summary}</p>
             {diff.length > 0 && (
               <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="What changed">
                 <span className="inline-flex items-center gap-1 text-[12px] text-accent">
                   <Cpu className="size-3.5" aria-hidden /> Adapted
                 </span>
-                {diff.map((c) => (
-                  <span
+                {diff.map((c, i) => (
+                  <motion.span
                     key={c}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                      delay: 0.15 + i * 0.08,
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 24,
+                    }}
                     className="rounded-md bg-accent-soft px-2 py-0.5 text-[12.5px] font-medium text-accent"
                   >
                     {c}
-                  </span>
+                  </motion.span>
                 ))}
               </div>
             )}
             <div className="mt-3">
               <WhyPanel decision={decision} />
             </div>
-          </div>
+          </motion.div>
 
           {/* The activity */}
-          <article className="mt-5 rounded-2xl border border-line bg-surface p-5 shadow-soft sm:p-7">
+          <motion.article
+            key={`${decision.id}-activity`}
+            initial={{ opacity: 0, y: 14, scale: 0.995 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.08, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+            className="mt-5 rounded-2xl border border-line bg-surface p-5 shadow-soft sm:p-7"
+          >
             <ActivityView
-              key={decision.id}
               decision={decision}
               mode={mode}
               interests={learner.interests}
@@ -253,7 +270,7 @@ export function SessionView() {
               onResume={resume}
               onShare={(title, text) => shareDiscovery({ title, text })}
             />
-          </article>
+          </motion.article>
 
           {/* Human control */}
           <div className="mt-4 rounded-2xl border border-line bg-surface-2/50 p-3 sm:p-4">

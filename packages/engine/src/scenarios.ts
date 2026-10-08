@@ -179,7 +179,7 @@ export const SCENARIOS: DemoScenario[] = [
     },
     tryThis: [
       "Notice it starts below logs, with doubling, and says why.",
-      "Press Too hard: the next step gets smaller, never bigger.",
+      "Press Too difficult: the next step gets smaller, never bigger.",
       "Switch to Offline, keep working, then reconnect and watch the outbox sync.",
       "Light mode is on: same activities, text-first, with the payload size shown.",
     ],

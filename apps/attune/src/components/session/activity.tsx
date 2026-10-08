@@ -8,6 +8,7 @@ import {
   Coffee,
   Lightbulb,
   LoaderCircle,
+  RotateCcw,
   Share2,
   Sparkles,
   Square,
@@ -16,6 +17,7 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
+import { motion } from "motion/react";
 import {
   CONCEPT_META,
   MODALITY_META,
@@ -79,18 +81,27 @@ function useClock() {
 /* Choice block: the shared answer mechanic.                                                   */
 /* ------------------------------------------------------------------------------------------ */
 
+const MAX_TRIES = 3;
+
 function ChoiceBlock({
   choice,
   onAnswer,
   onHint,
+  onDone,
   allowRetry = false,
+  offerRetry = false,
   promptSize = "lg",
   feedback = "grade",
 }: {
   choice: Choice;
-  onAnswer: (correct: boolean, latencyMs: number, usedHint: boolean) => void;
+  onAnswer: (correct: boolean, latencyMs: number, usedHint: boolean, attempt: number) => void;
   onHint?: () => void;
+  /** Called once the question is settled: solved, revealed, or out of tries. */
+  onDone?: (correct: boolean, attempts: number) => void;
+  /** Guided steps: keep picking until right, no prompt in between. */
   allowRetry?: boolean;
+  /** After a miss, offer "Try again" or "Show me the answer" before revealing anything. */
+  offerRetry?: boolean;
   promptSize?: "lg" | "md";
   /** "grade" marks right and wrong; "reveal" just reveals (for guesses that aren't tested). */
   feedback?: "grade" | "reveal";
@@ -98,13 +109,30 @@ function ChoiceBlock({
   const clock = useClock();
   const [picked, setPicked] = useState<number[]>([]);
   const [hint, setHint] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const solved = picked.includes(choice.answerIndex);
-  const done = solved || (!allowRetry && picked.length > 0);
+  const missed = picked.length > 0 && !solved;
+  const done =
+    solved ||
+    revealed ||
+    (missed && !allowRetry && !offerRetry) ||
+    (missed && offerRetry && picked.length >= MAX_TRIES);
+  // A miss with tries left: the learner decides whether to try again or see the answer.
+  const deciding = offerRetry && missed && !done && !retrying;
+
+  const settle = (correct: boolean, attempts: number) => onDone?.(correct, attempts);
 
   const pick = (i: number) => {
-    if (done || picked.includes(i)) return;
+    if (done || deciding || picked.includes(i)) return;
+    const attempt = picked.length + 1;
+    const correct = i === choice.answerIndex;
     setPicked((p) => [...p, i]);
-    onAnswer(i === choice.answerIndex, clock.elapsed(), hint);
+    setRetrying(false);
+    onAnswer(correct, clock.elapsed(), hint, attempt);
+    if (correct || !(allowRetry || offerRetry) || (offerRetry && attempt >= MAX_TRIES)) {
+      settle(correct, attempt);
+    }
   };
 
   return (
@@ -121,7 +149,7 @@ function ChoiceBlock({
             <button
               key={option}
               type="button"
-              disabled={done || wasPicked}
+              disabled={done || deciding || wasPicked}
               onClick={() => pick(i)}
               className={cn(
                 "group flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-[15px] transition-colors",
@@ -183,11 +211,52 @@ function ChoiceBlock({
         {allowRetry && !done && picked.length > 0 && (
           <p className="text-[14px] text-ink-2">Not that one. Have another go.</p>
         )}
+        {deciding && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <p className="mr-1 text-[14px] text-ink-2">
+              <strong className="text-ink">Not quite.</strong>{" "}
+              {MAX_TRIES - picked.length === 1 ? "One more try?" : "Want another go?"}
+            </p>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                clock.reset();
+                setRetrying(true);
+              }}
+            >
+              <RotateCcw className="size-3.5" /> Try again
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRevealed(true);
+                settle(false, picked.length);
+              }}
+            >
+              Show me the answer
+            </Button>
+          </motion.div>
+        )}
+        {offerRetry && retrying && !done && (
+          <p className="text-[14px] text-ink-2">
+            Attempt {picked.length + 1} of {MAX_TRIES}. The ones you&apos;ve ruled out are greyed.
+          </p>
+        )}
         {done && choice.explanation && (
           <p className="rise text-[14.5px] leading-relaxed text-ink-2">
             {feedback === "grade" && (
               <strong className={solved ? "text-good" : "text-ink"}>
-                {solved ? "Right. " : "Not quite. "}
+                {solved
+                  ? picked.length > 1
+                    ? `Got it on try ${picked.length}. `
+                    : "Right. "
+                  : "Here's how it works. "}
               </strong>
             )}
             {choice.explanation}
@@ -199,7 +268,12 @@ function ChoiceBlock({
 }
 
 function answerInput(a: { id: string; conceptId: Activity["conceptId"] }, difficulty: number) {
-  return (correct: boolean, latencyMs: number, usedHint: boolean): LearnerEventInput => ({
+  return (
+    correct: boolean,
+    latencyMs: number,
+    usedHint: boolean,
+    attempt = 1,
+  ): LearnerEventInput => ({
     type: "answer",
     activityId: a.id,
     conceptId: a.conceptId,
@@ -207,7 +281,14 @@ function answerInput(a: { id: string; conceptId: Activity["conceptId"] }, diffic
     correct,
     latencyMs: Math.round(latencyMs),
     usedHint,
+    ...(attempt > 1 ? { attempt } : {}),
   });
+}
+
+/** Full marks first time; partial credit for getting there on a retry. */
+function scoreFor(result: { correct: boolean; attempts: number }): number {
+  if (!result.correct) return 0;
+  return result.attempts <= 1 ? 1 : 0.5;
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -255,7 +336,7 @@ function Footer({ children }: { children: React.ReactNode }) {
 
 function QuestionView({ activity, onEvent }: ActivityProps & { activity: QuestionActivity }) {
   const dwell = useDwell();
-  const [result, setResult] = useState<boolean | null>(null);
+  const [result, setResult] = useState<{ correct: boolean; attempts: number } | null>(null);
   const toInput = answerInput(activity, activity.difficulty);
   return (
     <div>
@@ -265,11 +346,12 @@ function QuestionView({ activity, onEvent }: ActivityProps & { activity: Questio
       </div>
       <ChoiceBlock
         choice={activity}
+        offerRetry
         onHint={() => onEvent({ type: "hint", activityId: activity.id })}
-        onAnswer={(correct, latency, hint) => {
-          setResult(correct);
-          onEvent(toInput(correct, latency, hint));
-        }}
+        onAnswer={(correct, latency, hint, attempt) =>
+          onEvent(toInput(correct, latency, hint, attempt))
+        }
+        onDone={(correct, attempts) => setResult({ correct, attempts })}
       />
       {result !== null && (
         <Footer>
@@ -280,7 +362,7 @@ function QuestionView({ activity, onEvent }: ActivityProps & { activity: Questio
                 type: "activity_completed",
                 activityId: activity.id,
                 dwellMs: dwell(),
-                score: result ? 1 : 0,
+                score: scoreFor(result),
               })
             }
           >
@@ -294,15 +376,16 @@ function QuestionView({ activity, onEvent }: ActivityProps & { activity: Questio
 
 function MicroView({ activity, onEvent }: ActivityProps & { activity: MicroActivity }) {
   const dwell = useDwell();
-  const [result, setResult] = useState<boolean | null>(null);
+  const [result, setResult] = useState<{ correct: boolean; attempts: number } | null>(null);
   return (
     <div>
       <ChoiceBlock
         choice={{ ...activity, explanation: activity.cheer }}
-        onAnswer={(correct, latency, hint) => {
-          setResult(correct);
-          onEvent(answerInput(activity, 1)(correct, latency, hint));
-        }}
+        offerRetry
+        onAnswer={(correct, latency, hint, attempt) =>
+          onEvent(answerInput(activity, 1)(correct, latency, hint, attempt))
+        }
+        onDone={(correct, attempts) => setResult({ correct, attempts })}
       />
       {result !== null && (
         <Footer>
@@ -313,7 +396,7 @@ function MicroView({ activity, onEvent }: ActivityProps & { activity: MicroActiv
                 type: "activity_completed",
                 activityId: activity.id,
                 dwellMs: dwell(),
-                score: result ? 1 : 0,
+                score: scoreFor(result),
               })
             }
           >
@@ -460,11 +543,11 @@ function GuidedView({ activity, onEvent }: ActivityProps & { activity: GuidedAct
         promptSize="md"
         choice={{ ...current, explanation: current.reveal }}
         onHint={() => onEvent({ type: "hint", activityId: activity.id })}
-        onAnswer={(correct, latency, hint) => {
+        onAnswer={(correct, latency, hint, attempt) => {
           if (firstTry[step] === undefined)
             setFirstTry((f) => Object.assign([...f], { [step]: correct }));
           if (correct) setSolved((s) => Object.assign([...s], { [step]: true }));
-          onEvent(toInput(correct, latency, hint));
+          onEvent(toInput(correct, latency, hint, attempt));
         }}
       />
       {done && (
