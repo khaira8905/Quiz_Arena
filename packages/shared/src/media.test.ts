@@ -6,6 +6,10 @@ describe("media helpers", () => {
     expect(mediaNameFromFile("../../etc/passwd")).toBe("passwd");
     expect(mediaNameFromFile("C:\\Users\\me\\Eiffel_tower.JPG")).toBe("Eiffel tower");
     expect(mediaNameFromFile("")).toBe("Image");
+    // Videos without a usable name are labelled as videos, not images.
+    expect(mediaNameFromFile("", "Video")).toBe("Video");
+    expect(mediaNameFromFile(".mp4", "Video")).toBe("Video");
+    expect(mediaNameFromFile("C:\\clips\\Big_Reveal.webm", "Video")).toBe("Big Reveal");
     expect(mediaNameFromFile("x".repeat(300) + ".png")).toHaveLength(120);
   });
 
