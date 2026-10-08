@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
+import { THEME_TOKENS } from "@quizarena/shared/appearance";
 import { Providers } from "@/components/providers";
 import { uiThemeBootScript, uiThemeCss } from "@/lib/ui-theme";
 import "./globals.css";
@@ -41,7 +42,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07080c",
+  // The browser's toolbar colour. The boot script and the day/night switch keep it in step
+  // with the chosen theme; this is the first-paint default (night).
+  themeColor: THEME_TOKENS.BLACK.bg,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

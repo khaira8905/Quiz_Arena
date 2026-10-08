@@ -33,9 +33,18 @@ export function uiThemeCss(): string {
  * Runs in <head> before first paint, so a White-theme user never sees a black flash.
  * Kept tiny and dependency-free: it is inlined as a string.
  */
-export const uiThemeBootScript = `(function(){var d=document.documentElement;try{var t=localStorage.getItem(${JSON.stringify(
+export const uiThemeBootScript = `(function(){var d=document.documentElement,c=${JSON.stringify(
+  Object.fromEntries(UI_THEMES.map((t) => [t, THEME_TOKENS[t].bg])),
+)};try{var t=localStorage.getItem(${JSON.stringify(
   UI_THEME_KEY,
-)});if(${JSON.stringify(UI_THEMES)}.indexOf(t)<0)t=matchMedia("(prefers-color-scheme: light)").matches?"WHITE":"BLACK";d.setAttribute("data-ui-theme",t);}catch(e){d.setAttribute("data-ui-theme","BLACK");}})();`;
+)});if(${JSON.stringify(UI_THEMES)}.indexOf(t)<0)t=matchMedia("(prefers-color-scheme: light)").matches?"WHITE":"BLACK";d.setAttribute("data-ui-theme",t);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",c[t]);}catch(e){d.setAttribute("data-ui-theme","BLACK");}})();`;
+
+/** Points the browser's toolbar colour (`<meta name="theme-color">`) at a theme. */
+export function syncThemeColor(theme: UiTheme) {
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", THEME_TOKENS[theme].bg);
+}
 
 const listeners = new Set<() => void>();
 
@@ -94,6 +103,7 @@ export const uiThemeStore = {
   },
   commit(theme: UiTheme) {
     document.documentElement.setAttribute("data-ui-theme", theme);
+    syncThemeColor(theme);
     try {
       localStorage.setItem(UI_THEME_KEY, theme);
     } catch {
