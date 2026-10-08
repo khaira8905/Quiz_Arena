@@ -48,7 +48,10 @@ describe("two themes, one switch", () => {
         ...a: unknown[]
       ) => void;
       fn(
-        { documentElement: { setAttribute: (k: string, v: string) => (attrs[k] = v) } },
+        {
+          documentElement: { setAttribute: (k: string, v: string) => (attrs[k] = v) },
+          querySelector: () => ({ setAttribute: (_: string, v: string) => (attrs.color = v) }),
+        },
         { getItem: () => stored },
         () => ({ matches: prefersLight }),
       );
@@ -60,5 +63,18 @@ describe("two themes, one switch", () => {
     expect(run(null, true)).toBe("WHITE");
     expect(run(null, false)).toBe("BLACK");
     expect(run("BLUE", false)).toBe("BLACK");
+  });
+
+  it("points the browser toolbar colour at the chosen theme before first paint", () => {
+    const attrs: Record<string, string> = {};
+    new Function("document", "localStorage", "matchMedia", uiThemeBootScript)(
+      {
+        documentElement: { setAttribute: () => {} },
+        querySelector: () => ({ setAttribute: (_: string, v: string) => (attrs.color = v) }),
+      },
+      { getItem: () => "WHITE" },
+      () => ({ matches: false }),
+    );
+    expect(attrs.color).toBe(THEME_TOKENS.WHITE.bg);
   });
 });
