@@ -49,6 +49,70 @@ describe("Google consent URL", () => {
   });
 });
 
+describe("Drive video import", () => {
+  /** A minimal Drive that serves one file's metadata and bytes. */
+  const drive = (meta: Record<string, unknown>, bytes = Buffer.from("video-bytes")) => {
+    const calls: string[] = [];
+    const impl = (async (input: string | URL | Request) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input : input.url,
+      );
+      calls.push(url.search);
+      if (url.searchParams.get("alt") === "media") return new Response(bytes);
+      if (url.pathname === "/drive/v3/files")
+        return new Response(JSON.stringify({ files: [] }), { status: 200 });
+      return new Response(JSON.stringify({ id: "file_1234567890", ...meta }), { status: 200 });
+    }) as typeof fetch;
+    return { client: new GoogleDriveClient(CONFIG, impl), calls };
+  };
+  const video = {
+    name: "Reveal.mp4",
+    mimeType: "video/mp4",
+    size: "4096",
+    videoMediaMetadata: { width: 1920, height: 1080, durationMillis: "12500" },
+  };
+
+  it("downloads a video with Drive's own duration and size", async () => {
+    const { client } = drive(video);
+    const got = await client.downloadVideo("token", "file_1234567890");
+    expect(got).toMatchObject({
+      name: "Reveal.mp4",
+      mime: "video/mp4",
+      width: 1920,
+      height: 1080,
+      durationMs: 12_500,
+    });
+    expect(got.body.toString()).toBe("video-bytes");
+  });
+
+  it("refuses other file types, oversized files and videos Drive is still processing", async () => {
+    await expect(
+      drive({ ...video, mimeType: "video/quicktime" }).client.downloadVideo("t", "file_1234567890"),
+    ).rejects.toThrow(/Only MP4 and WebM/);
+    await expect(
+      drive({ ...video, size: String(41 * 1024 * 1024) }).client.downloadVideo(
+        "t",
+        "file_1234567890",
+      ),
+    ).rejects.toThrow(/over 40 MB/);
+    await expect(
+      drive({ ...video, videoMediaMetadata: undefined }).client.downloadVideo(
+        "t",
+        "file_1234567890",
+      ),
+    ).rejects.toThrow(/still processing/);
+  });
+
+  it("lists only MP4 and WebM files when asked for videos", async () => {
+    const { client, calls } = drive(video);
+    await client.listImages("token", { kind: "video" });
+    const q = new URLSearchParams(calls[0]).get("q")!;
+    expect(q).toContain("mimeType = 'video/mp4'");
+    expect(q).toContain("mimeType = 'video/webm'");
+    expect(q).not.toContain("image/");
+  });
+});
+
 /** A fake Google: token, userinfo, Drive files, thumbnails and downloads. */
 function fakeGoogle() {
   const log: { url: string; method: string; body?: string }[] = [];
