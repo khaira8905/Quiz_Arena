@@ -64,6 +64,34 @@ describe("appearance validation", () => {
     );
   });
 
+  it("keeps each theme's signature accent legal, and refuses swapping them blindly", () => {
+    // Each theme's own accent is valid on it…
+    for (const theme of ARENA_THEMES) {
+      expect(
+        arenaAppearanceSchema.safeParse({ theme, accent: THEME_TOKENS[theme].accent }).success,
+      ).toBe(true);
+    }
+    // …but night's dark blue would vanish into black, and a pale yellow into white.
+    expect(arenaAppearanceSchema.safeParse({ theme: "BLACK", accent: "#0a1a5c" }).success).toBe(
+      false,
+    );
+    expect(arenaAppearanceSchema.safeParse({ theme: "WHITE", accent: "#ffe680" }).success).toBe(
+      false,
+    );
+  });
+
+  it("explains which answer colour is unreadable", () => {
+    const r = arenaAppearanceSchema.safeParse({
+      theme: "WHITE",
+      answerColors: ["#ff5233", "#0a8cff", "#fafafa", "#8a3ffc"],
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => i.path.join("."))).toContain("answerColors.2");
+    expect(r.error?.issues.find((i) => i.path.join(".") === "answerColors.2")?.message).toMatch(
+      /Answer C/,
+    );
+  });
+
   it("rejects indistinguishable answer colours", () => {
     const r = arenaAppearanceSchema.safeParse({
       answerColors: ["#ff0000", "#fe0505", "#00aa00", "#0000ff"],
