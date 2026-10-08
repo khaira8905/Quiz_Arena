@@ -289,6 +289,7 @@ export const FEATURE_WEIGHTS: Record<string, Partial<Record<EngagementState, num
   hints: { OVERWHELMED: 1.0, CONFUSED: 0.6 },
   abandons: { BORED: 1.2, UNMOTIVATED: 1.0 },
   concept_struggle: { CONFUSED: 1.2, FRUSTRATED: 1.0 },
+  retrying: { CONFUSED: 1.6, FRUSTRATED: 0.5, OVERWHELMED: 0.3 },
   mastery_high: { UNDERCHALLENGED: 0.8 },
 
   ctrl_too_easy: { UNDERCHALLENGED: 3.0 },

@@ -22,9 +22,7 @@ function Section({
   return (
     <section id={id} className="border-t border-line py-14">
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="voice mt-3 max-w-3xl text-[32px] leading-[1.12] text-ink sm:text-[40px]">
-        {title}
-      </h2>
+      <h2 className="type-h1 mt-3 max-w-3xl text-ink">{title}</h2>
       <div className="mt-6 max-w-3xl space-y-4 text-[16.5px] leading-relaxed text-ink-2">
         {children}
       </div>
@@ -62,10 +60,10 @@ export function Story() {
   return (
     <div className="mx-auto max-w-5xl px-4 pb-28 pt-12 sm:px-6">
       <Eyebrow>The story</Eyebrow>
-      <h1 className="voice mt-4 max-w-4xl text-[44px] leading-[1.05] text-ink sm:text-[60px]">
+      <h1 className="type-display mt-4 max-w-4xl text-ink">
         We&apos;re not trying to make students spend more time learning.
       </h1>
-      <p className="voice mt-5 max-w-3xl text-[24px] leading-snug text-ink-2 sm:text-[28px]">
+      <p className="type-h2 mt-5 max-w-3xl text-ink-2">
         We&apos;re trying to understand what stops them from wanting to learn in the first place.
       </p>
 
@@ -180,7 +178,7 @@ export function Story() {
                 Reads <strong>{STATE_META[state].label}</strong> → chooses{" "}
                 <strong>{INTERVENTION_META[kind].label.toLowerCase()}</strong>
               </p>
-              <p className="voice mt-2 text-[19px] leading-snug text-ink">{title}</p>
+              <p className="type-h3 mt-2 text-ink">{title}</p>
               <p className="mt-2 text-[13.5px] text-ink-2">{summary}</p>
             </div>
           ))}

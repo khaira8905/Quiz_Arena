@@ -17,6 +17,7 @@ import {
   type ScenarioId,
   type SelfAssessment,
 } from "@attune/engine";
+import { useAuth } from "@/lib/auth";
 import { useConnectivity } from "@/lib/connectivity";
 import { readGoal, readIntake } from "@/lib/intake";
 import { randomId } from "@/lib/storage";
@@ -108,12 +109,34 @@ function fromScenario(id: ScenarioId): Answers {
 }
 
 /** Builds the starting learner model from the conversation. Every field is visible later in the Twin. */
-function buildLearner(a: Answers, scenarioId: ScenarioId | null): LearnerModel {
+function buildLearner(
+  a: Answers,
+  scenarioId: ScenarioId | null,
+  returning: LearnerModel | null = null,
+): LearnerModel {
   const consent = {
     learnFromBehaviour: a.learnFromBehaviour,
-    shareWithMentor: false,
+    shareWithMentor: returning?.consent.shareWithMentor ?? false,
     useAiGateway: a.useAi,
   };
+  if (returning && !scenarioId) {
+    // A returning learner keeps everything the model has learned; today's answers update context.
+    const intake = readIntake(a.mind, a.task, a.feelingNote);
+    const closedToday = returning.snapshots.some((s) => s.day === returning.day);
+    return {
+      ...returning,
+      displayName: a.name.trim().slice(0, 24) || returning.displayName,
+      interests: [...new Set([...returning.interests, ...intake.interests])].slice(0, 10),
+      consent,
+      context: {
+        ...returning.context,
+        energy: a.energy,
+        timeBudgetMin: a.minutes,
+        sharedDevice: a.shared,
+      },
+      day: closedToday ? returning.day + 1 : returning.day,
+    };
+  }
   if (scenarioId) {
     const l = scenarioById(scenarioId).learner();
     return { ...l, consent, context: { ...l.context, sharedDevice: a.shared } };
@@ -164,7 +187,11 @@ function toCheckin(a: Answers): CheckinInput {
 export function Onboarding() {
   const router = useRouter();
   const params = useSearchParams();
-  const { begin } = useAttune();
+  const { begin, savedLearner, session: current, scenarioId: activeScenario } = useAttune();
+  const { profile, status: authStatus } = useAuth();
+  // A returning learner: restored from their account, or with an ended session of their own.
+  const returning =
+    savedLearner ?? (current && !activeScenario && current.endedAt ? current.learner : null);
   const { mode, reason, network } = useConnectivity();
   const scenarioParam = params.get("scenario");
   const scenarioId = (
@@ -175,8 +202,14 @@ export function Onboarding() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- prefill from the URL's demo scenario
-    setAnswers(scenarioId ? fromScenario(scenarioId) : blank);
+    setAnswers(
+      scenarioId
+        ? fromScenario(scenarioId)
+        : { ...blank, name: returning?.displayName ?? profile?.displayName ?? "" },
+    );
     setStep("name");
+    // Only re-seed when the scenario changes, not on every profile or model update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId]);
 
   const set = <K extends keyof Answers>(key: K, value: Answers[K]) =>
@@ -193,12 +226,12 @@ export function Onboarding() {
   // The reflection is the real engine's first read, computed on the device before anything starts.
   const preview = useMemo(() => {
     if (step !== "reflect") return null;
-    const learner = buildLearner(answers, scenarioId);
+    const learner = buildLearner(answers, scenarioId, returning);
     return {
       learner,
       session: startSession({ id: "preview", learner, checkin: toCheckin(answers), now: 0, mode }),
     };
-  }, [step, answers, scenarioId, mode]);
+  }, [step, answers, scenarioId, mode, returning]);
 
   const canNext =
     (step === "feeling" && answers.feeling !== null) ||
@@ -252,7 +285,10 @@ export function Onboarding() {
               className="w-full border-b border-line-strong bg-transparent py-2 text-[22px] text-ink placeholder:text-muted focus:border-ink focus:outline-none"
             />
             <p className="mt-3 flex items-center gap-1.5 text-[13px] text-muted">
-              <ShieldCheck className="size-3.5" /> Stays on this device. No account, no email.
+              <ShieldCheck className="size-3.5" />{" "}
+              {authStatus === "signed-in"
+                ? "Saved to your account. Reflections never leave this device."
+                : "Stays on this device. No account needed."}
             </p>
           </Question>
         )}
@@ -468,7 +504,7 @@ function Question({
   return (
     <section>
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h1 className="voice mt-3 text-[34px] leading-[1.12] text-ink sm:text-[42px]">{title}</h1>
+      <h1 className="type-h1 mt-3 text-ink">{title}</h1>
       <div className="mt-8">{children}</div>
     </section>
   );
@@ -567,9 +603,7 @@ function Reflection({
     <section>
       <Eyebrow>Here&apos;s what I&apos;m picking up</Eyebrow>
       <div className="mt-4 space-y-5">
-        <p className="voice text-[30px] leading-[1.18] text-ink sm:text-[34px]">
-          {insight ?? STATE_META[state].describe}
-        </p>
+        <p className="type-h1 text-ink">{insight ?? STATE_META[state].describe}</p>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[13.5px] text-muted">Reading right now:</span>
           <StateBadge state={state} p={d.reading.distribution[0]?.p} />

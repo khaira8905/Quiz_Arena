@@ -21,6 +21,7 @@ import {
   type Trait,
 } from "@attune/engine";
 import { useAttune } from "@/lib/store";
+import { ModelStoryStrip } from "./model-story";
 import { Badge, Button, cn, Eyebrow, percent, SimulatedTag, Skeleton, StateDot } from "./ui";
 
 /**
@@ -29,7 +30,8 @@ import { Badge, Button, cn, Eyebrow, percent, SimulatedTag, Skeleton, StateDot }
  */
 
 export function TwinView() {
-  const { hydrated, session, updateLearner, forgetEverything, scenarioId } = useAttune();
+  const { hydrated, session, savedLearner, updateLearner, forgetEverything, scenarioId, ownerId } =
+    useAttune();
   const [compare, setCompare] = useState<"yesterday" | "today">("yesterday");
 
   if (!hydrated) {
@@ -40,11 +42,31 @@ export function TwinView() {
       </div>
     );
   }
+  if (!session && savedLearner) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <Eyebrow>Restored from your account</Eyebrow>
+        <h1 className="type-h1 mt-3 text-ink">
+          {savedLearner.displayName}&apos;s twin is ready for today.
+        </h1>
+        <p className="mt-3 text-ink-2">
+          It holds {savedLearner.sessions} {savedLearner.sessions === 1 ? "session" : "sessions"} of
+          evidence. Check in and it starts comparing today with yesterday.
+        </p>
+        <Link
+          href="/begin"
+          className="mt-6 inline-flex h-11 items-center rounded-xl bg-ink px-5 text-sm font-medium text-inverse"
+        >
+          Check in for today
+        </Link>
+      </div>
+    );
+  }
   if (!session) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <Eyebrow>Your twin is empty</Eyebrow>
-        <h1 className="voice mt-3 text-[34px] text-ink">
+        <h1 className="type-h1 mt-3 text-ink">
           Nothing learned yet, because nothing has happened yet.
         </h1>
         <p className="mt-3 text-ink-2">
@@ -74,14 +96,12 @@ export function TwinView() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <Eyebrow>Learner twin · day {learner.day}</Eyebrow>
-          <h1 className="voice mt-2 text-[36px] leading-tight text-ink sm:text-[42px]">
-            {learner.displayName}&apos;s engagement map
-          </h1>
+          <h1 className="type-h1 mt-2 text-ink">{learner.displayName}&apos;s engagement map</h1>
           <p className="mt-2 max-w-2xl text-ink-2">
             What Attune currently believes helps{" "}
             {learner.displayName === "You" ? "you" : learner.displayName} engage, how that&apos;s
-            changing, and the evidence behind it. It evolves with every activity and lives on this
-            device.
+            changing, and the evidence behind it. It evolves with every activity and{" "}
+            {ownerId && !scenarioId ? "is saved to your account." : "lives on this device."}
           </p>
         </div>
         {scenarioId && (
@@ -91,7 +111,9 @@ export function TwinView() {
         )}
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <ModelStoryStrip session={session} className="mt-8" />
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         {/* Traits */}
         <section className="rounded-2xl border border-line bg-surface p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -150,7 +172,7 @@ export function TwinView() {
               <ul className="mt-3 space-y-3">
                 {patterns.map((p) => (
                   <li key={p.text}>
-                    <p className="voice text-[20px] leading-snug text-ink">{p.text}</p>
+                    <p className="type-h3 text-ink">{p.text}</p>
                     <p className="mt-0.5 text-[12.5px] text-muted">
                       Evidence: {p.evidence} ·{" "}
                       <Badge tone={p.strength === "clear" ? "accent" : "neutral"}>
@@ -232,6 +254,7 @@ export function TwinView() {
         learner={learner}
         updateLearner={updateLearner}
         forgetEverything={forgetEverything}
+        account={Boolean(ownerId) && !scenarioId}
       />
     </div>
   );
@@ -445,10 +468,12 @@ function Privacy({
   learner,
   updateLearner,
   forgetEverything,
+  account,
 }: {
   learner: LearnerModel;
   updateLearner: (fn: (l: LearnerModel) => LearnerModel) => void;
   forgetEverything: () => void;
+  account: boolean;
 }) {
   const [confirm, setConfirm] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
@@ -549,7 +574,9 @@ function Privacy({
     <section id="privacy" className="mt-6 rounded-2xl border border-line bg-surface p-5">
       <h2 className="text-[15px] font-medium text-ink">What Attune knows about you, and why</h2>
       <p className="text-[12.5px] text-muted">
-        Everything here lives on this device. You can correct it, export it, or delete it.
+        {account
+          ? "Saved to your account (and cached on this device). You can correct it, export it, or delete it from your account page."
+          : "Everything here lives on this device. You can correct it, export it, or delete it."}
       </p>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[560px] text-[13.5px]">
@@ -615,7 +642,9 @@ function Privacy({
         </Button>
         {confirm ? (
           <span className="flex items-center gap-2 text-[13px] text-ink">
-            Delete everything on this device?
+            {account
+              ? "Clear this device's copy? Your account keeps everything."
+              : "Delete everything on this device?"}
             <Button size="sm" variant="primary" onClick={forgetEverything}>
               Yes, delete
             </Button>
@@ -630,7 +659,7 @@ function Privacy({
             className="text-danger"
             onClick={() => setConfirm(true)}
           >
-            <Trash2 className="size-3.5" /> Forget everything
+            <Trash2 className="size-3.5" /> {account ? "Clear this device" : "Forget everything"}
           </Button>
         )}
       </div>

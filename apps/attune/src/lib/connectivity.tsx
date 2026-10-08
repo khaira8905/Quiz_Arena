@@ -80,6 +80,9 @@ export function ConnectivityProvider({ children }: { children: React.ReactNode }
       setNetwork((n) => ({
         ...n,
         online: navigator.onLine,
+        // Losing the network invalidates the last probe: on return, show "reconnecting" until the
+        // server actually answers.
+        probeFailed: navigator.onLine ? n.probeFailed : true,
         effectiveType: c?.effectiveType,
         saveData: c?.saveData,
       }));

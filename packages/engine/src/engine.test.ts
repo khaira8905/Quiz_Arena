@@ -7,6 +7,8 @@ import {
   growthMoments,
   learnerEventSchema,
   learnerPatterns,
+  mergeLearnerModels,
+  modelStory,
   nextDay,
   readState,
   SCENARIOS,
@@ -233,6 +235,33 @@ describe("Learner controls are constraints, not suggestions", () => {
     expect(s.current!.rationale.summary).toMatch(/bored/);
   });
 
+  it("retrying the same question twice switches the explanation, and says why", () => {
+    let s = begin(neutralLearner(), { feeling: "okay" });
+    const q = s.current!.activity;
+    expect(q.type).toBe("question");
+    const answer = (correct: boolean, attempt: number): LearnerEventInput => ({
+      type: "answer",
+      activityId: q.id,
+      conceptId: q.conceptId,
+      difficulty: s.current!.difficulty ?? 2,
+      correct,
+      latencyMs: 15000,
+      usedHint: false,
+      attempt,
+    });
+    s = dispatch(s, answer(false, 1), T0 + 15_000);
+    s = dispatch(s, answer(false, 2), T0 + 30_000);
+    s = dispatch(s, answer(false, 3), T0 + 45_000);
+    s = dispatch(
+      s,
+      { type: "activity_completed", activityId: q.id, dwellMs: 45_000, score: 0 },
+      T0 + 46_000,
+    );
+    expect(s.current!.reading.primary).toBe("CONFUSED");
+    expect(s.current!.kind).toBe("SWITCH_MODALITY");
+    expect(s.current!.rationale.summary).toMatch(/retried this activity twice/);
+  });
+
   it.each([
     ["CHALLENGE_ME", "STRETCH_CHALLENGE"],
     ["EXPLORE", "CURIOSITY_PATH"],
@@ -292,6 +321,58 @@ describe("Observe → Adapt", () => {
     expect(s.learner.effectiveness).toEqual({});
   });
 });
+
+describe("merging learner models", () => {
+  it("keeps the fuller history from each side and never drops evidence", () => {
+    const base = scenarioById("A").learner();
+    const local = {
+      ...base,
+      effectiveness: { "BORED|STRETCH_CHALLENGE": { tries: 2, recoveries: 2 } },
+      seenActivities: ["ch-cricket"],
+      snapshots: [{ ...takeSnapshotStub(1), decisions: 5 }],
+    };
+    const remote = {
+      ...base,
+      traits: { ...base.traits, curiosity: 0.9 },
+      effectiveness: {
+        "BORED|STRETCH_CHALLENGE": { tries: 1, recoveries: 1 },
+        "CONFUSED|SWITCH_MODALITY": { tries: 4, recoveries: 3 },
+      },
+      seenActivities: ["q-d4-b"],
+      snapshots: [
+        { ...takeSnapshotStub(1), decisions: 3 },
+        { ...takeSnapshotStub(2), decisions: 6 },
+      ],
+      day: 3,
+    };
+    const merged = mergeLearnerModels(local, remote);
+    expect(merged.effectiveness["BORED|STRETCH_CHALLENGE"]).toEqual({ tries: 2, recoveries: 2 });
+    expect(merged.effectiveness["CONFUSED|SWITCH_MODALITY"]).toEqual({ tries: 4, recoveries: 3 });
+    expect([...merged.seenActivities].sort()).toEqual(["ch-cricket", "q-d4-b"]);
+    expect(merged.snapshots.map((s) => [s.day, s.decisions])).toEqual([
+      [1, 5],
+      [2, 6],
+    ]);
+    // Remote has more experience (5 tries vs 2), so its traits win; the day never goes backwards.
+    expect(merged.traits.curiosity).toBe(0.9);
+    expect(merged.day).toBe(3);
+    // Merging is idempotent.
+    expect(mergeLearnerModels(merged, remote)).toEqual(merged);
+  });
+});
+
+function takeSnapshotStub(day: number) {
+  const l = scenarioById("A").learner();
+  return {
+    day,
+    label: `Day ${day}`,
+    traits: l.traits,
+    ability: l.ability,
+    engagementAvg: 50,
+    decisions: 0,
+    recoveries: 0,
+  };
+}
 
 describe("simulated sessions", () => {
   it.each(SCENARIOS.map((s) => [s.id, s] as const))(
@@ -358,5 +439,33 @@ describe("boundary schemas", () => {
     expect(
       syncBatchSchema.safeParse({ learnerId: "l", deviceId: "d", cursor: 0, events }).success,
     ).toBe(false);
+  });
+});
+
+describe("Model story: Yesterday → Today → Emerging pattern", () => {
+  it("has no yesterday on day one, and tells today's story from evidence", () => {
+    const a = scenarioById("A");
+    let s = startSession({ id: "a", learner: a.learner(), checkin: a.checkin, now: T0 });
+    const fresh = modelStory(s);
+    expect(fresh.yesterday).toBeNull();
+    expect(fresh.today.headline).toMatch(/Just started/);
+    expect(fresh.pattern.strength).toBe("none");
+
+    s = solveCurrent(s, T0 + 10_000);
+    s = solveCurrent(s, T0 + 60_000);
+    const story = modelStory(s);
+    expect(story.today.headline).toMatch(/2 activities so far, \d brought you back/);
+    expect(story.today.detail).not.toMatch(/Nothing has shifted/);
+  });
+
+  it("carries the day into tomorrow's yesterday", () => {
+    const a = scenarioById("A");
+    let s = startSession({ id: "a", learner: a.learner(), checkin: a.checkin, now: T0 });
+    s = solveCurrent(s, T0 + 10_000);
+    const tomorrow = nextDay(s, a.dayTwoCheckin, T0 + 86_400_000, "a2");
+    const story = modelStory(tomorrow);
+    // Two decisions: the solved one, and the next one still open when the day closed.
+    expect(story.yesterday?.headline).toBe("1 of 2 moments brought you back.");
+    expect(story.yesterday?.detail).toMatch(/rose|eased|held steady/);
   });
 });

@@ -174,7 +174,8 @@ export function extractSignals(ctx: SignalContext): Signal[] {
       const a = answers[i]!;
       const fast = a.latencyMs < TUNING.latency.fastRatio * expectedLatencyMs(a.difficulty);
       const easy = a.difficulty <= ability(a.conceptId) - 0.5;
-      if (a.correct && !a.usedHint && (fast || easy) && (fast || a.difficulty <= 2)) {
+      const firstTry = (a.attempt ?? 1) === 1;
+      if (a.correct && firstTry && !a.usedHint && (fast || easy) && (fast || a.difficulty <= 2)) {
         streak++;
         streakTimes.push(a.latencyMs);
       } else break;
@@ -230,6 +231,19 @@ export function extractSignals(ctx: SignalContext): Signal[] {
       `${plural(guesses, "quick miss", "quick misses")}: that can mean guessing`,
       "behaviour",
     );
+
+    // Retries on the same activity: persistence, but also a sign the current framing isn't working.
+    const retriesByActivity = new Map<string, number>();
+    for (const a of answers) {
+      if ((a.attempt ?? 1) > 1)
+        retriesByActivity.set(a.activityId, (retriesByActivity.get(a.activityId) ?? 0) + 1);
+    }
+    const mostRetries = Math.max(0, ...retriesByActivity.values());
+    if (mostRetries > 0) {
+      const times =
+        mostRetries === 1 ? "once" : mostRetries === 2 ? "twice" : `${mostRetries} times`;
+      add("retrying", clamp(mostRetries / 2), `You've retried this activity ${times}`, "behaviour");
+    }
 
     const missesByConcept = new Map<ConceptId, number>();
     for (const a of answers) {

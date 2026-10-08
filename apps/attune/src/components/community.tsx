@@ -64,9 +64,7 @@ export function CommunityView() {
     <div className="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-6">
       <Eyebrow>Community</Eyebrow>
       <div className="mt-2 flex flex-wrap items-end gap-3">
-        <h1 className="voice text-[36px] leading-tight text-ink sm:text-[42px]">
-          Learning with people who care about the same things
-        </h1>
+        <h1 className="type-h1 text-ink">Learning with people who care about the same things</h1>
         <SimulatedTag>Demo peers</SimulatedTag>
       </div>
       <p className="mt-2 max-w-2xl text-ink-2">

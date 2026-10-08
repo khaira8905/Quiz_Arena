@@ -150,7 +150,6 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
   --shadow-soft: var(--shadow);
 }
@@ -182,11 +181,80 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* The engine's voice: questions and decisions are set in a quiet serif. */
-.voice {
-  font-family: var(--font-serif);
-  font-weight: 450;
+/* ==========================================================================================
+   TYPE SYSTEM
+   One family (Geist) for everything people read, Geist Mono for data, ids and the engine trace.
+   Hierarchy comes from size, weight and tracking — never from mixing faces.
+
+     type-display  hero statements            44 → 68px  600  -0.035em
+     type-h1       page titles                32 → 42px  600  -0.03em
+     type-h2       section titles, prompts    24 → 28px  600  -0.022em
+     type-h3       card titles, small prompts 19 → 20px  600  -0.012em
+     type-lead     intro paragraphs           18 → 21px  400
+     type-body     running text               15px       400
+     type-small    secondary text             13px       400
+     type-caption  labels and eyebrows        11px mono uppercase
+     type-data     numbers in tables          tabular mono
+   ========================================================================================== */
+
+@utility type-display {
+  font-size: clamp(2.75rem, 1.6rem + 4.2vw, 4.25rem);
+  line-height: 1.04;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+@utility type-h1 {
+  font-size: clamp(2rem, 1.55rem + 1.6vw, 2.625rem);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+@utility type-h2 {
+  font-size: clamp(1.5rem, 1.32rem + 0.6vw, 1.75rem);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+@utility type-h3 {
+  font-size: clamp(1.1875rem, 1.15rem + 0.15vw, 1.25rem);
+  line-height: 1.35;
+  font-weight: 600;
   letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+@utility type-lead {
+  font-size: clamp(1.125rem, 1.05rem + 0.3vw, 1.3125rem);
+  line-height: 1.5;
+  letter-spacing: -0.008em;
+  text-wrap: pretty;
+}
+@utility type-body {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+@utility type-small {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+@utility type-caption {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@utility type-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+@utility type-brand {
+  font-size: 1.1875rem;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 /* ----------------------------------------------------------------------------------------
@@ -211,13 +279,24 @@ html[data-mode="offline"] * {
   box-shadow: none !important;
 }
 
+/* Reduced motion: the OS setting, unless the learner chose "full" in Settings; or their choice. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion="full"]) *,
+  html:not([data-motion="full"]) *::before,
+  html:not([data-motion="full"]) *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 @keyframes pulse-ring {

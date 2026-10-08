@@ -1,6 +1,21 @@
-import { INTERVENTION_META, MODALITY_META, STATE_META, TUNING } from "./config";
+import {
+  CONCEPT_META,
+  INTERVENTION_META,
+  MODALITY_META,
+  STATE_META,
+  TRAIT_META,
+  TUNING,
+} from "./config";
 import type { SessionState } from "./orchestrator";
-import type { InterventionKind, LearnerModel, Modality } from "./types";
+import {
+  CONCEPTS,
+  TRAITS,
+  type ConceptId,
+  type InterventionKind,
+  type LearnerModel,
+  type Modality,
+  type Trait,
+} from "./types";
 import { mean } from "./util";
 
 /**
@@ -284,4 +299,111 @@ export function learnerPatterns(learner: LearnerModel): {
   }
 
   return { patterns, engageTriggers, disengageTriggers, preferredModality };
+}
+
+/* --------------------------------------------------------------------------------------------- */
+/* The model's story: Yesterday → Today → Emerging pattern, in plain words, from real evidence.  */
+/* --------------------------------------------------------------------------------------------- */
+
+export interface ModelStoryStep {
+  headline: string;
+  detail: string;
+}
+
+export interface ModelStory {
+  /** Null on a learner's first day: there is no yesterday to compare with. */
+  yesterday: ModelStoryStep | null;
+  today: ModelStoryStep;
+  pattern: ModelStoryStep & { strength: "emerging" | "clear" | "none" };
+}
+
+function biggestTraitMove(
+  before: Record<Trait, number> | undefined,
+  after: Record<Trait, number>,
+): { trait: Trait; delta: number } | null {
+  if (!before) return null;
+  let best: { trait: Trait; delta: number } | null = null;
+  for (const t of TRAITS) {
+    const delta = after[t] - before[t];
+    if (Math.abs(delta) >= 0.03 && (!best || Math.abs(delta) > Math.abs(best.delta))) {
+      best = { trait: t, delta };
+    }
+  }
+  return best;
+}
+
+function biggestAbilityMove(
+  before: Record<ConceptId, number> | undefined,
+  after: Record<ConceptId, number>,
+): { concept: ConceptId; delta: number } | null {
+  if (!before) return null;
+  let best: { concept: ConceptId; delta: number } | null = null;
+  for (const c of CONCEPTS) {
+    const delta = after[c] - before[c];
+    if (Math.abs(delta) >= 0.05 && (!best || Math.abs(delta) > Math.abs(best.delta))) {
+      best = { concept: c, delta };
+    }
+  }
+  return best;
+}
+
+const moved = (delta: number) => (delta > 0 ? "rose" : "eased");
+
+export function modelStory(state: SessionState): ModelStory {
+  const learner = state.learner;
+  const previous = [...learner.snapshots]
+    .filter((s) => s.day < learner.day)
+    .sort((a, b) => b.day - a.day)[0];
+
+  let yesterday: ModelStoryStep | null = null;
+  if (previous) {
+    const trait = biggestTraitMove(previous.start?.traits, previous.traits);
+    yesterday = {
+      headline:
+        previous.decisions === 0
+          ? "A short check-in, nothing to learn from yet."
+          : `${previous.recoveries} of ${previous.decisions} moments brought you back.`,
+      detail: trait
+        ? `${TRAIT_META[trait.trait].label} ${moved(trait.delta)} over the day.`
+        : "Your profile held steady.",
+    };
+  }
+
+  const closed = state.timeline.filter((t) => t.outcome);
+  const recovered = closed.filter((t) => t.outcome!.recovered).length;
+  const trait = biggestTraitMove(state.learnerAtStart.traits, learner.traits);
+  const ability = biggestAbilityMove(state.learnerAtStart.ability, learner.ability);
+  const todayDetail = [
+    trait ? `${TRAIT_META[trait.trait].label} ${moved(trait.delta)} since you started.` : null,
+    ability
+      ? `${CONCEPT_META[ability.concept].short} estimate ${ability.delta > 0 ? "up" : "down"} ${Math.abs(ability.delta).toFixed(1)} levels.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const today: ModelStoryStep = {
+    headline:
+      closed.length === 0
+        ? "Just started: the first activity is underway."
+        : `${closed.length} ${closed.length === 1 ? "activity" : "activities"} so far, ${recovered} brought you back.`,
+    detail: todayDetail || "Nothing has shifted yet. One activity is rarely enough evidence.",
+  };
+
+  const { patterns, preferredModality } = learnerPatterns(learner);
+  const top = patterns[0];
+  const pattern: ModelStory["pattern"] = top
+    ? { headline: top.text, detail: `Evidence: ${top.evidence}.`, strength: top.strength }
+    : preferredModality
+      ? {
+          headline: `Explanations land best as ${preferredModality.label.toLowerCase()}.`,
+          detail: `Worked ${Math.round(preferredModality.rate * 100)}% of the time so far.`,
+          strength: "emerging",
+        }
+      : {
+          headline: "Too early to call.",
+          detail: "Patterns appear once a few activities give evidence, and they always show it.",
+          strength: "none",
+        };
+
+  return { yesterday, today, pattern };
 }

@@ -37,9 +37,7 @@ export function EducatorView() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <Eyebrow>Mentor view · Class 11-B · Exponents &amp; logarithms</Eyebrow>
-          <h1 className="voice mt-2 text-[36px] leading-tight text-ink sm:text-[42px]">
-            How the class is engaging this week
-          </h1>
+          <h1 className="type-h1 mt-2 text-ink">How the class is engaging this week</h1>
         </div>
       </div>
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-dashed border-line-strong bg-surface p-4 text-[13.5px] text-ink-2">

@@ -33,6 +33,8 @@ export {
   evaluateOutcome,
   applyOutcome,
   takeSnapshot,
+  mergeLearnerModels,
+  experienceOf,
   type CreateLearnerInput,
 } from "./learner-model";
 export {
@@ -53,6 +55,9 @@ export {
   growthMoments,
   learnerPatterns,
   categoryStats,
+  modelStory,
+  type ModelStory,
+  type ModelStoryStep,
   type SessionMetrics,
   type GrowthMoment,
   type Pattern,

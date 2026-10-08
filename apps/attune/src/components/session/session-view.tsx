@@ -68,17 +68,46 @@ function useMinutes(since: number) {
 }
 
 export function SessionView() {
-  const { hydrated, session, send, end, resume, shareDiscovery } = useAttune();
+  const { hydrated, session, savedLearner, restore, send, end, resume, shareDiscovery } =
+    useAttune();
   const { mode, aiConfigured } = useConnectivity();
   const [traceOpen, setTraceOpen] = useState(true);
   const minutes = useMinutes(session?.startedAt ?? 0);
 
-  if (!hydrated) {
+  if (!hydrated || (restore === "restoring" && !session)) {
     return (
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 sm:px-6" aria-busy="true">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32" />
         <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  if (!session && savedLearner) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <Eyebrow>Welcome back · day {savedLearner.day}</Eyebrow>
+        <h1 className="type-h1 mt-3 text-ink">Good to see you, {savedLearner.displayName}.</h1>
+        <p className="mt-3 text-ink-2">
+          Your learner model is restored: {savedLearner.sessions}{" "}
+          {savedLearner.sessions === 1 ? "session" : "sessions"} of evidence about what brings you
+          back. A quick check-in and it picks up from there.
+        </p>
+        <div className="mt-6 flex justify-center gap-2">
+          <Link
+            href="/begin"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-ink px-5 text-sm font-medium text-inverse"
+          >
+            Check in for today <ArrowRight className="size-4" />
+          </Link>
+          <Link
+            href="/twin"
+            className="inline-flex h-11 items-center rounded-xl border border-line bg-surface px-5 text-sm font-medium text-ink"
+          >
+            See your twin
+          </Link>
+        </div>
       </div>
     );
   }
@@ -87,9 +116,7 @@ export function SessionView() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
         <Eyebrow>No session yet</Eyebrow>
-        <h1 className="voice mt-3 text-[34px] leading-tight text-ink">
-          Start with a 40-second check-in.
-        </h1>
+        <h1 className="type-h1 mt-3 text-ink">Start with a 40-second check-in.</h1>
         <p className="mt-3 text-ink-2">
           Or open Demo mode and pick one of four fictional learners to see how differently the
           engine responds to each.
@@ -189,9 +216,7 @@ export function SessionView() {
                 </Badge>
               )}
             </div>
-            <h1 className="voice mt-3 text-[30px] leading-[1.15] text-ink sm:text-[34px]">
-              {decision.rationale.headline}
-            </h1>
+            <h1 className="type-h1 mt-3 text-ink">{decision.rationale.headline}</h1>
             <p className="mt-2 max-w-3xl text-[15.5px] leading-relaxed text-ink-2">
               {decision.rationale.summary}
             </p>

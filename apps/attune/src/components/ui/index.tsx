@@ -194,3 +194,144 @@ export function percent(value: number | null | undefined, digits = 0): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `${(value * 100).toFixed(digits)}%`;
 }
+
+/* ------------------------------------------------------------------------------------------ */
+/* Forms and feedback                                                                         */
+/* ------------------------------------------------------------------------------------------ */
+
+export function Spinner({ className, label }: { className?: string; label?: string }) {
+  return (
+    <span role={label ? "status" : undefined} className="inline-flex items-center gap-2">
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className={cn("size-4 animate-spin motion-reduce:animate-none", className)}
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="9"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity=".2"
+          strokeWidth="3"
+        />
+        <path
+          d="M21 12a9 9 0 0 0-9-9"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </svg>
+      {label && <span>{label}</span>}
+    </span>
+  );
+}
+
+type NoticeTone = "info" | "good" | "warn" | "danger";
+const NOTICE: Record<NoticeTone, string> = {
+  info: "border-line bg-surface-2 text-ink-2",
+  good: "border-transparent bg-good-soft text-good",
+  warn: "border-transparent bg-warn-soft text-warn",
+  danger: "border-transparent bg-danger-soft text-danger",
+};
+
+/** Inline status. Errors are announced immediately; everything else politely. */
+export function Notice({
+  tone = "info",
+  title,
+  children,
+  action,
+  className,
+}: {
+  tone?: NoticeTone;
+  title?: React.ReactNode;
+  children?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      role={tone === "danger" ? "alert" : "status"}
+      className={cn(
+        "rounded-xl border px-3.5 py-3 text-[13.5px] leading-relaxed",
+        NOTICE[tone],
+        className,
+      )}
+    >
+      {title && <p className="font-medium">{title}</p>}
+      {children && <div className={cn(Boolean(title) && "mt-0.5", "text-ink-2")}>{children}</div>}
+      {action && <div className="mt-2">{action}</div>}
+    </div>
+  );
+}
+
+export const TextInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }
+>(function TextInput({ className, invalid, ...rest }, ref) {
+  return (
+    <input
+      ref={ref}
+      aria-invalid={invalid || undefined}
+      className={cn(
+        "h-11 w-full rounded-xl border bg-surface px-3.5 text-[15px] text-ink placeholder:text-muted transition-colors focus:outline-none focus-visible:border-ink focus-visible:outline-2 focus-visible:outline-offset-0",
+        invalid ? "border-danger" : "border-line hover:border-line-strong",
+        className,
+      )}
+      {...rest}
+    />
+  );
+});
+
+/** A labelled control with optional hint and error, wired up for screen readers. */
+export function Field({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: React.ReactNode;
+  error?: string;
+  children: (props: {
+    id: string;
+    "aria-describedby"?: string;
+    invalid: boolean;
+  }) => React.ReactNode;
+}) {
+  const described = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <div className="grid gap-1.5">
+      <label htmlFor={id} className="text-[13.5px] font-medium text-ink">
+        {label}
+      </label>
+      {children({ id, "aria-describedby": described || undefined, invalid: Boolean(error) })}
+      {hint && !error && (
+        <p id={`${id}-hint`} className="text-[12.5px] text-muted">
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p id={`${id}-error`} className="text-[12.5px] text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div
+      className={cn("rounded-2xl border border-line bg-surface p-5 shadow-soft sm:p-6", className)}
+    >
+      {children}
+    </div>
+  );
+}

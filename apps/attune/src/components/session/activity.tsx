@@ -109,16 +109,7 @@ function ChoiceBlock({
 
   return (
     <div>
-      <p
-        className={cn(
-          "voice text-ink",
-          promptSize === "lg"
-            ? "text-[22px] leading-snug sm:text-[26px]"
-            : "text-[19px] leading-snug",
-        )}
-      >
-        {choice.prompt}
-      </p>
+      <p className={cn("text-ink", promptSize === "lg" ? "type-h2" : "type-h3")}>{choice.prompt}</p>
       <div className={cn("mt-4 grid gap-2", choice.options.length > 2 && "sm:grid-cols-2")}>
         {choice.options.map((option, i) => {
           const isAnswer = i === choice.answerIndex;
@@ -549,7 +540,7 @@ function ExplanationView({
           )}
         </span>
       </div>
-      <h3 className="voice text-[24px] leading-tight text-ink">{activity.title}</h3>
+      <h3 className="type-h2 text-ink">{activity.title}</h3>
 
       <div className="mt-4 space-y-3 text-[16px] leading-relaxed text-ink-2">
         {(body.modality === "text" || body.modality === "analogy") &&
@@ -724,9 +715,7 @@ function CuriosityView({
           ))}
         </nav>
       </div>
-      {nodeId === activity.startNodeId && (
-        <p className="voice mb-2 text-[26px] leading-tight text-ink">{activity.hook}</p>
-      )}
+      {nodeId === activity.startNodeId && <p className="type-h2 mb-2 text-ink">{activity.hook}</p>}
       <div key={nodeId} className="rise">
         <h3 className="text-[15px] font-medium text-ink">{node.title}</h3>
         <p className="mt-1 text-[16px] leading-relaxed text-ink-2">{node.body}</p>
@@ -811,7 +800,7 @@ function MissionView({ activity, mode, onEvent }: ActivityProps & { activity: Mi
         </Badge>
         <SimulatedTag>Demo peers</SimulatedTag>
       </div>
-      <h3 className="voice text-[24px] leading-tight text-ink">{activity.title}</h3>
+      <h3 className="type-h2 text-ink">{activity.title}</h3>
       <p className="mt-2 text-[15.5px] leading-relaxed text-ink-2">{activity.brief}</p>
       {mode === "offline" && (
         <p className="mt-3 rounded-xl border border-dashed border-line-strong px-3 py-2 text-[13px] text-muted">
@@ -894,7 +883,7 @@ function MissionView({ activity, mode, onEvent }: ActivityProps & { activity: Mi
 function ModalityChoiceView({ activity, onEvent }: ActivityProps & { activity: ChoiceActivity }) {
   return (
     <div>
-      <p className="voice text-[26px] leading-tight text-ink">{activity.prompt}</p>
+      <p className="type-h2 text-ink">{activity.prompt}</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         {activity.options.map((o) => (
           <button
@@ -919,7 +908,7 @@ function ReflectionView({ activity, onEvent }: ActivityProps & { activity: Refle
   const [useful, setUseful] = useState<number | null>(null);
   return (
     <div>
-      <label htmlFor="reflection" className="voice block text-[24px] leading-tight text-ink">
+      <label htmlFor="reflection" className="type-h2 block text-ink">
         {activity.prompt}
       </label>
       <textarea
@@ -991,7 +980,7 @@ function BreakView({
   return (
     <div className="text-center sm:text-left">
       <Coffee className="mx-auto size-6 text-accent sm:mx-0" aria-hidden />
-      <h3 className="voice mt-3 text-[28px] leading-tight text-ink">{activity.title}</h3>
+      <h3 className="type-h2 mt-3 text-ink">{activity.title}</h3>
       <p className="mt-2 text-[16px] leading-relaxed text-ink-2">{activity.body}</p>
       {!activity.stopHere && (
         <p className="tabular mt-4 font-mono text-[40px] text-ink">{`${mm}:${ss}`}</p>

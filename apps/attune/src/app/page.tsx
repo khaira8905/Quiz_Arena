@@ -38,7 +38,7 @@ export default function Home() {
           <BrandMark size={28} />
           <Eyebrow>Engagement intelligence for learners</Eyebrow>
         </div>
-        <h1 className="voice mt-6 max-w-4xl text-[44px] leading-[1.04] text-ink sm:text-[68px]">
+        <h1 className="type-display mt-6 max-w-4xl text-ink">
           Not personalized content.
           <br />
           <em className="text-accent">Personalized engagement.</em>
@@ -86,7 +86,7 @@ export default function Home() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <Eyebrow>Demo · about four minutes</Eyebrow>
-            <h2 className="voice mt-2 text-[32px] leading-tight text-ink">
+            <h2 className="type-h1 mt-2 text-ink">
               Same topic. Four learners. Four different reasons.
             </h2>
             <p className="mt-2 max-w-2xl text-ink-2">
@@ -100,7 +100,7 @@ export default function Home() {
           {SCENARIOS.map((s) => (
             <div key={s.id} className="flex flex-col rounded-2xl border border-line bg-surface p-5">
               <p className="font-mono text-[12px] text-muted">Scenario {s.id}</p>
-              <p className="voice mt-2 text-[24px] leading-tight text-ink">{s.name}</p>
+              <p className="type-h2 mt-2 text-ink">{s.name}</p>
               <p className="text-[14px] font-medium text-ink-2">{s.label}</p>
               <p className="mt-2 flex-1 text-[13.5px] leading-relaxed text-muted">{s.tagline}</p>
               <div className="mt-4 flex flex-col gap-2">

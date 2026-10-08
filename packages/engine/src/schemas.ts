@@ -34,6 +34,7 @@ export const learnerEventSchema = z.discriminatedUnion("type", [
     correct: z.boolean(),
     latencyMs: z.number().int().nonnegative().max(3_600_000),
     usedHint: z.boolean(),
+    attempt: z.number().int().min(1).max(10).optional(),
   }),
   z.object({ ...base, type: z.literal("hint"), activityId: z.string().max(96) }),
   z.object({ ...base, type: z.literal("control"), action: z.enum(CONTROLS) }),

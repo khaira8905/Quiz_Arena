@@ -124,6 +124,8 @@ export interface AnswerEvent extends EventBase {
   correct: boolean;
   latencyMs: number;
   usedHint: boolean;
+  /** 1 for the first try at this question; 2+ when the learner retries after a miss. */
+  attempt?: number;
 }
 
 export interface HintEvent extends EventBase {

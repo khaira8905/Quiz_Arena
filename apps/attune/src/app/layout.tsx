@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/shell";
 import { ServiceWorker } from "@/components/service-worker";
+import { AuthProvider } from "@/lib/auth";
 import { ConnectivityProvider } from "@/lib/connectivity";
+import { BOOT_SCRIPT } from "@/lib/prefs";
+import { SettingsProvider } from "@/lib/settings";
 import { AttuneProvider } from "@/lib/store";
 import "./globals.css";
 
-/** UI face: neutral and legible at small sizes. */
+/** One family for everything people read: neutral, legible at small sizes, strong at display. */
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 /** Data and engine-trace face. */
 const geistMono = Geist_Mono({
@@ -15,15 +18,6 @@ const geistMono = Geist_Mono({
   weight: ["400", "500"],
   display: "swap",
 });
-/** The engine's voice: questions, reflections and decisions. Calm, human, a little literary. */
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-newsreader",
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: { default: "Attune — personalized engagement", template: "%s · Attune" },
   description:
@@ -46,13 +40,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       data-mode="full"
-      className={`${geist.variable} ${geistMono.variable} ${newsreader.variable}`}
+      className={`${geist.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Applies the saved theme and motion choice before first paint (no flash). */}
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+      </head>
       <body>
         <ConnectivityProvider>
-          <AttuneProvider>
-            <AppShell>{children}</AppShell>
-          </AttuneProvider>
+          <AuthProvider>
+            <SettingsProvider>
+              <AttuneProvider>
+                <AppShell>{children}</AppShell>
+              </AttuneProvider>
+            </SettingsProvider>
+          </AuthProvider>
         </ConnectivityProvider>
         <ServiceWorker />
       </body>

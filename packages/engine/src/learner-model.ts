@@ -91,7 +91,8 @@ export function applyAnswer(model: LearnerModel, answer: AnswerEvent): LearnerMo
   const next = clone(model);
   const theta = next.ability[answer.conceptId];
   const expected = probabilityCorrect(theta, answer.difficulty);
-  const gain = answer.correct && answer.usedHint ? 0.5 : 1;
+  // Getting there with a hint or on a retry still counts, just for less.
+  const gain = answer.correct && (answer.usedHint || (answer.attempt ?? 1) > 1) ? 0.5 : 1;
   next.ability[answer.conceptId] = clamp(
     theta + TUNING.abilityStep * gain * ((answer.correct ? 1 : 0) - expected),
     0.5,
@@ -301,5 +302,45 @@ export function takeSnapshot(model: LearnerModel, timeline: TimelineEntry[]): Da
     engagementAvg: Math.round(mean(indices)),
     decisions: timeline.length,
     recoveries: timeline.filter((t) => t.outcome?.recovered).length,
+  };
+}
+
+/** Total interventions the model has learned from: a rough measure of how much history it holds. */
+export function experienceOf(model: LearnerModel): number {
+  return Object.values(model.effectiveness).reduce((n, r) => n + r.tries, 0);
+}
+
+/**
+ * Merge two versions of the same learner's model, e.g. a device that worked offline and the copy
+ * in the cloud. Deterministic and loss-averse:
+ *   - effectiveness records keep whichever side has seen more of that state × intervention;
+ *   - daily snapshots and seen activities are unioned;
+ *   - ability, traits and modality come from the side with more overall experience
+ *     (ties go to `local`, the device the learner is using right now);
+ *   - consent always comes from `local`, because it reflects the learner's latest explicit choice
+ *     on this device; account settings are synced separately.
+ */
+export function mergeLearnerModels(local: LearnerModel, remote: LearnerModel): LearnerModel {
+  const primary = experienceOf(remote) > experienceOf(local) ? remote : local;
+  const effectiveness: LearnerModel["effectiveness"] = { ...remote.effectiveness };
+  for (const [key, rec] of Object.entries(local.effectiveness)) {
+    const other = effectiveness[key];
+    if (!other || rec.tries >= other.tries) effectiveness[key] = rec;
+  }
+  const snapshots = new Map(remote.snapshots.map((s) => [s.day, s]));
+  for (const s of local.snapshots) {
+    const other = snapshots.get(s.day);
+    if (!other || s.decisions >= other.decisions) snapshots.set(s.day, s);
+  }
+  return {
+    ...clone(primary),
+    id: local.id,
+    consent: { ...local.consent },
+    interests: [...new Set([...local.interests, ...remote.interests])].slice(0, 10),
+    effectiveness,
+    snapshots: [...snapshots.values()].sort((a, b) => a.day - b.day),
+    seenActivities: [...new Set([...remote.seenActivities, ...local.seenActivities])].slice(-60),
+    sessions: Math.max(local.sessions, remote.sessions),
+    day: Math.max(local.day, remote.day),
   };
 }

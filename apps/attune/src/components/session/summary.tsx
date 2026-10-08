@@ -63,7 +63,7 @@ export function SessionSummary() {
       <Eyebrow className="mt-3">
         {session.learner.displayName} · Day {session.learner.day}
       </Eyebrow>
-      <h1 className="voice mt-2 text-[38px] leading-tight text-ink">
+      <h1 className="type-h1 mt-2 text-ink">
         {ended ? "That's a good place to stop." : "This looks like a good place to stop."}
       </h1>
       <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-2">
