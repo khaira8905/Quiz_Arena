@@ -1,6 +1,7 @@
 import { ARENA_THEMES, THEME_TOKENS, otherTheme } from "@quizarena/shared/appearance";
 import { describe, expect, it } from "vitest";
-import { UI_THEMES, uiThemeBootScript, uiThemeCss } from "./ui-theme";
+import { UI_THEMES, onOtherTab, uiThemeBootScript, uiThemeCss, uiThemeStore } from "./ui-theme";
+import { vi } from "vitest";
 
 describe("two themes, one switch", () => {
   it("has exactly night (black + orange) and day (white + blue)", () => {
@@ -76,5 +77,30 @@ describe("two themes, one switch", () => {
       () => ({ matches: false }),
     );
     expect(attrs.color).toBe(THEME_TOKENS.WHITE.bg);
+  });
+});
+
+describe("cross-tab sync", () => {
+  it("follows a day/night switch made in another tab, and ignores anything else", () => {
+    const attrs: Record<string, string> = { "data-ui-theme": "BLACK" };
+    vi.stubGlobal("document", {
+      documentElement: {
+        setAttribute: (k: string, v: string) => (attrs[k] = v),
+        getAttribute: (k: string) => attrs[k] ?? null,
+      },
+      querySelector: () => null,
+    });
+    const heard = vi.fn();
+    uiThemeStore.subscribe(heard);
+
+    onOtherTab({ key: "something-else", newValue: "WHITE" });
+    onOtherTab({ key: "qa:ui-theme", newValue: "PINK" });
+    expect(attrs["data-ui-theme"]).toBe("BLACK");
+    expect(heard).not.toHaveBeenCalled();
+
+    onOtherTab({ key: "qa:ui-theme", newValue: "WHITE" });
+    expect(attrs["data-ui-theme"]).toBe("WHITE");
+    expect(heard).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 });

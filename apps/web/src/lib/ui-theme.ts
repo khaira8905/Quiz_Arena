@@ -113,6 +113,25 @@ export const uiThemeStore = {
   },
   subscribe(listener: () => void) {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    if (listeners.size === 1 && typeof window !== "undefined") {
+      window.addEventListener("storage", onOtherTab);
+    }
+    return () => {
+      listeners.delete(listener);
+      if (listeners.size === 0 && typeof window !== "undefined") {
+        window.removeEventListener("storage", onOtherTab);
+      }
+    };
   },
 };
+
+/** Another tab flipped day/night: follow it here too (no reveal; this tab wasn't clicked). */
+export function onOtherTab(e: Pick<StorageEvent, "key" | "newValue">) {
+  if (e.key !== UI_THEME_KEY) return;
+  const theme = e.newValue as UiTheme | null;
+  if (!theme || !(UI_THEMES as readonly string[]).includes(theme)) return;
+  if (theme === uiThemeStore.get()) return;
+  document.documentElement.setAttribute("data-ui-theme", theme);
+  syncThemeColor(theme);
+  for (const l of listeners) l();
+}
