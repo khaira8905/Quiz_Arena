@@ -2,6 +2,17 @@
 
 What changed, newest first. Dates are when the work landed on the development branch.
 
+## 2026-10-08: Hardening and docs
+
+- **Fixes.** The browser toolbar colour now follows day/night (it was stuck on the retired
+  Black theme's colour); a theme switch in one tab is followed by every other open tab;
+  videos without a usable file name are labelled "Video", not "Image".
+- **Tests.** Display formatters, pre-upload media checks, custom colours against the new
+  palettes, served-video byte ranges, Google Drive video imports, upload-ticket expiry,
+  the cursor preference, and a check that JS and CSS motion tokens never drift apart.
+- **Docs.** A [contributing guide](CONTRIBUTING.md); deployment and `.env.example` now cover
+  the bucket CORS rule video uploads need, and the smoke test covers themes and video.
+
 ## 2026-10-07: Day and night, depth and motion
 
 - **Two themes, one switch.** Black + Orange (night) and White + Blue (day). A single
