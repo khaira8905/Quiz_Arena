@@ -205,7 +205,7 @@ export function googleRoutes(app: FastifyInstance, ctx: AppContext) {
           key,
           mime: video.mime,
           maxBytes: VIDEO_DRIVE_MAX_BYTES,
-          name: mediaNameFromFile(video.name),
+          name: mediaNameFromFile(video.name, "Video"),
           source: "GOOGLE_DRIVE",
           durationMs: Math.min(video.durationMs, VIDEO_MAX_DURATION_MS),
           width: video.width,

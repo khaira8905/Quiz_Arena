@@ -134,7 +134,7 @@ export function mediaRoutes(app: FastifyInstance, ctx: AppContext) {
           key,
           mime: input.mimeType,
           bytes: input.bytes,
-          name: mediaNameFromFile(input.name),
+          name: mediaNameFromFile(input.name, "Video"),
         },
         ctx.config.JWT_SECRET,
       );

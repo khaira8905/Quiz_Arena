@@ -116,8 +116,14 @@ export interface QuestionVideo {
   durationMs: number | null;
 }
 
-/** A display name from an uploaded file's name: never trusted as a path, only as a label. */
-export function mediaNameFromFile(filename: string | undefined | null): string {
+/**
+ * A display name from an uploaded file's name: never trusted as a path, only as a label.
+ * `fallback` names a file that had no usable name ("Image", or "Video" for videos).
+ */
+export function mediaNameFromFile(
+  filename: string | undefined | null,
+  fallback: "Image" | "Video" = "Image",
+): string {
   const base = (filename ?? "")
     .split(/[\\/]/)
     .pop()!
@@ -126,7 +132,7 @@ export function mediaNameFromFile(filename: string | undefined | null): string {
     .replace(/[_]+/g, " ")
     .trim()
     .slice(0, MEDIA_NAME_MAX);
-  return base || "Image";
+  return base || fallback;
 }
 
 /** Picks the smallest rendition at least `width` CSS pixels wide (for srcset / phones). */
