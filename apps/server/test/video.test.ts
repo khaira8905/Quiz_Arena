@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import sharp from "sharp";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app";
 import { loadConfig } from "../src/config";
 import { createDb, type Db } from "../src/db";
@@ -48,6 +48,29 @@ describe("video sniffing and tickets", () => {
     ).toString("base64url");
     expect(() => readTicket(`${forged}.${mac}`, "u1", SECRET)).toThrow(/isn't valid/);
     expect(() => readTicket(t, "u1", "another-secret-another-secret-12345")).toThrow();
+  });
+
+  it("expires tickets after 30 minutes, so a leaked upload link goes dead", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-08T12:00:00Z"));
+      const t = issueTicket(
+        { owner: "u1", key: "media/u1/abc123", mime: "video/webm", bytes: 10, name: "Clip" },
+        SECRET,
+      );
+      vi.setSystemTime(new Date("2026-10-08T12:29:00Z"));
+      expect(readTicket(t, "u1", SECRET).mime).toBe("video/webm");
+      vi.setSystemTime(new Date("2026-10-08T12:31:00Z"));
+      expect(() => readTicket(t, "u1", SECRET)).toThrow(/took too long/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("refuses malformed tickets without throwing anything unexpected", () => {
+    for (const bad of ["", "no-dot", ".", "abc.", ".abc", "a.b.c"]) {
+      expect(() => readTicket(bad, "u1", SECRET)).toThrow(/isn't valid/);
+    }
   });
 });
 
