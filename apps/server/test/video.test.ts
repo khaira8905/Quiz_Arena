@@ -197,6 +197,31 @@ describe.skipIf(!hasDb)("video library API", () => {
     expect(part.statusCode).toBe(206);
     expect(part.headers["content-range"]).toBe("bytes 100-199/50000");
     expect(part.rawPayload.equals(data.subarray(100, 200))).toBe(true);
+
+    // A suffix range (players use it to find an MP4's index at the end of the file).
+    const tail = await app.inject({
+      method: "GET",
+      url: asset.url,
+      headers: { range: "bytes=-64" },
+    });
+    expect(tail.statusCode).toBe(206);
+    expect(tail.headers["content-range"]).toBe("bytes 49936-49999/50000");
+    expect(tail.rawPayload.equals(data.subarray(49_936))).toBe(true);
+
+    // An open-ended range runs to the end; a range past the end is refused.
+    const rest = await app.inject({
+      method: "GET",
+      url: asset.url,
+      headers: { range: "bytes=49990-" },
+    });
+    expect(rest.headers["content-range"]).toBe("bytes 49990-49999/50000");
+    const past = await app.inject({
+      method: "GET",
+      url: asset.url,
+      headers: { range: "bytes=60000-60010" },
+    });
+    expect(past.statusCode).toBe(416);
+    expect(past.headers["content-range"]).toBe("bytes */50000");
   });
 
   it("refuses non-videos, oversized bodies and other people's tickets", async () => {
