@@ -1,0 +1,251 @@
+@import "tailwindcss";
+
+/* ==========================================================================================
+   ATTUNE DESIGN TOKENS
+   Calm, warm paper; one ink; one accent for "the engine noticed something". Every colour in the
+   product resolves to one of these. State-family colours are the validated categorical palette
+   (checked for colour-vision deficiency in both modes) and only ever carry identity.
+   ========================================================================================== */
+
+:root {
+  color-scheme: light;
+  --bg: #f6f5f1;
+  --surface: #fcfcfb;
+  --surface-2: #f1efe9;
+  --surface-3: #e8e5dd;
+  --line: #e2dfd6;
+  --line-strong: #cbc7bb;
+
+  --ink: #1b1a17;
+  --ink-2: #4c4a45;
+  --muted: #6a6862;
+  --inverse: #fcfcfb;
+
+  --accent: #1d6a57;
+  --accent-strong: #15523f;
+  --accent-soft: color-mix(in oklab, #1d6a57 11%, transparent);
+  --accent-ink: #ffffff;
+
+  --good: #146c2e;
+  --good-soft: color-mix(in oklab, #0ca30c 12%, transparent);
+  --warn: #8a5300;
+  --warn-soft: color-mix(in oklab, #fab219 18%, transparent);
+  --danger: #b42828;
+  --danger-soft: color-mix(in oklab, #d03b3b 12%, transparent);
+
+  /* State families — categorical slots 1–5, light steps. */
+  --fam-engaged: #2a78d6;
+  --fam-understimulated: #eb6834;
+  --fam-overloaded: #1baf7a;
+  --fam-depleted: #eda100;
+  --fam-social: #e87ba4;
+
+  /* Chart chrome. */
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --seq-1: #cde2fb;
+  --seq-2: #9ec5f4;
+  --seq-3: #5598e7;
+  --seq-4: #256abf;
+  --seq-5: #184f95;
+
+  --shadow: 0 1px 2px rgb(27 26 23 / 0.04), 0 8px 24px -12px rgb(27 26 23 / 0.12);
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11110f;
+    --surface: #1a1a18;
+    --surface-2: #22221f;
+    --surface-3: #2b2b27;
+    --line: #2f2f2b;
+    --line-strong: #43423d;
+    --ink: #f2f1ec;
+    --ink-2: #c6c4ba;
+    --muted: #9a988f;
+    --inverse: #11110f;
+    --accent: #5cc0a2;
+    --accent-strong: #7dd3b8;
+    --accent-soft: color-mix(in oklab, #5cc0a2 14%, transparent);
+    --accent-ink: #0b1f19;
+    --good: #4fc26a;
+    --warn: #f2b84b;
+    --danger: #f07a7a;
+    --fam-engaged: #3987e5;
+    --fam-understimulated: #d95926;
+    --fam-overloaded: #199e70;
+    --fam-depleted: #c98500;
+    --fam-social: #d55181;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --seq-1: #1c2a3d;
+    --seq-2: #184f95;
+    --seq-3: #256abf;
+    --seq-4: #3987e5;
+    --seq-5: #86b6ef;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11110f;
+  --surface: #1a1a18;
+  --surface-2: #22221f;
+  --surface-3: #2b2b27;
+  --line: #2f2f2b;
+  --line-strong: #43423d;
+  --ink: #f2f1ec;
+  --ink-2: #c6c4ba;
+  --muted: #9a988f;
+  --inverse: #11110f;
+  --accent: #5cc0a2;
+  --accent-strong: #7dd3b8;
+  --accent-soft: color-mix(in oklab, #5cc0a2 14%, transparent);
+  --accent-ink: #0b1f19;
+  --good: #4fc26a;
+  --warn: #f2b84b;
+  --danger: #f07a7a;
+  --fam-engaged: #3987e5;
+  --fam-understimulated: #d95926;
+  --fam-overloaded: #199e70;
+  --fam-depleted: #c98500;
+  --fam-social: #d55181;
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --seq-1: #1c2a3d;
+  --seq-2: #184f95;
+  --seq-3: #256abf;
+  --seq-4: #3987e5;
+  --seq-5: #86b6ef;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-inverse: var(--inverse);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+  --shadow-soft: var(--shadow);
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The engine's voice: questions and decisions are set in a quiet serif. */
+.voice {
+  font-family: var(--font-serif);
+  font-weight: 450;
+  letter-spacing: -0.012em;
+}
+
+/* ----------------------------------------------------------------------------------------
+   Connectivity modes. LIGHT and OFFLINE strip motion and rich media; the same activities
+   render text-first. `.rich-only` content disappears; `.light-only` content appears.
+   ---------------------------------------------------------------------------------------- */
+.light-only {
+  display: none;
+}
+html[data-mode="light"] .rich-only,
+html[data-mode="offline"] .rich-only {
+  display: none !important;
+}
+html[data-mode="light"] .light-only,
+html[data-mode="offline"] .light-only {
+  display: block;
+}
+html[data-mode="light"] *,
+html[data-mode="offline"] * {
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.pulse-ring {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}

@@ -7,3 +7,6 @@ apps/server/prisma/migrations
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
 apps/web/next-env.d.ts
+apps/attune/AGENTS.md
+apps/attune/CLAUDE.md
+apps/attune/next-env.d.ts

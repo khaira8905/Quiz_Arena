@@ -15,6 +15,11 @@ the moment the timer hits zero.
 | **Quiz editor**                                  | **Live control panel**                                   |
 | ![Editor](docs/screenshots/admin-editor.png)     | ![Live control](docs/screenshots/admin-live-control.png) |
 
+> **Also in this repository: [Attune](apps/attune/README.md)**, an engagement intelligence
+> prototype that works out _why_ a learner has disengaged and adapts the next few minutes to fit.
+> It lives in `apps/attune` and `packages/engine`, independent of QuizArena. Product
+> architecture: [`docs/attune/PRODUCT.md`](docs/attune/PRODUCT.md).
+
 ---
 
 ## Features
