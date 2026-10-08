@@ -80,11 +80,16 @@ DATABASE_URL=… SEED_ADMIN_EMAIL=you@org.edu SEED_ADMIN_PASSWORD='a long passwo
 
 Check `https://<server>/health` → `{"ok":true,…}`.
 
-### Images and Google Drive (optional)
+### Images, videos and Google Drive (optional)
 
-Image uploads in production need an S3-compatible bucket. Cloudflare R2 has 10 GB free;
-Supabase Storage has 1 GB. Without one, uploads are switched off and organisers can still
-paste image links.
+Image and video uploads in production need an S3-compatible bucket. Cloudflare R2 has 10 GB
+free; Supabase Storage has 1 GB. Without one, uploads are switched off and organisers can
+still paste image links.
+
+Videos go from the browser straight to the bucket, so the bucket also needs a **CORS rule**
+allowing `PUT`, `GET` and `HEAD` from your Vercel domain with the `content-type` header (the
+exact JSON is in [MEDIA.md → Question videos](MEDIA.md#question-videos)). Without it, image
+uploads still work but video uploads fail with a message pointing at CORS.
 
 The Google Drive picker needs a Google OAuth client. Both are set as environment variables
 on the game server; the step-by-step setup is in **[MEDIA.md](MEDIA.md)**:
@@ -115,6 +120,10 @@ GOOGLE_CLIENT_ID=…  GOOGLE_CLIENT_SECRET=…  GOOGLE_REDIRECT_URI=https://<you
    mirrored screen); scan the QR with a phone; join.
 3. Start → read → start timer → answer → lock → show answers → reveal → leaderboard → end →
    reveal 3rd / 2nd / 1st → full leaderboard. Check results and CSV export in Results.
+4. Flip the day/night switch on the landing page and in the admin: the whole page should
+   change theme, and a second open tab should follow.
+5. If a bucket is set up: add a short MP4 to a question, go live, and check it plays muted on
+   the projector, Replay restarts it and it pauses when answers lock.
 
 Optional load check from your machine against production:
 
