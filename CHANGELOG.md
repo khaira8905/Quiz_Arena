@@ -2,6 +2,19 @@
 
 What changed, newest first. Dates are when the work landed on the development branch.
 
+## 2026-10-10: A calmer landing page
+
+- **New landing page.** An editorial layout in a soft serif, framed by hairline "ruled"
+  lines: a split hero with a 12-second big-screen scene (countdown ring, answers coming in,
+  the reveal, then the leaderboard), a contrast band whose cards reveal the fix on hover or
+  focus, a question-type carousel that glides one card at a time, floating competitors,
+  big-number blocks with true product facts, a replay of a sample game, and a podium finale.
+- **The game PIN, three times.** Hero, band and finale each have the same six-box entry:
+  type or paste ("QA 482 193" works), and the arrow lights up when the PIN is complete.
+- **Calm by design.** Native scrolling, nothing scroll-linked, four gentle loops that pause
+  off-screen. Reduced motion freezes the scene on its final frame and stops every loop.
+- **Removed.** The parallax hero, string-art orbit and walker parade it replaces.
+
 ## 2026-10-08: Hardening and docs
 
 - **Fixes.** The browser toolbar colour now follows day/night (it was stuck on the retired

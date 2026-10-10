@@ -427,11 +427,6 @@ html.theme-crossfade *::after {
     );
   }
 
-  /* Pointer parallax (components/ambient/parallax.tsx): layers pan with depth --d. */
-  .parallax [data-depth] {
-    translate: calc(var(--px, 0) * var(--d, 0) * 1px) calc(var(--py, 0) * var(--d, 0) * 0.6px);
-  }
-
   /* 3D lean toward the pointer (components/motion/tilt.tsx). */
   .tilt {
     perspective: 900px;
@@ -754,24 +749,6 @@ html.theme-crossfade *::after {
   }
 }
 
-/* The landing-page parade: a loop of walkers crossing a full-width band. */
-.parade-walker {
-  position: absolute;
-  inset: 0;
-  contain: layout paint;
-  will-change: transform;
-  animation: parade var(--parade-duration, 42s) linear infinite;
-  animation-delay: var(--parade-delay, 0s);
-}
-@keyframes parade {
-  from {
-    transform: translateX(-4%);
-  }
-  to {
-    transform: translateX(104%);
-  }
-}
-
 /* ----------------------------------------------------------------------------------------
    CURSOR (components/ui/cursor.tsx). Mounted only for fine pointers without reduced motion.
    The native pointer hides except over text fields, which keep their I-beam.
@@ -971,14 +948,10 @@ html[data-cursor="custom"] *:not(input, textarea, select, [contenteditable="true
 
 @media (prefers-reduced-motion: reduce) {
   /* Ambient loops stop where they stand instead of running to their end state. */
-  .parade-walker,
   .marquee-track,
   .stage-drift,
   .arena-floor-plane::before {
     animation: none !important;
-  }
-  .parade-walker {
-    transform: translateX(var(--parade-rest, 50%));
   }
   *,
   *::before,

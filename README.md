@@ -56,8 +56,8 @@ the moment the timer hits zero.
   A template CSV can be downloaded from the import dialog
 - **Motion and depth:** a branded desktop cursor (interpolated ring, theme-coloured trail,
   spring-physics magnetic buttons, link arrow, VIEW / PLAY / EDIT on media, drag grip,
-  loading ring, click sparks); 3D tilt on media and cards; a parallax landing hero with 3D
-  string art and walkers at three depths; a lobby crowd on a perspective floor; questions
+  loading ring, click sparks); 3D tilt on media and cards; a calm, editorial landing page
+  with a looping big-screen scene; a lobby crowd on a perspective floor; questions
   that assemble in layered 3D; a podium with lit blocks and a moving camera. All of it is
   CSS 3D or 2D canvas (no WebGL), touch- and reduced-motion-aware, and driven by server
   state, never by local timers. See [docs/DESIGN.md](docs/DESIGN.md)

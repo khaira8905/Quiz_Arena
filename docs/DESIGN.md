@@ -93,13 +93,33 @@ CSS 3D and 2D canvas only; no WebGL. Each piece is cheap and self-contained:
 
 - `components/motion/tilt.tsx`: leans media and cards toward the pointer (2–6°), with a
   tracking highlight and a shadow that falls away from it.
-- `components/ambient/parallax.tsx`: layers pan with depth as a camera follows the pointer.
-- `components/ambient/orbit-field.tsx`: string art projected in perspective.
-- `components/ambient/parade.tsx` and `procession.tsx`: walkers in three depth rows; far
-  rows are smaller, slower and fainter.
+- `components/ambient/procession.tsx`: lobby walkers in three depth rows; far rows are
+  smaller, slower and fainter.
 - Stage entrances use per-element `transformPerspective`, so each layer travels in its own
   depth without `preserve-3d` chains.
 
-Budget: hold 60fps on a mid-range laptop with the landing page scrolled to the parade, and
-on the projector with a full lobby. Measure with the browser's frame timing before adding
+Budget: hold 60fps on a mid-range laptop on the landing page's hero scene, and on the
+projector with a full lobby. Measure with the browser's frame timing before adding
 anything that animates continuously.
+
+## The landing page
+
+`app/page.tsx`, `components/landing/*`, styles in `components/landing/landing.css`. The one
+page where restraint is the effect: it should feel like a well-made printed magazine.
+
+- **Type.** Fraunces (soft, bookish serif, loaded only on this page) for headlines at 56/48
+  px, light (300) sans body, giant tight numerals (112 px, −6 % tracking) on accent blocks.
+- **Frame.** Every section's content sits in a 1280 px column with hairline borders left
+  and right; carousels bleed past the right line so the next card is always cut off.
+- **Colour.** Hard cuts, never scroll-linked fades: page → contrast band (warm black with a
+  glow at night, deep navy by day) → page → accent stats block → page → footer. Band-only
+  colours are defined per theme at the top of `landing.css` and pass AA.
+- **Motion.** Native scrolling, no scroll-triggered reveals. Four loops only: the hero's
+  12 s scene (pure CSS keyframes on one clock, paused off-screen), the bobbing crowd, the
+  phone-width capability ticker and the sample-game replay. Carousel arrows glide 650 ms on
+  `cubic-bezier(0.22, 1, 0.36, 1)`. Hovers change colour; nothing lifts or scales.
+- **Reduced motion.** The scene freezes on its final frame (overriding the global rule that
+  zeroes animations), every loop stops, the replay stops advancing.
+- **Honesty.** Only true facts: numbers come from shared constants, the sample game is
+  labelled as example data, and there are no testimonials, awards or press until real ones
+  exist.

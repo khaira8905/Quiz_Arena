@@ -1,0 +1,668 @@
+/* ==========================================================================================
+   LANDING PAGE (app/page.tsx, components/landing/*)
+
+   A calm, editorial page: a soft serif for headlines, light body copy, 32px cards, hairline
+   "ruled" frame lines around a 1280px column, colour blocking instead of scroll effects, and a
+   handful of gentle loops. Native scrolling throughout: nothing here is scroll-linked.
+   Everything reads the app's theme tokens; the few landing-only colours (the contrast band,
+   stats block, glass) are defined per theme below and all pass WCAG AA.
+   ========================================================================================== */
+
+/* Typed custom properties for the scene's counters (must sit outside any layer block). */
+@property --lp-t {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 8;
+}
+@property --lp-n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* In the components layer, so Tailwind utilities on the same element still win. */
+@layer components {
+  .lp {
+    --lp-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+    --lp-max: 1280px;
+    --lp-pad: 16px;
+    --lp-radius: 24px;
+    --lp-hair: var(--line);
+    --lp-glide: cubic-bezier(0.22, 1, 0.36, 1);
+    --lp-t-hover: 200ms;
+    --lp-t-reveal: 300ms;
+    --lp-t-slide: 650ms;
+  }
+  @media (min-width: 768px) {
+    .lp {
+      --lp-pad: 24px;
+      --lp-radius: 32px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .lp {
+      --lp-pad: 48px;
+    }
+  }
+
+  /* Night: the page is already dark, so the contrast band is made with warmth and a glow
+     instead of a flip to black. */
+  html[data-ui-theme="BLACK"] .lp {
+    --lp-band: #120c07;
+    --lp-band-card: #1b140d;
+    --lp-band-line: #2e241a;
+    --lp-band-text: #f7f4ef;
+    --lp-band-muted: #b0a69b;
+    --lp-band-emph: #ff7a1a;
+    --lp-band-glow: radial-gradient(900px 640px at 0% 0%, rgb(255 122 26 / 0.1), transparent 70%);
+    --lp-accent-hover: #ff9447;
+    --lp-stat-num: var(--accent-ink);
+    --lp-stat-label: var(--accent-ink);
+    --lp-footer: #050506;
+    --lp-glass: rgb(18 18 22 / 0.62);
+    --lp-glass-line: rgb(255 255 255 / 0.12);
+    --lp-pill-shadow: 0 20px 60px -12px rgb(0 0 0 / 0.7);
+  }
+  /* Day: a light page with one deep-navy band. */
+  html[data-ui-theme="WHITE"] .lp {
+    --lp-band: #0b1230;
+    --lp-band-card: #131c44;
+    --lp-band-line: #26316a;
+    --lp-band-text: #f5f7fb;
+    --lp-band-muted: #b4bddb;
+    /* #1940dc on navy is only 2.5:1, so emphasis on the band uses a lighter blue. */
+    --lp-band-emph: #8aa0ff;
+    --lp-band-glow: radial-gradient(900px 640px at 0% 0%, rgb(138 160 255 / 0.14), transparent 70%);
+    --lp-accent-hover: #1232b0;
+    --lp-stat-num: #dfe6ff;
+    --lp-stat-label: #ffffff;
+    --lp-footer: #0b1230;
+    --lp-glass: rgb(255 255 255 / 0.66);
+    --lp-glass-line: rgb(11 18 48 / 0.08);
+    --lp-pill-shadow: 0 20px 60px -12px rgb(16 32 96 / 0.2);
+  }
+
+  /* The ruled page: every section's content sits in the same framed column. */
+  .lp-frame {
+    max-width: var(--lp-max);
+    margin-inline: auto;
+    padding-inline: var(--lp-pad);
+    border-inline: 1px solid var(--lp-hair);
+  }
+  @media (min-resolution: 2dppx) {
+    .lp-frame,
+    .lp-hairline {
+      border-width: 0.5px;
+    }
+  }
+  .lp-band {
+    --lp-hair: var(--lp-band-line);
+    background: var(--lp-band-glow), var(--lp-band);
+    color: var(--lp-band-text);
+  }
+  /* Anchored sections clear the sticky header. */
+  .lp [id] {
+    scroll-margin-top: 120px;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     Type. Contrast comes from family, not weight: serif headlines, light sans body.
+     ------------------------------------------------------------------------------------------ */
+  .lp-h1,
+  .lp-h2,
+  .lp-h3 {
+    font-family: var(--lp-serif);
+    font-weight: 400;
+    font-variation-settings:
+      "SOFT" 50,
+      "opsz" 72;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .lp-h1 {
+    font-size: 40px;
+  }
+  .lp-h2 {
+    font-size: 32px;
+  }
+  .lp-h3 {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0;
+  }
+  @media (min-width: 768px) {
+    .lp-h1 {
+      font-size: 56px;
+    }
+    .lp-h2 {
+      font-size: 48px;
+    }
+    .lp-h3 {
+      font-size: 32px;
+    }
+  }
+  .lp-body {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+  @media (min-width: 768px) {
+    .lp-body {
+      font-size: 17px;
+    }
+  }
+  .lp-band .lp-body {
+    color: var(--lp-band-muted);
+  }
+  .lp-stat {
+    font-family: var(--font-sans);
+    font-size: 56px;
+    font-weight: 400;
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (min-width: 768px) {
+    .lp-stat {
+      font-size: 112px;
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     Buttons: pills that change colour on hover. No scale, no lift.
+     ------------------------------------------------------------------------------------------ */
+  .lp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    height: 2.25rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 15px;
+    font-weight: 450;
+    white-space: nowrap;
+    transition:
+      background-color var(--lp-t-hover) ease,
+      border-color var(--lp-t-hover) ease,
+      color var(--lp-t-hover) ease;
+  }
+  .lp-btn:focus-visible,
+  .lp-round:focus-visible,
+  .lp-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .lp-btn-accent {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .lp-btn-accent:hover {
+    background: var(--lp-accent-hover);
+  }
+  .lp-btn-outline {
+    border-color: var(--line-strong);
+    color: var(--text-primary);
+  }
+  .lp-btn-outline:hover {
+    background: var(--surface-elevated);
+    border-color: var(--text-muted);
+  }
+  .lp-btn-ink {
+    background: var(--text-primary);
+    color: var(--background);
+  }
+  .lp-btn-ink:hover {
+    background: color-mix(in oklab, var(--text-primary) 78%, var(--background));
+  }
+  .lp-link {
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    text-decoration-line: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color var(--lp-t-hover) ease;
+  }
+  .lp-link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Round arrow buttons (carousels). */
+  .lp-round {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    transition:
+      background-color var(--lp-t-hover) ease,
+      color var(--lp-t-hover) ease,
+      opacity var(--lp-t-hover) ease;
+  }
+  .lp-round:not(:disabled):hover,
+  .lp-round:not(:disabled):active {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .lp-round:disabled {
+    opacity: 0.3;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     The game-PIN pill (hero, band, final card).
+     ------------------------------------------------------------------------------------------ */
+  .lp-pill-box {
+    transition:
+      border-color var(--lp-t-hover) ease,
+      background-color var(--lp-t-hover) ease;
+  }
+  .lp-pill-box[data-active] {
+    border-color: var(--accent);
+  }
+  .lp-pill-box[data-active]::after {
+    content: "";
+    width: 1.5px;
+    height: 1.1em;
+    background: var(--accent);
+    animation: lp-caret 1s steps(1) infinite;
+  }
+  @keyframes lp-caret {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     Glass panels (scene overlays, bento cards).
+     ------------------------------------------------------------------------------------------ */
+  .lp-glass {
+    background: var(--lp-glass);
+    border: 1px solid var(--lp-glass-line);
+    border-radius: 20px;
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     Hover-to-reveal problem cards (the band). Pure CSS: a blur that rises from the bottom, the
+     description opening (grid rows 0fr → 1fr), and the plus turning into a minus. Same on
+     keyboard focus; on touch screens the description is simply always open.
+     ------------------------------------------------------------------------------------------ */
+  .lp-reveal {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .lp-reveal-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    background: color-mix(in oklab, var(--lp-band-card) 55%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    mask-image: linear-gradient(to top, #000 60%, transparent);
+    transition: opacity var(--lp-t-reveal) ease;
+    pointer-events: none;
+  }
+  .lp-reveal-more {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--lp-t-reveal) ease;
+  }
+  .lp-reveal-more > div {
+    overflow: hidden;
+  }
+  .lp-reveal-toggle {
+    background: color-mix(in oklab, var(--lp-band-text) 18%, transparent);
+    color: var(--lp-band-text);
+    transition:
+      background-color var(--lp-t-reveal) ease,
+      color var(--lp-t-reveal) ease;
+  }
+  .lp-reveal-toggle .lp-plus-v {
+    transform-origin: center;
+    transition:
+      transform var(--lp-t-reveal) ease,
+      opacity var(--lp-t-reveal) ease;
+  }
+  .lp-reveal:is(:hover, :focus-within, [data-open]) .lp-reveal-veil {
+    opacity: 1;
+  }
+  .lp-reveal:is(:hover, :focus-within, [data-open]) .lp-reveal-more {
+    grid-template-rows: 1fr;
+  }
+  .lp-reveal:is(:hover, :focus-within, [data-open]) .lp-reveal-toggle {
+    background: var(--lp-band-text);
+    color: #c4500a;
+  }
+  html[data-ui-theme="WHITE"] .lp-reveal:is(:hover, :focus-within, [data-open]) .lp-reveal-toggle {
+    color: #1940dc;
+  }
+  .lp-reveal:is(:hover, :focus-within, [data-open]) .lp-plus-v {
+    transform: rotate(90deg);
+    opacity: 0;
+  }
+  @media (hover: none) {
+    .lp-reveal .lp-reveal-more {
+      grid-template-rows: 1fr;
+    }
+    .lp-reveal .lp-reveal-veil {
+      opacity: 1;
+    }
+    .lp-reveal .lp-reveal-toggle {
+      display: none;
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     Carousels: a native scroller (swipe and trackpad work as usual) that bleeds past the right
+     frame line, so the next card is always cut off. The arrows glide it in JS.
+     ------------------------------------------------------------------------------------------ */
+  .lp-rail {
+    --lp-rail-start: max(var(--lp-pad), calc((100% - var(--lp-max)) / 2 + var(--lp-pad)));
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--lp-rail-start);
+    padding-inline: var(--lp-rail-start);
+    scrollbar-width: none;
+  }
+  .lp-rail::-webkit-scrollbar {
+    display: none;
+  }
+  .lp-rail > * {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     The hero's projector scene: one 12-second loop, every part on the same clock.
+     0–1s question in · 1–9s countdown ring drains (colour turns at the end) · 2–8.6s answers
+     tick in · 9–10s reveal · 10–12s glass leaderboard slides in and two rows swap.
+     Paused off-screen; frozen on its final frame under reduced motion.
+     ------------------------------------------------------------------------------------------ */
+  .lp-scene {
+    --lp-at: 0s;
+    --lp-play: running;
+    container-type: inline-size;
+  }
+  .lp-scene[data-paused] {
+    --lp-play: paused;
+  }
+  .lp-scene .lp-anim {
+    animation-duration: 12s;
+    animation-iteration-count: infinite;
+    animation-delay: var(--lp-at);
+    animation-play-state: var(--lp-play);
+    animation-fill-mode: both;
+  }
+  .lp-scene-in {
+    animation-name: lp-scene-in;
+  }
+  @keyframes lp-scene-in {
+    0% {
+      opacity: 0;
+      transform: translateY(12px);
+      animation-timing-function: var(--lp-glide);
+    }
+    8.3%,
+    83.3% {
+      opacity: 1;
+      transform: none;
+    }
+    /* The board takes over, as on the real stage: the question steps back. */
+    88%,
+    95% {
+      opacity: 0.14;
+      transform: none;
+    }
+    100% {
+      opacity: 0;
+      transform: none;
+    }
+  }
+  .lp-ring {
+    animation-name: lp-ring;
+  }
+  @keyframes lp-ring {
+    0%,
+    8.3% {
+      stroke-dashoffset: 0;
+      stroke: var(--accent);
+      animation-timing-function: linear;
+    }
+    50% {
+      stroke: var(--accent);
+      animation-timing-function: linear;
+    }
+    62.5% {
+      stroke: var(--warning);
+      animation-timing-function: linear;
+    }
+    75%,
+    100% {
+      stroke-dashoffset: 100;
+      stroke: var(--danger);
+    }
+  }
+  .lp-timer {
+    animation-name: lp-timer;
+    counter-reset: lp-t var(--lp-t);
+  }
+  .lp-timer::after {
+    content: counter(lp-t);
+  }
+  @keyframes lp-timer {
+    0%,
+    8.3% {
+      --lp-t: 8;
+      animation-timing-function: linear;
+    }
+    75%,
+    100% {
+      --lp-t: 0;
+    }
+  }
+  .lp-count {
+    animation-name: lp-count;
+    counter-reset: lp-n var(--lp-n);
+  }
+  .lp-count::before {
+    content: counter(lp-n);
+  }
+  @keyframes lp-count {
+    0%,
+    16.7% {
+      --lp-n: 0;
+      animation-timing-function: cubic-bezier(0.3, 0.6, 0.5, 1);
+    }
+    71.7%,
+    100% {
+      --lp-n: 30;
+    }
+  }
+  .lp-wrong {
+    animation-name: lp-wrong;
+  }
+  @keyframes lp-wrong {
+    0%,
+    75% {
+      opacity: 1;
+    }
+    79%,
+    100% {
+      opacity: 0.28;
+    }
+  }
+  .lp-right {
+    animation-name: lp-right;
+  }
+  @keyframes lp-right {
+    0%,
+    75% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 transparent;
+      animation-timing-function: var(--lp-glide);
+    }
+    79% {
+      transform: scale(1.04);
+      box-shadow: 0 0 0 3px var(--text-primary);
+    }
+    83.3%,
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 3px var(--text-primary);
+    }
+  }
+  .lp-tick {
+    animation-name: lp-tick;
+  }
+  @keyframes lp-tick {
+    0%,
+    76% {
+      opacity: 0;
+      transform: scale(0.5);
+      animation-timing-function: var(--lp-glide);
+    }
+    80%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .lp-board {
+    animation-name: lp-board;
+  }
+  @keyframes lp-board {
+    0%,
+    83.3% {
+      opacity: 0;
+      transform: translateX(24px);
+      animation-timing-function: var(--lp-glide);
+    }
+    88%,
+    96% {
+      opacity: 1;
+      transform: none;
+    }
+    100% {
+      opacity: 0;
+      transform: none;
+    }
+  }
+  /* Two rows trade places, FLIP-style: each slides one slot. */
+  .lp-row-up {
+    animation-name: lp-row-up;
+  }
+  .lp-row-down {
+    animation-name: lp-row-down;
+  }
+  @keyframes lp-row-up {
+    0%,
+    89% {
+      transform: translateY(100%);
+      animation-timing-function: var(--lp-glide);
+    }
+    92.5%,
+    100% {
+      transform: translateY(0);
+    }
+  }
+  @keyframes lp-row-down {
+    0%,
+    89% {
+      transform: translateY(-100%);
+      animation-timing-function: var(--lp-glide);
+    }
+    92.5%,
+    100% {
+      transform: translateY(0);
+    }
+  }
+  .lp-delta {
+    animation-name: lp-delta;
+  }
+  @keyframes lp-delta {
+    0%,
+    91% {
+      opacity: 0;
+    }
+    93%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------
+     Gentle loops: the crowd bobs out of step, like balloons. Hover gives a small wiggle.
+     ------------------------------------------------------------------------------------------ */
+  .lp-bob {
+    animation: lp-bob 3s ease-in-out infinite;
+  }
+  @keyframes lp-bob {
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+  .lp-wiggle {
+    transition: rotate var(--lp-t-hover) var(--lp-glide);
+  }
+  .lp-wiggle:hover {
+    rotate: 6deg;
+  }
+
+  /* A one-time burst over the podium when the final section first comes into view. */
+  .lp-spark {
+    opacity: 0;
+  }
+  [data-burst] .lp-spark {
+    animation: lp-spark 1.3s var(--lp-glide) forwards;
+    animation-delay: var(--lp-spark-delay, 0s);
+  }
+  @keyframes lp-spark {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.6);
+    }
+  }
+
+  /* The sample-game replay fades its neighbouring cards. */
+  .lp-replay-card {
+    transition: opacity 400ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Freeze the scene on its last full frame (leaderboard in, rows swapped). !important here,
+       in a layer, outranks the global reduced-motion rule that zeroes every animation. */
+    .lp-scene .lp-anim {
+      animation-duration: 12s !important;
+      animation-iteration-count: infinite !important;
+      animation-delay: -11.2s !important;
+      animation-play-state: paused !important;
+    }
+    .lp-bob,
+    [data-burst] .lp-spark,
+    .lp-pill-box[data-active]::after {
+      animation: none;
+    }
+    .lp-wiggle:hover {
+      rotate: none;
+    }
+    .lp-reveal-veil,
+    .lp-reveal-more,
+    .lp-replay-card {
+      transition: none;
+    }
+  }
+}
